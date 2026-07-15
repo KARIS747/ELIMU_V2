@@ -1,0 +1,128 @@
+{
+  "name": "elimu",
+  "version": "1.0.6",
+  "description": "Application de gestion scolaire pour établissements en Afrique",
+  "main": "src/main/main.js",
+  "author": {
+    "name": "M. Karis",
+    "email": "karisdev369@gmail.com"
+  },
+  "license": "SEE LICENSE IN build-resources/license.txt",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect",
+    "postinstall": "electron-builder install-app-deps",
+    "obfuscate": "node scripts/obfuscate.js",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder --win --linux",
+    "test": "jest"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.0.0",
+    "chart.js": "^4.4.0",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
+    "exceljs": "^4.3.0",
+    "pdfkit": "^0.14.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3",
+    "javascript-obfuscator": "^5.4.3",
+    "jest": "^30.3.0"
+  },
+  "build": {
+    "appId": "com.elimu.gestion-scolaire",
+    "productName": "Elimu",
+    "copyright": "Copyright © 2025 M. Karis",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build-resources"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KARIS747",
+        "repo": "ELIMU-APP",
+        "private": false,
+        "releaseType": "release"
+      }
+    ],
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!src/**/*.map",
+      "!**/*.md",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/.git/**"
+    ],
+    "extraResources": [
+      {
+        "from": "database",
+        "to": "database",
+        "filter": [
+          "*.db"
+        ]
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/bcryptjs/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build-resources/icon.ico",
+      "artifactName": "Elimu-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build-resources/icons",
+      "category": "Education",
+      "artifactName": "Elimu-${version}.${ext}",
+      "maintainer": "M. Karis <contact@elimu-app.com>",
+      "description": "Application de gestion scolaire pour établissements en Afrique",
+      "desktop": {
+        "Name": "Elimu",
+        "Comment": "Application de gestion scolaire pour établissements en Afrique",
+        "Icon": "elimu",
+        "Categories": "Education;Office;",
+        "StartupWMClass": "Elimu"
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0"
+      ]
+    }
+  }
+}

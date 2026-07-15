@@ -1,0 +1,236 @@
+<!-- eleves.html - Section Élèves d'Elimu -->
+
+<style>
+  .eleves-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .eleve-card {
+    background: var(--eleve-card-bg, linear-gradient(160deg, #2a3147 0%, #1e2538 100%));
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px 16px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .eleve-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    background: linear-gradient(180deg, rgba(0,230,118,0.06) 0%, transparent 100%);
+  }
+
+  .eleve-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    border-color: rgba(0, 230, 118, 0.4);
+    box-shadow: 0 16px 40px rgba(0, 230, 118, 0.12);
+  }
+
+  .eleve-card .card-score {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .eleve-card .card-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-fifa), var(--blue-fifa));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: white;
+    margin: 0 auto 10px;
+    border: 2px solid rgba(255,255,255,0.08);
+  }
+
+  .eleve-card .card-name {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+  }
+
+  .eleve-card .card-class {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .eleve-card .card-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .eleve-card:hover .card-actions {
+    opacity: 1;
+  }
+</style>
+
+<div id="eleves-root">
+
+  <!-- Barre d'outils -->
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+    <div style="position:relative; flex:1; min-width:200px; max-width:340px;">
+      <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%);
+                   font-size:15px; pointer-events:none; color:var(--text-muted);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </span>
+      <input type="text" id="search-eleves" class="input"
+             data-i18n-placeholder="eleves.placeholder_search"
+             placeholder="Rechercher un élève..." style="padding-left:38px;">
+    </div>
+    <select id="filter-classe" class="input" style="width:200px;">
+      <option value="" data-i18n="eleves.all_classes">Toutes les classes</option>
+    </select>
+    <select id="filter-sexe" class="input" style="width:130px;">
+      <option value="">Tous les sexes</option>
+      <option value="M" data-i18n="eleve.garcon">Garçon</option>
+      <option value="F" data-i18n="eleve.fille">Fille</option>
+    </select>
+    <button class="btn btn-primary" id="btn-add-eleve" type="button" data-i18n="eleves.btn_add">
+      Ajouter un élève
+    </button>
+  </div>
+
+  <!-- Grille des élèves -->
+  <div class="eleves-grid" id="eleves-grid">
+    <div style="grid-column:1/-1; display:flex; justify-content:center; padding:40px;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE FORMULAIRE ÉLÈVE ===== -->
+  <div id="modal-eleve" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:540px;
+                box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div id="modal-eleve-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="eleves.modal_add">
+          Ajouter un élève
+        </div>
+        <button id="modal-eleve-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="eleves.label_lastname">Nom *</label>
+          <input type="text" id="ef-nom" class="input"
+                 data-i18n-placeholder="common.name" placeholder="Nom de famille">
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="eleves.label_firstname">Prénom *</label>
+          <input type="text" id="ef-prenom" class="input"
+                 data-i18n-placeholder="common.firstname" placeholder="Prénom">
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="eleves.label_birthdate">Date de naissance</label>
+          <input type="date" id="ef-naissance" class="input">
+        </div>
+        <div class="input-group">
+          <label data-i18n="eleves.label_class">Classe</label>
+          <select id="ef-classe" class="input">
+            <option value="" data-i18n="eleves.card_no_class">Sans classe</option>
+          </select>
+          <div id="ef-classe-info" style="font-size: 11px; margin-top: 4px; display: none; border-radius: 4px; padding: 2px 6px;"></div>
+        </div>
+        <div class="input-group">
+          <label data-i18n="eleve.sexe">Sexe</label>
+          <select id="ef-sexe" class="input">
+            <option value="M" data-i18n="eleve.garcon">Garçon</option>
+            <option value="F" data-i18n="eleve.fille">Fille</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:0; grid-column:1/-1;">
+          <label data-i18n="eleves.label_parent">Nom du parent / tuteur</label>
+          <input type="text" id="ef-parent" class="input"
+                 data-i18n-placeholder="eleves.placeholder_parent"
+                 placeholder="Nom complet du parent">
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="eleves.label_phone">Téléphone (WhatsApp)</label>
+          <div style="display:flex; gap:8px;">
+            <select id="ef-indicatif" class="input" style="width:100px; flex-shrink:0; font-size:12px;">
+              <option value="+237">🇨🇲 +237</option>
+              <option value="+225">🇨🇮 +225</option>
+              <option value="+221">🇸🇳 +221</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+241">🇬🇦 +241</option>
+              <option value="+242">🇨🇬 +242</option>
+              <option value="+243">🇨🇩 +243</option>
+            </select>
+            <input type="tel" id="ef-tel" class="input">
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="eleves.label_email">Email parent</label>
+          <input type="email" id="ef-email" class="input" placeholder="email@exemple.com">
+        </div>
+      </div>
+
+      <div id="form-error" style="display:none; background:rgba(255,82,82,0.1);
+           border:1px solid rgba(255,82,82,0.3); color:var(--red-fifa); border-radius:8px;
+           padding:10px 14px; font-size:13px; margin-top:12px;"></div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button type="button" id="modal-eleve-cancel" class="btn btn-secondary"
+                data-i18n="common.cancel">Annuler</button>
+        <button type="button" id="modal-eleve-save" class="btn btn-primary"
+                data-i18n="eleves.btn_save">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE PROFIL ÉLÈVE ===== -->
+  <div id="modal-profil" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:620px;
+                max-height:85vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div id="profil-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="eleves.profil_title">
+          Profil Élève
+        </div>
+        <button id="modal-profil-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+      <div id="profil-content"></div>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,33 @@
+CONTRAT DE LICENCE UTILISATEUR FINAL (CLUF) — ELIMU
+Application de Gestion Scolaire
+Copyright © 2025-2026 M. Karis — Tous droits réservés
+
+IMPORTANT : VEUILLEZ LIRE ATTENTIVEMENT CE CONTRAT AVANT D'INSTALLER OU D'UTILISER LE LOGICIEL. EN INSTALLANT OU EN UTILISANT ELIMU, VOUS ACCEPTEZ D'ÊTRE LIÉ PAR LES TERMES DE CETTE LICENCE.
+
+1. CONCESSION DE LICENCE
+M. Karis (l'Éditeur) vous concède une licence limitée, non exclusive et non transférable pour utiliser Elimu sur UN (1) seul poste de travail informatique au sein d'UN (1) seul établissement scolaire identifié lors de l'achat. La licence est liée à l'empreinte matérielle (HWID) de l'ordinateur.
+
+2. RESTRICTIONS STRICTES
+Il vous est formellement interdit de :
+- Copier, modifier, adapter, traduire ou créer des œuvres dérivées du Logiciel.
+- Décompiler, désassembler ou tenter de découvrir le code source par ingénierie inverse.
+- Louer, prêter, revendre, distribuer ou sous-licencier le Logiciel à des tiers.
+- Contourner les mesures de protection technique ou les systèmes de validation de licence.
+
+3. PROPRIÉTÉ ET DONNÉES
+Le Logiciel est protégé par les lois sur le droit d'auteur. L'Éditeur reste propriétaire de tous les droits de propriété intellectuelle.
+Données Utilisateur : L'Éditeur ne collecte aucune donnée personnelle saisie dans l'application. La responsabilité de la sauvegarde, de la confidentialité et de la conformité légale (ex: RGPD ou lois locales sur la protection des données) des informations relatives aux élèves et au personnel incombe exclusivement à l'Établissement Utilisateur.
+
+4. EXCLUSION DE GARANTIE
+LE LOGICIEL EST FOURNI "TEL QUEL", SANS AUCUNE GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE, Y COMPRIS MAIS SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE OU D'ADÉQUATION À UN USAGE PARTICULIER. L'ÉDITEUR NE GARANTIT PAS QUE LES FONCTIONS CONTENUES DANS LE LOGICIEL RÉPONDRONT À VOS EXIGENCES OU QUE LE FONCTIONNEMENT DU LOGICIEL SERA ININTERROMPU OU SANS ERREUR.
+
+5. LIMITATION DE RESPONSABILITÉ (CLAUSE DE PROTECTION)
+EN AUCUN CAS L'ÉDITEUR NE POURRA ÊTRE TENU RESPONSABLE DE TOUT DOMMAGE DIRECT, INDIRECT, ACCESSOIRE, SPÉCIAL OU CONSÉCUTIF (Y COMPRIS, SANS S'Y LIMITER, LA PERTE DE DONNÉES, LES ERREURS DE CALCUL, LA PERTE DE PROFITS OU L'INTERRUPTION D'ACTIVITÉ) RÉSULTANT DE L'UTILISATION OU DE L'IMPOSSIBILITÉ D'UTILISER LE LOGICIEL, MÊME SI L'ÉDITEUR A ÉTÉ INFORMÉ DE LA POSSIBILITÉ DE TELS DOMMAGES. LA RESPONSABILITÉ TOTALE DE L'ÉDITEUR NE SAURAIT EXCÉDER LE MONTANT PAYÉ POUR L'ACQUISITION DE LA LICENCE.
+
+6. RÉSILIATION
+Tout manquement aux termes de ce contrat entraînera la résiliation immédiate et automatique de la licence, sans préavis ni remboursement, et pourra donner lieu à des poursuites judiciaires.
+
+7. SUPPORT ET CONTACT
+Le support technique est fourni à la discrétion de l'Éditeur via : karisdev369@gmail.com
+
+Fait à la date de l'installation, l'acceptation électronique faisant foi de signature.

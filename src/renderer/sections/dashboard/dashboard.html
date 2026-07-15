@@ -1,0 +1,219 @@
+<!-- dashboard.html — Elimu v2 Dashboard -->
+
+<div class="dashboard-container animate-in">
+
+  <!-- ── En-tête avec salutation ── -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <div id="dash-greeting" style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+           color:var(--text-primary); letter-spacing:0.5px;" data-i18n="dashboard.greeting">
+        Bonjour 
+      </div>
+      <div style="font-size:13px; color:var(--text-muted); margin-top:2px;"
+           data-i18n="dashboard.subtitle">
+        Vue d'ensemble de l'établissement
+      </div>
+    </div>
+
+    <!-- Filtres compacts -->
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <select class="input" id="dash-classe-select"
+              style="width:190px; font-size:12.5px; padding:8px 12px;">
+        <option value="" data-i18n="dashboard.all_establishment"> Tout l'établissement</option>
+      </select>
+      <select class="input" id="dash-periode"
+              style="width:140px; font-size:12.5px; padding:8px 12px;">
+        <option value="Tous"        data-i18n="dashboard.all_trimesters">Tous trimestres</option>
+        <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+        <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+        <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+      </select>
+      <select class="input" id="dash-sequence"
+              style="width:130px; font-size:12.5px; padding:8px 12px;">
+        <option value="0" data-i18n="dashboard.all_sequences">Toutes séq.</option>
+        <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
+        <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+      </select>
+      <button class="btn btn-secondary" id="dash-refresh"
+              style="padding:8px 14px; font-size:12px;"
+              data-i18n="common.refresh">
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPIs ── -->
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:24px;" id="dash-kpis">
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(0,230,118,0.15),rgba(0,230,118,0.05)); border:1px solid rgba(0,230,118,0.15); color:var(--green-fifa); width:32px; height:32px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate" id="kpi-eleves" style="font-size:20px;">—</div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.kpi_students">Élèves inscrits</div>
+      </div>
+    </div>
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(0,210,255,0.15),rgba(0,210,255,0.05)); border:1px solid rgba(0,210,255,0.15); color:#00d2ff; width:32px; height:32px;">
+        <span style="font-size:16px; font-weight:bold;">♂</span>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate" id="kpi-garcons" style="font-size:20px;">—</div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.garcons">Garçons</div>
+      </div>
+    </div>
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(255,0,127,0.15),rgba(255,0,127,0.05)); border:1px solid rgba(255,0,127,0.15); color:#ff007f; width:32px; height:32px;">
+        <span style="font-size:16px; font-weight:bold;">♀</span>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate" id="kpi-filles" style="font-size:20px;">—</div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.filles">Filles</div>
+      </div>
+    </div>
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(61,142,248,0.15),rgba(61,142,248,0.05)); border:1px solid rgba(61,142,248,0.15); color:var(--blue-fifa); width:32px; height:32px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate" id="kpi-moyenne" style="color:var(--green-fifa); font-size:20px;">—</div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.kpi_average">Moyenne générale</div>
+      </div>
+    </div>
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(240,180,41,0.15),rgba(240,180,41,0.05)); border:1px solid rgba(240,180,41,0.15); color:var(--yellow-fifa); width:32px; height:32px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate" id="kpi-top"
+             style="color:var(--yellow-fifa); font-size:15px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          —
+        </div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.kpi_top">Meilleur élève</div>
+      </div>
+    </div>
+
+    <div class="stat-card animate-in" style="padding: 12px 15px;">
+      <div class="stat-icon" style="background:linear-gradient(135deg,rgba(255,71,87,0.15),rgba(255,71,87,0.05)); border:1px solid rgba(255,71,87,0.15); width:32px; height:32px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div class="stat-value kpi-animate alert-pulse" id="kpi-alertes" style="color:var(--red-fifa); font-size:20px;">—</div>
+        <div class="stat-label" style="font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" data-i18n="dashboard.kpi_alerts">Élèves en alerte</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Ligne 1 : Jauge + Radar ── -->
+  <div class="grid-2 mb-24">
+
+    <!-- Jauge de performance -->
+    <div class="card animate-in chart-container">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.performance">Performance Globale</div>
+        <span class="badge badge-info" id="dash-niveau-label" data-i18n="dashboard.establishment">Établissement</span>
+      </div>
+      <div style="position:relative; display:flex; justify-content:center; align-items:center; height:220px;">
+        <canvas id="gauge-chart" width="300" height="220"></canvas>
+        <div style="position:absolute; bottom:28px; text-align:center;">
+          <div style="font-family:'Rajdhani',sans-serif; font-size:48px; font-weight:700;
+               color:var(--green-fifa); line-height:1;" id="gauge-value">—</div>
+          <div id="gauge-scale-label" style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1.5px;">/20</div>
+          <div id="gauge-mention" style="margin-top:4px; font-size:12px; font-weight:600; color:var(--text-secondary);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Radar par matière -->
+    <div class="card animate-in chart-container">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.radar_title">Forces par Matière</div>
+      </div>
+      <div id="forces-container" style="min-height:220px; height: auto; display:flex; align-items:center; justify-content:center; padding: 15px; position: relative; overflow-y: auto; overflow-x: hidden;">
+        <canvas id="radar-chart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Ligne 2 : Top 5 + Alertes ── -->
+  <div class="grid-2 mb-24">
+
+    <!-- Top 5 -->
+    <div class="card animate-in">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.top5_title">Classement Top 5</div>
+        <span class="badge badge-warning" style="font-size:10px;" data-i18n="dashboard.this_trimester">Ce trimestre</span>
+      </div>
+      <div id="top5-container">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Alertes -->
+    <div class="card animate-in">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.alerts_title">Élèves à Surveiller</div>
+        <span class="badge badge-danger" id="alertes-count">0</span>
+      </div>
+      <div id="alertes-container">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Ligne 3 : Absences & Assiduité ── -->
+  <div class="grid-2 mb-24">
+
+    <!-- Top Assiduité -->
+    <div class="card animate-in">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.abs_top_assiduous_title">Élèves les plus Assidus</div>
+        <span class="badge badge-success" style="font-size:10px;" data-i18n="dashboard.abs_badge_discipline">Discipline</span>
+      </div>
+      <div id="abs-assidus-container">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Top Absentéisme -->
+    <div class="card animate-in">
+      <div class="card-header">
+        <div class="card-title" data-i18n="dashboard.abs_top_absent_title">Plus d'Absences</div>
+        <span class="badge badge-danger" style="font-size:10px;" data-i18n="dashboard.abs_badge_alerte">Alerte</span>
+      </div>
+      <div id="abs-top-container">
+        <div class="loader"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Ligne 4 : Évolution ── -->
+  <div class="card animate-in chart-container">
+    <div class="card-header">
+      <div class="card-title" data-i18n="dashboard.evolution_title">Évolution des Moyennes</div>
+      <span style="font-size:11px; color:var(--text-muted); font-weight:500;"
+            data-i18n="dashboard.evolution_subtitle">
+        Moyenne pondérée par trimestre / séquence
+      </span>
+    </div>
+    <div style="height:200px; position:relative;">
+      <canvas id="evolution-chart"></canvas>
+      <div id="evolution-empty" style="display:none; position:absolute; inset:0;
+           display:flex; align-items:center; justify-content:center;
+           color:var(--text-muted); font-size:13px;"
+           data-i18n="dashboard.evolution_empty">
+        Aucune donnée d'évolution disponible
+      </div>
+    </div>
+  </div>
+
+</div>

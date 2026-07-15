@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      background-color: #1a1e2c;
+      color: white;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid #2d3446;
+    }
+    .logo {
+      font-size: 48px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      margin-bottom: 10px;
+      background: linear-gradient(45deg, #2d6ef8, #00e676);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .tagline {
+      font-size: 14px;
+      color: #8a8f9d;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 40px;
+    }
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: #2d6ef8;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #5c6275;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">ELIMU</div>
+  <div class="tagline">Gestion Scolaire d'Excellence</div>
+  <div class="loader"></div>
+  <div class="status" id="status">Initialisation...</div>
+</body>
+</html>

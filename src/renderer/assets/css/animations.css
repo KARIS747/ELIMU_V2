@@ -1,0 +1,311 @@
+/**
+ * animations.css — Elimu v2
+ * Micro-interactions, transitions de page, effets spéciaux
+ */
+
+/* ============================================================
+   TRANSITIONS DE NAVIGATION (section change)
+   ============================================================ */
+.section-enter {
+  animation: sectionEnter 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes sectionEnter {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    filter: blur(0);
+  }
+}
+
+/* ============================================================
+   CARTES — ENTRÉE ÉCHELONNÉE
+   ============================================================ */
+.card-stagger > * {
+  opacity: 0;
+  animation: cardIn 0.4s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+}
+
+.card-stagger > *:nth-child(1)  { animation-delay: 0ms; }
+.card-stagger > *:nth-child(2)  { animation-delay: 60ms; }
+.card-stagger > *:nth-child(3)  { animation-delay: 120ms; }
+.card-stagger > *:nth-child(4)  { animation-delay: 180ms; }
+.card-stagger > *:nth-child(5)  { animation-delay: 240ms; }
+.card-stagger > *:nth-child(6)  { animation-delay: 300ms; }
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================
+   KPI — COMPTEUR ANIMÉ (via JS — classe appliquée)
+   ============================================================ */
+.kpi-animate {
+  animation: kpiPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes kpiPop {
+  0%   { transform: scale(0.7);  opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* ============================================================
+   HOVER EFFECTS
+   ============================================================ */
+
+/* Carte classe — effet glow au hover */
+.classe-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+.classe-card:hover {
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* Élève card — lift */
+.eleve-card {
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.22s ease,
+              box-shadow 0.22s ease;
+}
+
+.eleve-card:hover {
+  transform: translateY(-5px) scale(1.02);
+}
+
+/* ============================================================
+   BARRE DE PROGRESSION ANIMÉE
+   ============================================================ */
+.progress-bar-fill {
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: progressGrow 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes progressGrow {
+  from { width: 0 !important; }
+}
+
+/* ============================================================
+   STAT CARD — NOMBRE QUI MONTE
+   ============================================================ */
+.stat-value-animate {
+  animation: countUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   EFFETS SPÉCIAUX NEON (thème neon uniquement)
+   ============================================================ */
+[data-theme="neon"] .stat-card:hover {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 136, 0.2),
+    0 0 20px rgba(0, 255, 136, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="neon"] .btn-primary {
+  box-shadow:
+    0 0 10px rgba(0, 255, 136, 0.4),
+    0 2px 12px rgba(0, 255, 136, 0.2);
+}
+
+[data-theme="neon"] .btn-primary:hover {
+  box-shadow:
+    0 0 20px rgba(0, 255, 136, 0.6),
+    0 4px 24px rgba(0, 255, 136, 0.3);
+  animation: neonPulse 1s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.6), 0 4px 24px rgba(0, 255, 136, 0.3); }
+  50%       { box-shadow: 0 0 30px rgba(0, 255, 136, 0.8), 0 4px 32px rgba(0, 255, 136, 0.5); }
+}
+
+[data-theme="neon"] .nav-item.active {
+  text-shadow: 0 0 10px var(--green-fifa);
+}
+
+[data-theme="neon"] .card-title {
+  animation: textFlicker 8s ease-in-out infinite;
+}
+
+@keyframes textFlicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+  98% { opacity: 0.85; }
+  99% { opacity: 1; }
+}
+
+/* ============================================================
+   EFFETS OCEAN
+   ============================================================ */
+[data-theme="ocean"] #sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(0, 212, 170, 0.04) 0%,
+    transparent 60%,
+    rgba(64, 170, 255, 0.04) 100%);
+  pointer-events: none;
+  animation: oceanWave 6s ease-in-out infinite alternate;
+}
+
+@keyframes oceanWave {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+/* ============================================================
+   RIPPLE EFFECT SUR LES BOUTONS
+   ============================================================ */
+.btn { position: relative; overflow: hidden; }
+
+.btn .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0);
+  animation: ripple 0.5s linear;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* ============================================================
+   MODALE — ENTRÉE / SORTIE
+   ============================================================ */
+.modal-enter {
+  animation: modalIn 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.modal-exit {
+  animation: modalOut 0.2s ease both;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.88) translateY(20px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+@keyframes modalOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.92); }
+}
+
+/* ============================================================
+   SPINNER ÉLÉGANT
+   ============================================================ */
+.spinner-ring {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.spinner-ring::before,
+.spinner-ring::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+}
+
+.spinner-ring::before {
+  inset: 0;
+  border: 2.5px solid var(--border-color);
+}
+
+.spinner-ring::after {
+  inset: 0;
+  border: 2.5px solid transparent;
+  border-top-color: var(--green-fifa);
+  animation: spin 0.7s linear infinite;
+}
+
+/* ============================================================
+   ALERTE PULSE
+   ============================================================ */
+.alert-pulse {
+  animation: alertPulse 2s ease-in-out infinite;
+}
+
+@keyframes alertPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 71, 87, 0);
+  }
+}
+
+/* ============================================================
+   TOP 5 — ENTRÉE DES LIGNES
+   ============================================================ */
+.top5-row {
+  animation: rowSlideIn 0.35s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.top5-row:nth-child(1) { animation-delay: 50ms; }
+.top5-row:nth-child(2) { animation-delay: 100ms; }
+.top5-row:nth-child(3) { animation-delay: 150ms; }
+.top5-row:nth-child(4) { animation-delay: 200ms; }
+.top5-row:nth-child(5) { animation-delay: 250ms; }
+
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   GRAPHIQUES — FADE IN
+   ============================================================ */
+.chart-container {
+  animation: chartFadeIn 0.6s ease both;
+  animation-delay: 200ms;
+}
+
+@keyframes chartFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================================
+   TRANSITION DE THÈME
+   ============================================================ */
+body.theme-transitioning * {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease !important;
+}

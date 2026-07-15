@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activation Elimu</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    body {
+      background-color: #1a1e2c;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .license-container {
+      background: #242938;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      position: relative;
+    }
+    .lang-switcher {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .lang-btn {
+      background: #3d4455;
+      color: #a0aec0;
+      border: 1px solid #4a5568;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: #00a854;
+      color: white;
+      border-color: #00a854;
+    }
+    .logo {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #00a854;
+      margin-bottom: 10px;
+    }
+    h1 { margin-bottom: 10px; font-size: 1.5rem; }
+    p { color: #a0aec0; margin-bottom: 30px; line-height: 1.5; }
+    
+    .form-group { text-align: left; margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; color: #cbd5e0; font-size: 0.9rem; }
+    
+    .hwid-box {
+      background: #1a1e2c;
+      padding: 12px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #3d4455;
+      margin-bottom: 10px;
+    }
+    .hwid-value { font-family: monospace; color: #63b3ed; font-size: 1rem; }
+    .copy-btn {
+      background: #3d4455;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: #4a5568; }
+    
+    input {
+      width: 100%;
+      padding: 12px;
+      background: #1a1e2c;
+      border: 1px solid #3d4455;
+      border-radius: 6px;
+      color: white;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    input:focus { border-color: #00a854; outline: none; }
+    
+    .activate-btn {
+      width: 100%;
+      padding: 14px;
+      background: #00a854;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.2s;
+    }
+    .activate-btn:hover { background: #008f47; }
+    .activate-btn:disabled { background: #2d3748; cursor: not-allowed; }
+    
+    .error-msg {
+      color: #f56565;
+      font-size: 0.85rem;
+      margin-top: 15px;
+      display: none;
+    }
+    .success-msg {
+      color: #48bb78;
+      font-size: 0.85rem;
+      margin-top: 15px;
+      display: none;
+    }
+    
+    .help-text {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-top: 25px;
+    }
+  </style>
+</head>
+<body>
+  <div class="license-container">
+    <div class="lang-switcher">
+      <button class="lang-btn" id="lang-fr">FR</button>
+      <button class="lang-btn" id="lang-en">EN</button>
+    </div>
+    <div class="logo">Elimu</div>
+    <h1 data-i18n="licence.title">Activation de la licence</h1>
+    <p data-i18n="licence.subtitle">Pour continuer à utiliser Elimu, veuillez activer votre licence.</p>
+    
+    <div class="form-group">
+      <label data-i18n="licence.hwid_label">Identifiant machine</label>
+      <div class="hwid-box">
+        <span id="hwid-display" class="hwid-value">Chargement...</span>
+        <button id="copy-hwid" class="copy-btn" data-i18n="licence.copy_hwid">Copier</button>
+      </div>
+      <small class="help-text" data-i18n="licence.send_hwid">Envoyez cet identifiant à votre fournisseur pour obtenir votre clé.</small>
+    </div>
+    
+    <div class="form-group">
+      <label data-i18n="licence.key_label">Clé de licence</label>
+      <input type="text" id="license-key" data-i18n-placeholder="licence.key_placeholder" placeholder="ELIMU-2025-12-31-HWID-XXXX">
+    </div>
+    
+    <button id="activate-btn" class="activate-btn" data-i18n="licence.activate_btn">Activer la licence</button>
+    
+    <div id="error-msg" class="error-msg"></div>
+    <div id="success-msg" class="success-msg" data-i18n="licence.success">Licence activée avec succès. Redémarrage...</div>
+    
+    <div class="help-text" data-i18n="licence.managed_by">
+      La licence est liée à votre machine. Pour tout changement, contactez votre fournisseur.
+    </div>
+  </div>
+
+  <script type="module" src="license.js"></script>
+</body>
+</html>

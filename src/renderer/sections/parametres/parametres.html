@@ -1,0 +1,883 @@
+<!-- parametres.html - Section Paramètres d'Elimu -->
+<!-- Version avec onglet Années scolaires (nouveau) et sans doublon du journal d'activité -->
+
+<div class="animate-in">
+
+  <!-- Titre -->
+  <div style="margin-bottom: 24px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+                color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;">
+      <span data-i18n="params.title">Paramètres</span>
+    </div>
+    <div style="font-size:13px; color:var(--text-muted); margin-top:4px;" data-i18n="params.subtitle">
+      Configuration de l'application et de l'établissement
+    </div>
+  </div>
+
+  <div style="display:flex; margin-bottom:24px; border-bottom:1px solid var(--border-color); flex-wrap:nowrap; overflow:hidden;">
+    <button class="tab-btn active" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="general">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span data-i18n="params.tab_general"> Général</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="seuils">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20V10M18 20V4"></path></svg>
+      <span data-i18n="params.tab_seuils"> Seuils & Notes</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="sauvegarde">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      <span data-i18n="params.tab_sauvegarde">Sauvegarde</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="bulletin">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      <span data-i18n="params.tab_bulletin">Bulletin</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="utilisateurs">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      <span data-i18n="params.tab_users"> Utilisateurs</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="absences">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <span data-i18n="params.tab_absences"> Absences & Sanctions</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="audit">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      <span data-i18n="params.tab_audit">Journal d'activité</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="annees">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      <span data-i18n="params.tab_annees">Années scolaires</span>
+    </button>
+    <button class="tab-btn" style="padding: 8px 10px; font-size: 11px; letter-spacing: 0; display: flex; align-items: center; gap: 4px;" data-tab="update">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path></svg>
+      <span data-i18n="params.tab_update">Mise à jour</span>
+    </button>
+  </div>
+
+  <!-- ======================================================
+       ONGLET GÉNÉRAL
+       ====================================================== -->
+  <div id="tab-general" class="tab-content active">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" data-i18n="params.general.school_title"> Informations de l'établissement</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.general.school_name">Nom de l'établissement *</label>
+          <input type="text" id="etablissement-nom" class="input" 
+                 data-i18n-placeholder="params.general.placeholder_name"
+                 placeholder="Ex: Collège Moderne de Yaoundé">
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.general.school_abreviation">Abréviation (Nom court)</label>
+          <input type="text" id="etablissement-abreviation" class="input" 
+                 placeholder="Ex: CMY">
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.general.phone">Téléphone</label>
+          <input type="text" id="etablissement-tel" class="input" 
+                 data-i18n-placeholder="params.general.placeholder_phone"
+                 placeholder="+237 6XX XXX XXX">
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.general.email">Email</label>
+          <input type="email" id="etablissement-email" class="input" 
+                 data-i18n-placeholder="params.general.placeholder_email"
+                 placeholder="contact@etablissement.cm">
+        </div>
+        <div class="input-group" style="margin:0; grid-column:1/-1;">
+          <label data-i18n="params.general.address">Adresse</label>
+          <input type="text" id="etablissement-adresse" class="input" 
+                 data-i18n-placeholder="params.general.placeholder_addr"
+                 placeholder="Quartier, Ville">
+        </div>
+      </div>
+
+      <!-- Bloc Licence -->
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color);">
+        <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;"
+             data-i18n="params.general.licence_title">
+          Licence du logiciel
+        </div>
+        
+        <div style="background:var(--bg-secondary); border-radius:10px; padding:16px; border:1px solid var(--border-color);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;"
+                   data-i18n="params.general.licence_status">État</div>
+              <div id="licence-status-text" style="font-weight:700; font-size:14px;">Chargement...</div>
+            </div>
+            <button class="btn btn-sm btn-secondary" id="btn-renew-licence" data-i18n="licence.renew_btn">Changer la licence</button>
+          </div>
+          
+          <div id="licence-expiry-row" style="display:none;">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;"
+                 data-i18n="params.general.licence_valid_until">Valide jusqu’au</div>
+            <div id="licence-expiry-date" style="font-weight:600; font-size:13px; color:var(--text-primary);">—</div>
+          </div>
+          
+          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;"
+                 data-i18n="licence.hwid_label">Identifiant machine</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <code id="licence-hwid-val" style="background:var(--bg-card); padding:4px 8px; border-radius:4px; font-size:12px; color:var(--blue-fifa); flex:1; border:1px solid var(--border-color);">—</code>
+              <button class="btn btn-sm btn-secondary" id="btn-copy-hwid-params" title="Copier" style="padding:4px 8px;"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:20px;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button class="btn btn-primary" id="btn-save-general" data-i18n="params.general.save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET SEUILS & NOTES
+       ====================================================== -->
+  <div id="tab-seuils" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" data-i18n="params.seuils.title">Seuils d'évaluation</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.seuils.note_max">Note maximale</label>
+          <input type="number" id="note-max" class="input" value="20" min="10" max="100" step="1">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.note_max_tip">Généralement 20 en Afrique francophone</span>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.seuils.seuil_alerte">Seuil d'alerte </label>
+          <input type="number" id="seuil-alerte" class="input" value="10" min="0" max="20" step="0.5">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.seuil_alerte_tip">En dessous → élève en difficulté</span>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.seuils.seuil_excellent">Seuil "Excellent" </label>
+          <input type="number" id="seuil-excellent" class="input" value="14" min="0" max="20" step="0.5">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.seuil_exc_tip">À partir de → mention Excellent</span>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.seuils.periode">Période active</label>
+          <select id="periode-active" class="input">
+            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:20px; padding:14px; background:var(--bg-secondary);
+                  border-radius:10px; border:1px solid var(--border-color);">
+        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;
+                    letter-spacing:0.8px; margin-bottom:10px;" data-i18n="params.seuils.preview">Aperçu des appréciations</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span style="background:rgba(0,230,118,0.15); border:1px solid rgba(0,230,118,0.3);
+                       color:var(--green-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
+            ≥ <span id="preview-excellent">14</span>/20 → Excellent
+          </span>
+          <span style="background:rgba(255,183,77,0.15); border:1px solid rgba(255,183,77,0.3);
+                       color:var(--yellow-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
+            ≥ <span id="preview-alerte">10</span>/20 → Passable
+          </span>
+          <span style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3);
+                       color:var(--red-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
+            &lt; <span id="preview-alerte2">10</span>/20 → En difficulté
+          </span>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:20px;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button class="btn btn-primary" id="btn-save-seuils" data-i18n="params.seuils.save">Enregistrer les seuils</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET SAUVEGARDE (sans le journal d'activité)
+       ====================================================== -->
+  <div id="tab-sauvegarde" class="tab-content">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="params.backup.create_title">Sauvegarde</div>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="params.backup.folder_label">Dossier de sauvegarde</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="backup-folder" class="input" readonly placeholder="Aucun dossier sélectionné">
+            <button class="btn btn-secondary" id="btn-choose-backup-folder" data-i18n="params.backup.choose_folder">Choisir</button>
+          </div>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" data-i18n="params.backup.create_desc">
+          Crée une copie complète de votre base de données dans le dossier sélectionné.
+        </p>
+        <button class="btn btn-primary w-full" id="btn-backup" style="justify-content:center;" data-i18n="params.backup.create_btn">
+          Sauvegarder maintenant
+        </button>
+        <div id="backup-status" class="backup-info" style="display:none; margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="params.backup.restore_title">↩Restaurer une sauvegarde</div>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;" data-i18n-html="params.backup.restore_desc_html">
+          Restaure vos données depuis un fichier de sauvegarde (.db).<br>
+          <strong style="color:var(--red-fifa);">Cette action remplace toutes les données actuelles.</strong>
+        </p>
+        <button class="btn btn-danger w-full" id="btn-restore" style="justify-content:center;" data-i18n="params.backup.restore_btn">
+          ↩Choisir une sauvegarde à restaurer
+        </button>
+        <div id="restore-status" class="backup-info" style="display:none; margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- Liste des sauvegardes -->
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header">
+        <div class="card-title" data-i18n="params.backup.history_title">Historique des sauvegardes</div>
+        <button class="btn btn-sm btn-secondary" id="btn-refresh-backups" data-i18n="common.refresh"></button>
+      </div>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;" data-i18n="params.backup.history_desc">
+        Les sauvegardes automatiques sont créées chaque jour au démarrage. Les 30 plus récentes sont conservées.
+      </p>
+      <div id="backup-liste" style="max-height:280px; overflow-y:auto;">
+        <div style="text-align:center; padding:20px; color:var(--text-muted);">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET BULLETIN (contenu complet)
+       ====================================================== -->
+  <div id="tab-bulletin" class="tab-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="font-size:13px; color:var(--text-muted);" data-i18n="params.bulletin.subtitle">
+        Personnalisez l'apparence et le contenu des bulletins PDF.
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-preview-bulletin" data-i18n="params.bulletin.preview">Prévisualiser</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+
+      <!-- BLOC 1 : En-tête & Logos -->
+      <div class="card" style="margin-bottom:0; padding:12px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+          <span data-i18n="params.bulletin.header_official">En-tête & Identité</span>
+        </div>
+
+        <div style="display:flex; gap:12px; margin-bottom:12px; align-items:center; background:var(--bg-secondary); padding:8px; border-radius:8px;">
+          <div id="logo-preview" style="width:50px; height:50px; border:1px dashed var(--border-color); border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; background:var(--bg-card);"></div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:4px;">
+            <button class="btn btn-sm btn-secondary" id="btn-upload-logo" style="padding:4px 8px; font-size:11px;" data-i18n="params.bulletin.upload_logo">Changer logo</button>
+            <button class="btn btn-sm btn-danger" id="btn-remove-logo" style="padding:4px 8px; font-size:11px; display:none;" data-i18n="params.bulletin.remove_logo">Supprimer</button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin-bottom:8px;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.school_name_fr">Nom (FR)</label>
+            <input type="text" id="bul-etab-nom" class="input" style="height:32px; font-size:12px; padding: 4px 10px;">
+          </div>
+          <div class="input-group" style="margin-bottom:8px;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.school_name_en">Nom (EN)</label>
+            <input type="text" id="bul-etab-nom-en" class="input" style="height:32px; font-size:12px; padding: 4px 10px;">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin-bottom:8px;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.phone">Téléphone</label>
+            <input type="text" id="bul-etab-tel" class="input" style="height:32px; font-size:12px; padding: 4px 10px;">
+          </div>
+          <div class="input-group" style="margin-bottom:8px;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.school_year">Année scolaire</label>
+            <input type="text" id="bul-annee-scolaire" class="input" style="height:32px; font-size:12px; padding: 4px 10px;" placeholder="2025/2026">
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom:8px;">
+          <label style="font-size:11px;" data-i18n="params.bulletin.address">Adresse</label>
+          <input type="text" id="bul-etab-adresse" class="input" style="height:32px; font-size:12px; padding: 4px 10px;">
+        </div>
+
+        <div style="background:rgba(45,110,224,0.05); border:1px solid var(--border-color); border-radius:6px; padding:8px; margin-top:4px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="input-group" style="margin-bottom:4px;">
+              <label style="font-size:10px;" data-i18n="params.bulletin.country">Pays (FR)</label>
+              <input type="text" id="bul-pays" class="input" style="height:28px; font-size:11px;">
+            </div>
+            <div class="input-group" style="margin-bottom:4px;">
+              <label style="font-size:10px;" data-i18n="params.bulletin.republic_en">Pays (EN)</label>
+              <input type="text" id="bul-republique-en" class="input" style="height:28px; font-size:11px;">
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
+              <label style="font-size:10px;" data-i18n="params.bulletin.ministry">Ministère (FR)</label>
+              <input type="text" id="bul-ministere" class="input" style="height:28px; font-size:11px;">
+            </div>
+            <div class="input-group" style="margin-bottom:0;">
+              <label style="font-size:10px;" data-i18n="params.bulletin.ministry_en">Ministère (EN)</label>
+              <input type="text" id="bul-ministere-en" class="input" style="height:28px; font-size:11px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC 2 : Style & Couleurs -->
+      <div class="card" style="margin-bottom:0; padding:12px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8l4 4-4 4M8 12h7"></path></svg>
+          <span data-i18n="params.bulletin.style_visual">Style & Visuel</span>
+        </div>
+
+        <div class="input-group" style="margin-bottom:12px;">
+          <label style="font-size:11px;" data-i18n="params.bulletin.template_label">Modèle de bulletin</label>
+          <select id="bul-modele" class="input" style="height:32px; font-size:12px; padding: 0 10px;">
+            <option value="officiel" data-i18n="params.bulletin.template_official">Officiel (classique, sobre)</option>
+            <option value="moderne" data-i18n="params.bulletin.template_modern">Moderne (coloré, dynamique)</option>
+            <option value="minimal" data-i18n="params.bulletin.template_minimal">Minimal (épuré, minimaliste)</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.primary_color">Couleur Primaire</label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="color" id="bul-couleur-primaire" value="#1a3c6e" style="width:32px; height:32px; border:none; border-radius:4px; cursor:pointer; padding:2px; background:none;">
+              <input type="text" id="bul-couleur-primaire-hex" class="input" value="#1a3c6e" style="flex:1; height:32px; font-size:10px; font-family:monospace; padding: 4px 8px;">
+            </div>
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.accent_color">Couleur d'Accent</label>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="color" id="bul-couleur-secondaire" value="#c8a415" style="width:32px; height:32px; border:none; border-radius:4px; cursor:pointer; padding:2px; background:none;">
+              <input type="text" id="bul-couleur-secondaire-hex" class="input" value="#c8a415" style="flex:1; height:32px; font-size:10px; font-family:monospace; padding: 4px 8px;">
+            </div>
+          </div>
+        </div>
+
+        <div id="apercu-couleurs" style="border-radius:6px; overflow:hidden; margin-bottom:12px; border:1px solid var(--border-color); font-size:10px;">
+          <div id="apercu-header" style="background:#1a3c6e; color:white; padding:4px 8px; font-weight:bold; text-align:center; text-transform:uppercase;">Aperçu des couleurs</div>
+          <div style="padding:6px 8px; background:var(--bg-card); display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text-muted);">Moyenne Trimestre</span>
+            <span id="apercu-moy" style="color:#c8a415; font-weight:bold;">14.50/20 → Bien</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="bul-entete-bilingue" checked> <span data-i18n="params.bulletin.bilingual_header">Bilingue</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="bul-pied-signature" checked> <span data-i18n="params.bulletin.show_signature">Signature</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="bul-afficher-absences" checked> <span data-i18n="params.bulletin.show_absences">Absences</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="bul-appreciation-auto" checked> <span data-i18n="params.bulletin.auto_appreciation">Auto-appréc.</span>
+          </label>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin-bottom:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.director_name">Directeur</label>
+            <input type="text" id="bul-dir-nom" class="input" style="height:32px; font-size:12px;">
+          </div>
+          <div class="input-group" style="margin-bottom:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.director_title">Titre</label>
+            <input type="text" id="bul-dir-titre" class="input" style="height:32px; font-size:12px;">
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOC 3 : Notation & Moyennes -->
+      <div class="card" style="margin-bottom:0; padding:12px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"></path></svg>
+          <span data-i18n="params.bulletin.notation_title">Notation & Poids</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.weight_seq1">Séquence 1 (%)</label>
+            <input type="number" id="bul-poids-seq1" class="input" style="height:32px; font-size:12px;" value="40">
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.weight_seq2">Séquence 2 (%)</label>
+            <input type="number" id="bul-poids-seq2" class="input" style="height:32px; font-size:12px;" value="60">
+          </div>
+        </div>
+
+        <div class="input-group" style="margin-bottom:12px;">
+          <label style="font-size:11px;" data-i18n="params.bulletin.notation_type">Type de notation</label>
+          <select id="bul-notation-type" class="input" style="height:32px; font-size:12px;">
+            <option value="numerique">Numérique + Mentions</option>
+            <option value="mentions">Compétences (NA, CA, A, A+)</option>
+            <option value="lettres">Lettres (A, B, C...)</option>
+          </select>
+        </div>
+
+        <div id="mentions-editor" style="background:var(--bg-secondary); padding:8px; border-radius:8px; border:1px solid var(--border-color);">
+          <div id="mentions-list" style="max-height:100px; overflow-y:auto; display:flex; flex-direction:column; gap:4px; margin-bottom:8px;"></div>
+          <button class="btn btn-sm btn-secondary w-full" id="btn-add-mention" style="font-size:11px;" data-i18n="params.bulletin.add_mention">+ Ajouter</button>
+        </div>
+      </div>
+
+      <!-- BLOC 4 : Colonnes à afficher -->
+      <div class="card" style="margin-bottom:0; padding:12px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM3 9h18M9 3v18"></path></svg>
+          <span data-i18n="params.bulletin.columns_title">Colonnes du tableau</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-coefficient" checked> <span data-i18n="params.bulletin.col_coefficient">Coef</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-seq1" checked> <span data-i18n="params.bulletin.col_seq1">Seq 1</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-seq2" checked> <span data-i18n="params.bulletin.col_seq2">Seq 2</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-moyenne" checked> <span data-i18n="params.bulletin.col_average">Moyenne</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-moy-classe"> <span data-i18n="params.bulletin.col_class_average">Moy. Classe</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:var(--bg-secondary); border-radius:6px; cursor:pointer; font-size:12px;">
+            <input type="checkbox" id="col-appreciation" checked> <span data-i18n="params.bulletin.col_grade">Appréc.</span>
+          </label>
+        </div>
+
+        <div class="input-group" style="margin-top:12px; margin-bottom:0;">
+          <label style="font-size:11px;" data-i18n="params.bulletin.footer_text">Texte pied de page</label>
+          <input type="text" id="bul-pied-texte" class="input" style="height:32px; font-size:12px;" placeholder="Fait à...">
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Barre d'action bas de page -->
+    <div style="margin-top:12px; padding:10px 16px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <span data-i18n="params.bulletin.footer_hint">Appliqué aux prochains bulletins PDF.</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary btn-sm" id="btn-reset-bulletin" data-i18n="params.bulletin.reset_btn">Réinitialiser</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-bulletin-bas" data-i18n="params.bulletin.save">Enregistrer la configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET UTILISATEURS (contenu complet)
+       ====================================================== -->
+  <div id="tab-utilisateurs" class="tab-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div style="font-size:13px; color:var(--text-muted);" data-i18n="params.users.subtitle">
+        Gerez les comptes d'accès à Elimu (enseignants, secrétaires).
+      </div>
+      <button class="btn btn-primary" id="btn-add-utilisateur" data-i18n="params.users.add">Nouvel utilisateur</button>
+    </div>
+
+    <!-- Note d'information Station de Pilotage V2 -->
+    <div style="padding:12px 16px; background:rgba(45,110,224,0.06); border:1px solid rgba(45,110,224,0.2);
+         border-radius:12px; font-size:12px; color:var(--text-secondary); margin-bottom:20px; display:flex; gap:12px; align-items:center; line-height:1.5;">
+      <span style="font-size:18px;">💡</span>
+      <span><strong>Station de Pilotage (V2) :</strong> Les rôles <em>Enseignant</em> et <em>Secrétaire</em> sont désormais configurés ici principalement pour permettre leur connexion et saisie de notes sur la <strong>PWA mobile (enseignants)</strong> et l'accès au <strong>Portail Parents</strong>. L'application bureau (Desktop) est optimisée et réservée pour le rôle de <strong>Directeur / Pilote</strong>.</span>
+    </div>
+
+    <!-- Liste des utilisateurs -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <div class="card-title" data-i18n="params.users.title">Comptes utilisateurs</div>
+        <button class="btn btn-sm btn-secondary" id="btn-refresh-utilisateurs" data-i18n="params.users.refresh">Actualiser</button>
+      </div>
+      <div id="utilisateurs-list" style="min-height:60px;">
+        <div style="text-align:center; padding:20px;">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire ajout/édition utilisateur -->
+    <div id="utilisateur-form-card" class="card" style="display:none;">
+      <div class="card-header">
+        <div class="card-title" id="utilisateur-form-titre" data-i18n="params.users.form_title_add">Nouvel utilisateur</div>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-cancel-utilisateur" data-i18n="params.users.form_cancel">Annuler</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.users.form_username">Nom d'utilisateur *</label>
+          <input type="text" id="uf-username" class="input" placeholder="Ex: prof.martin">
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.users.form_fullname">Nom complet *</label>
+          <input type="text" id="uf-nom-complet" class="input" placeholder="Ex: M. Martin Jean">
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.users.form_password">Mot de passe *</label>
+          <input type="password" id="uf-password" class="input" placeholder="Min. 6 caractères">
+          <span id="uf-password-hint" style="font-size:11px; color:var(--text-muted);" data-i18n="params.users.form_password_hint_edit">
+            Laissez vide pour ne pas modifier (édition uniquement)
+          </span>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.users.form_role">Rôle *</label>
+          <select id="uf-role" class="input">
+            <option value="enseignant" data-i18n="params.users.role_teacher">Enseignant</option>
+            <option value="comptable" data-i18n="params.users.role_accountant">Comptable</option>
+            <option value="admin" data-i18n="params.users.role_admin">Administrateur</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin:0; grid-column:1/-1;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="uf-actif" checked> <span data-i18n="params.users.form_active">Compte actif</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Assignations pour les enseignants -->
+      <div id="uf-assignations" style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border-color);">
+        <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;
+                    letter-spacing:0.5px; margin-bottom:12px;" data-i18n="params.users.form_assignments">
+          Assignations (Enseignant uniquement)
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; font-weight:600;" data-i18n="params.users.form_authorized_classes">Classes autorisées :</div>
+            <div id="uf-classes-check"
+                 style="max-height:200px; overflow-y:auto; border:1px solid var(--border-color);
+                        border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:4px;">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px; font-weight:600;" data-i18n="params.users.form_authorized_subjects">Matières autorisées :</div>
+            <div id="uf-matieres-check"
+                 style="max-height:200px; overflow-y:auto; border:1px solid var(--border-color);
+                        border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:4px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="uf-error" style="display:none; background:rgba(255,82,82,0.1);
+           border:1px solid rgba(255,82,82,0.3); color:var(--red-fifa); border-radius:8px;
+           padding:10px 14px; font-size:13px; margin-top:12px;"></div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;
+                  padding-top:14px; border-top:1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-utilisateur-bas" data-i18n="params.users.form_cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-save-utilisateur" data-i18n="params.users.form_save">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET ABSENCES & SANCTIONS (contenu complet)
+       ====================================================== -->
+  <div id="tab-absences" class="tab-content">
+    <div style="background:rgba(255,183,77,0.06); border:1px solid rgba(255,183,77,0.2);
+                border-radius:12px; padding:14px 18px; margin-bottom:20px;
+                display:flex; gap:14px; align-items:flex-start;">
+      <span style="font-size:26px; flex-shrink:0;"></span>
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif; font-size:15px; font-weight:700;
+                    color:var(--yellow-fifa); text-transform:uppercase; margin-bottom:4px;" data-i18n="params.absences.title">
+          Règlement des absences — défini par l'établissement
+        </div>
+        <div style="font-size:13px; color:var(--text-muted); line-height:1.6;" data-i18n-html="params.absences.desc">
+          Configurez les seuils d'heures d'absence à partir desquels une sanction est
+          <strong style="color:var(--text-primary);">suggérée automatiquement</strong>
+          sur le bulletin. Chaque établissement fixe ses propres règles.
+          Ces sanctions restent des suggestions affichées sur le bulletin — elles ne sont
+          jamais appliquées sans validation manuelle dans le profil élève.
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="params.absences.comptage_title">Paramètres de comptage</div>
+        </div>
+        <div class="input-group">
+          <label data-i18n="params.absences.duree_cours">Durée d'un cours (heures)</label>
+          <input type="number" id="abs-duree-cours" class="input" value="1" min="0.5" max="6" step="0.5">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.absences.duree_cours_tip">
+            Permet de convertir le nombre d'absences en heures cumulées
+          </span>
+        </div>
+        <div class="input-group">
+          <label data-i18n="params.absences.comptage_label">Comptabiliser les absences</label>
+          <select id="abs-comptage" class="input">
+            <option value="non_justifiees" data-i18n="params.absences.comptage_non_justifiees">Non justifiées uniquement</option>
+            <option value="toutes" data-i18n="params.absences.comptage_toutes">Toutes (justifiées + non justifiées)</option>
+          </select>
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.absences.comptage_tip">
+            Détermine quelles absences déclenchent les seuils de sanction
+          </span>
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="params.absences.seuil_alerte">Seuil d'alerte (heures / trimestre)</label>
+          <input type="number" id="abs-seuil-alerte" class="input" value="10" min="1" max="500" step="1">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.absences.seuil_alerte_tip">
+            Au-delà, l'élève apparaît en alerte dans le tableau de bord
+          </span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="params.absences.bareme_preview_title">Aperçu du barème actuel</div>
+        </div>
+        <div id="abs-bareme-preview"
+             style="display:flex; flex-direction:column; gap:6px; min-height:100px;">
+          <div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;" data-i18n="common.loading">
+            Chargement…
+          </div>
+        </div>
+        <div style="margin-top:12px; padding:10px; background:var(--bg-secondary);
+                    border-radius:8px; font-size:12px; color:var(--text-muted); line-height:1.6;" data-i18n-html="params.absences.bareme_info">
+          Sur le bulletin PDF, la section Absences affichera le total d'heures
+          et la sanction correspondante selon ce barème.
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1;">
+        <div class="card-header">
+          <div class="card-title" data-i18n="params.absences.bareme_editor_title">Barème sanctions par heures d'absence</div>
+          <button class="btn btn-sm btn-secondary" id="btn-add-regle-absence" data-i18n="params.absences.bareme_add">
+            Ajouter un palier
+          </button>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;" data-i18n-html="params.absences.bareme_desc">
+          Définissez les paliers d'heures d'absence cumulées <strong>par trimestre</strong>
+          et la sanction ou mesure associée. Triées automatiquement par seuil croissant.
+        </p>
+        <div style="display:grid; grid-template-columns:100px 100px 1fr 170px 38px;
+                    gap:8px; padding:8px 12px;
+                    background:var(--bg-secondary);
+                    border-radius:8px 8px 0 0;
+                    border:1px solid var(--border-color);
+                    font-size:11px; font-weight:600; color:var(--text-muted);
+                    text-transform:uppercase; letter-spacing:0.7px;">
+          <div data-i18n="params.absences.bareme_col_from">De (h)</div>
+          <div data-i18n="params.absences.bareme_col_to">Jusqu'à (h)</div>
+          <div data-i18n="params.absences.bareme_col_sanction">Sanction / Mesure suggérée</div>
+          <div data-i18n="params.absences.bareme_col_gravity">Niveau de gravité</div>
+          <div></div>
+        </div>
+        <div id="regles-absences-list"
+             style="border:1px solid var(--border-color); border-top:none;
+                    border-radius:0 0 8px 8px; overflow:hidden; min-height:60px;">
+          <div style="padding:20px; text-align:center;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px;">
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.absences.gravity_labels">Niveaux :</span>
+          <span style="background:rgba(255,183,77,0.15); border:1px solid rgba(255,183,77,0.3);
+                       color:#ffb74d; font-size:11px; padding:2px 10px; border-radius:12px;" data-i18n="params.absences.gravity_observation">Observation</span>
+          <span style="background:rgba(255,152,0,0.15); border:1px solid rgba(255,152,0,0.3);
+                       color:#ff9800; font-size:11px; padding:2px 10px; border-radius:12px;" data-i18n="params.absences.gravity_warning">Avertissement</span>
+          <span style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3);
+                       color:#ff5252; font-size:11px; padding:2px 10px; border-radius:12px;" data-i18n="params.absences.gravity_serious">Sanction grave</span>
+          <span style="background:rgba(183,28,28,0.15); border:1px solid rgba(183,28,28,0.4);
+                       color:#b71c1c; font-size:11px; padding:2px 10px; border-radius:12px;" data-i18n="params.absences.gravity_critical">Exclusion / Critique</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px; padding:16px; background:var(--bg-card);
+                border:1px solid var(--border-color); border-radius:12px;
+                display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div style="font-size:13px; color:var(--text-muted);" data-i18n-html="params.absences.footer_hint_html">
+        Ce barème sera affiché dans la section <strong style="color:var(--text-primary);">Absences</strong>
+        de chaque bulletin trimestriel
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-secondary" id="btn-reset-absences" data-i18n="params.absences.btn_reset">↩Valeurs par défaut</button>
+        <button class="btn btn-primary" id="btn-save-absences" data-i18n="params.absences.btn_save">Enregistrer le règlement</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET JOURNAL D'ACTIVITÉ (AUDIT)
+       ====================================================== -->
+  <div id="tab-audit" class="tab-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div>
+        <div style="font-size:13px; color:var(--text-muted);" data-i18n="params.audit.subtitle">
+          Historique des dernières actions effectuées dans l'application.
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="btn-refresh-audit-tab" data-i18n="params.audit.refresh">Rafraîchir</button>
+    </div>
+    <div class="card">
+      <div id="audit-tab-content" style="min-height:100px;">
+        <div style="text-align:center; padding:32px; color:var(--text-muted);" data-i18n="params.audit.load_hint">
+          Cliquez sur l'onglet ou sur "Rafraîchir" pour charger le journal.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET ANNÉES SCOLAIRES
+       ====================================================== -->
+  <div id="tab-annees" class="tab-content">
+    <!-- Bandeau année active -->
+    <div id="annees-banner" style="display:flex; align-items:center; gap:14px; padding:12px 18px;
+         background:rgba(0,230,118,0.07); border:1px solid rgba(0,230,118,0.2);
+         border-radius:12px; margin-bottom:20px;">
+      <span style="font-size:22px;"></span>
+      <div style="flex:1;">
+        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase;
+                    letter-spacing:0.5px; font-weight:600;" data-i18n="params.annees.active_banner">Année scolaire active</div>
+        <div id="annees-active-label"
+             style="font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700;
+                    color:var(--green-fifa);">—</div>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); text-align:right; line-height:1.6;" data-i18n-html="params.annees.active_banner_desc_html">
+        Les données affichées (élèves, notes,<br>paiements) sont filtrées sur cette année.
+      </div>
+    </div>
+
+    <!-- Actions & liste -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" data-i18n="params.annees.title">Années scolaires</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="btn-add-annee" data-i18n="params.annees.btn_add">Nouvelle année</button>
+          <button class="btn btn-secondary btn-sm" id="btn-preparer-annee" data-i18n="params.annees.btn_preparer">Préparer nouvelle année</button>
+        </div>
+      </div>
+
+      <div id="annees-list">
+        <div style="text-align:center; padding:32px;">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       MODALE ANNÉES SCOLAIRES (Ajout / Édition)
+       ====================================================== -->
+
+
+
+  <!-- ======================================================
+       MODALE : CRÉER UNE CLASSE À LA VOLÉE
+       ====================================================== -->
+
+  <!-- ======================================================
+       MODALE : CONFIRMATION SUPPRESSION DÉFINITIVE
+       ====================================================== -->
+  <div id="modal-hard-delete-confirm" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.85); z-index:1100; align-items:center;
+       justify-content:center; backdrop-filter:blur(6px); padding:20px;">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; width:100%; max-width:440px;
+                box-shadow:0 32px 80px rgba(0,0,0,0.7); overflow:hidden; animation: shake 0.5s ease-in-out;">
+      <div style="padding:24px 28px 20px; border-bottom:1px solid var(--border-color); background:linear-gradient(to bottom, #d32f2f15, var(--bg-card));">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="font-size:24px;"></div>
+          <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700;
+                      color:#d32f2f; text-transform:uppercase; letter-spacing:0.5px;">
+            Suppression irréversible
+          </div>
+        </div>
+      </div>
+      <div style="padding:24px 28px;">
+        <div style="font-size:14px; color:var(--text-primary); line-height:1.6; margin-bottom:20px;">
+          Vous êtes sur le point de supprimer l'année <strong id="hard-delete-year-name" style="color:#d32f2f;">—</strong> ainsi que <strong>TOUTES</strong> les données associées (élèves, notes, paiements).
+        </div>
+        <div class="input-group">
+          <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:block;">
+            Veuillez saisir le libellé pour confirmer :
+          </label>
+          <input type="text" id="hard-delete-input" class="input" 
+                 style="height:44px; border-radius:10px; font-size:14px; border-color:#d32f2f50; text-align:center;"
+                 placeholder="Ex: 2024/2025">
+        </div>
+      </div>
+      <div style="padding:20px 28px 24px; display:flex; gap:12px; justify-content:flex-end;
+                  border-top:1px solid var(--border-color); background:var(--bg-card);">
+        <button type="button" class="btn btn-secondary" id="hard-delete-cancel" style="height:42px; padding:0 20px; border-radius:10px;">Annuler</button>
+        <button type="button" class="btn btn-danger" id="hard-delete-confirm-btn" 
+                style="height:42px; padding:0 24px; border-radius:10px; font-weight:600; background:#d32f2f;">DÉTRUIRE LES DONNÉES</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONGLET MISE À JOUR (Version compacte sans scroll)
+       ====================================================== -->
+  <div id="tab-update" class="tab-content">
+    <div class="card" style="padding: 12px 16px;">
+      <div style="display:flex; align-items:center; gap:15px; flex-wrap:nowrap;">
+        
+        <!-- Bloc Version -->
+        <div style="display:flex; align-items:center; gap:8px; padding-right:15px; border-right:1px solid var(--border-color);">
+          <span style="font-size:20px;"></span>
+          <div>
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:700; line-height:1;">Version</div>
+            <div id="app-version-display" style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; color:var(--text-primary); line-height:1.2;">...</div>
+          </div>
+        </div>
+
+        <!-- Bloc Status & Progress (Flexible) -->
+        <div style="flex:1; display:flex; align-items:center; gap:12px; overflow:hidden;">
+          <button class="btn btn-primary btn-sm" id="btn-check-updates" style="white-space:nowrap; padding:6px 12px; font-size:12px;">
+            Vérifier
+          </button>
+
+          <div id="update-status-container" style="display:none; align-items:center; gap:8px; overflow:hidden;">
+            <div id="update-spinner" class="spinner" style="display:none; width:14px; height:14px; border-width:2px;"></div>
+            <div id="update-status-icon" style="font-size:16px;"></div>
+            <div id="update-status-message" style="font-size:12px; font-weight:500; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px;"></div>
+          </div>
+
+          <!-- Barre de progression compacte -->
+          <div id="update-progress-container" style="display:none; flex:1; min-width:100px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:10px; color:var(--text-muted);">
+              <span id="update-progress-percent">0%</span>
+              <span id="update-progress-speed">0 KB/s</span>
+            </div>
+            <div style="width:100%; height:5px; background:var(--bg-secondary); border-radius:3px; overflow:hidden; border:1px solid var(--border-color);">
+              <div id="update-progress-bar" style="width:0%; height:100%; background:var(--blue-fifa); transition:width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloc Actions Finales -->
+        <div id="update-actions" style="display:none;">
+          <button class="btn btn-success btn-sm" id="btn-install-update" style="white-space:nowrap; padding:6px 12px; font-size:12px; animation: pulse 2s infinite;">
+            Installer & Relancer
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Note minimaliste -->
+      <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+        <span style="color:var(--blue-fifa);"></span>
+        <span data-i18n="params.update_hint_short">Gardez Elimu à jour pour bénéficier des dernières sécurités et fonctions.</span>
+      </div>
+    </div>
+  </div>
+
+</div>

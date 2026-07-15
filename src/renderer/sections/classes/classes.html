@@ -1,0 +1,635 @@
+<!-- classes.html - Section Gestion des Classes d'Elimu -->
+
+<style>
+  .classes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── Carte classe v2 ── */
+  .classe-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s ease, box-shadow 0.25s ease;
+    position: relative; overflow: hidden;
+  }
+  .classe-card:hover { transform: translateY(-4px) scale(1.01); border-color: var(--border-accent); box-shadow: var(--shadow-hover); }
+
+  .card-band { height: 4px; width: 100%; border-radius: 16px 16px 0 0; transition: height 0.25s ease; }
+  .classe-card:hover .card-band { height: 5px; }
+  .card-inner { padding: 16px 18px 0; }
+
+  .classe-card .classe-nom {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 24px; font-weight: 700;
+    color: var(--text-primary); letter-spacing: 0.5px;
+  }
+
+  .classe-card .classe-stats {
+    display: flex; gap: 0; margin: 12px 0;
+    background: var(--bg-secondary); border-radius: 10px;
+    border: 1px solid var(--border-color); overflow: hidden;
+  }
+  .classe-card .stat-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 2px; padding: 10px 6px; position: relative;
+  }
+  .classe-card .stat-item:not(:last-child)::after {
+    content: ''; position: absolute; right: 0; top: 20%; bottom: 20%;
+    width: 1px; background: var(--border-color);
+  }
+  .classe-card .stat-val { font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700; line-height: 1; }
+  .classe-card .stat-lbl { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+
+  .classe-card .matieres-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 26px; }
+
+  .matiere-tag {
+    background: rgba(61,142,248,0.1); border: 1px solid rgba(61,142,248,0.2);
+    color: var(--blue-fifa); font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+  }
+
+  .badge-prof-principal {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.2);
+    color: var(--purple-fifa); font-size: 10px; font-weight: 600;
+    padding: 3px 8px; border-radius: 6px; margin-bottom: 10px;
+  }
+
+  .progress-bar-wrap { height: 3px; background: var(--bg-secondary); overflow: hidden; margin-bottom: 10px; }
+  .progress-bar-fill { height: 100%; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+
+  .classe-card .classe-actions {
+    border-top: 1px solid var(--border-color);
+    padding: 10px 14px 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .action-row { display: flex; gap: 6px; }
+  .action-row .btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px; }
+
+  .eleve-list-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px;
+    border: 1px solid var(--border-color); margin-bottom: 8px;
+    background: var(--bg-secondary); transition: var(--transition);
+  }
+  .eleve-list-item:hover { border-color: rgba(0,230,118,0.2); background: var(--bg-hover); }
+
+  .eleve-avatar-sm {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-fifa), var(--blue-fifa));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+
+  .matiere-checkbox-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border-color); cursor: pointer; transition: var(--transition-fast);
+  }
+  .matiere-checkbox-item:hover { border-color: rgba(45,110,224,0.4); background: rgba(45,110,224,0.06); }
+  .matiere-checkbox-item input[type="checkbox"] { accent-color: var(--blue-fifa); width: 15px; height: 15px; cursor: pointer; }
+
+  .btn-del-custom:hover { transform: scale(1.2); color: var(--red-fifa) !important; }
+
+  /* Config modale */
+  .config-tab-btn {
+    padding: 8px 18px; border: none; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    background: var(--bg-secondary); color: var(--text-muted);
+    transition: all 0.15s ease;
+  }
+  .config-tab-btn.active {
+    background: rgba(45,110,224,0.15);
+    color: var(--blue-fifa);
+    border-bottom: 2px solid var(--blue-fifa);
+  }
+  .config-tab-pane { display: none; }
+  .config-tab-pane.active { display: block; }
+
+  /* Ligne matière dans config */
+  .mat-config-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 80px 140px 160px;
+    gap: 8px; align-items: center;
+    padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    margin-bottom: 5px;
+  }
+  .mat-config-row:hover { border-color: rgba(45,110,224,0.3); }
+  .mat-config-row input[type="checkbox"] { accent-color: var(--blue-fifa); width:15px; height:15px; cursor:pointer; }
+  .mat-config-row input[type="number"],
+  .mat-config-row input[type="text"],
+  .mat-config-row select {
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    color: var(--text-primary); border-radius: 6px;
+    padding: 4px 8px; font-size: 12px; width: 100%;
+  }
+  .mat-config-row input:focus, .mat-config-row select:focus {
+    outline: none; border-color: var(--blue-fifa);
+  }
+
+  /* Groupe items */
+  .groupe-config-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary); margin-bottom: 6px;
+  }
+</style>
+
+<div id="classes-root">
+
+  <!-- En-tête section -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+    <div>
+      <div style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+                  color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;"
+           data-i18n="classes.title">
+         Classes
+      </div>
+      <div style="font-size:13px; color:var(--text-muted); margin-top:2px;"
+           data-i18n="classes.subtitle">
+        Gestion des classes et de leurs configurations
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre d'outils -->
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+    <div style="position:relative; flex:1; min-width:200px; max-width:320px;">
+      <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%);
+                   font-size:15px; pointer-events:none; color:var(--text-muted);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </span>
+      <input type="text" id="search-classes" class="input"
+             data-i18n-placeholder="classes.search"
+             placeholder="Rechercher une classe..." style="padding-left:38px;">
+    </div>
+    <select id="filter-niveau" class="input" style="width:180px;">
+      <option value="" data-i18n="classes.all_levels">Tous les niveaux</option>
+      <option value="Primaire" data-i18n="classes.level_primary"> Primaire</option>
+      <option value="Secondaire" data-i18n="classes.level_secondary"> Secondaire</option>
+      <option value="Supérieur" data-i18n="classes.level_higher"> Supérieur</option>
+    </select>
+    <button class="btn btn-primary" id="btn-add-classe" type="button"
+            data-i18n="classes.add_new">Nouvelle classe</button>
+  </div>
+
+  <!-- KPIs -->
+  <div id="classes-kpis" style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px;"></div>
+
+  <!-- Grille des classes -->
+  <div class="classes-grid" id="classes-grid">
+    <div style="grid-column:1/-1; display:flex; justify-content:center; padding:40px;">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODALE FORMULAIRE CLASSE (Créer / Modifier)
+       =================================================== -->
+  <div id="modal-classe" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:560px;
+                max-height:88vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div id="modal-classe-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="classes.modal_add">Nouvelle classe</div>
+        <button id="modal-classe-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
+        <span style="font-size:12px; color:var(--text-muted); width:100%; margin-bottom:4px;">Choisissez le type de classe :</span>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="SIL" data-lvl="N1">SIL</button>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="CP" data-lvl="N1">CP</button>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="CE1" data-lvl="N2">CE1</button>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="CE2" data-lvl="N2">CE2</button>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="CM1" data-lvl="N3">CM1</button>
+        <button type="button" class="btn btn-sm btn-secondary preset-btn" data-val="CM2" data-lvl="N3">CM2</button>
+        <button type="button" class="btn btn-sm btn-primary preset-btn" data-val="" data-lvl="">Personnalisé</button>
+        
+        <select id="cf-niveau-v2" class="input" style="display:none; margin-left:auto; width:120px;">
+          <option value="N1">Niveau 1</option>
+          <option value="N2">Niveau 2</option>
+          <option value="N3">Niveau 3</option>
+        </select>
+      </div>
+
+      <!-- Message affiché avant toute sélection de preset -->
+      <div id="cf-preset-prompt" style="display:none; background:rgba(45,110,224,0.06);
+           border:1px dashed rgba(45,110,224,0.25); border-radius:10px;
+           padding:18px; text-align:center; margin-bottom:16px;">
+        <div style="font-size:20px; margin-bottom:8px;">☝️</div>
+        <div style="font-size:13px; color:var(--text-secondary); font-weight:500;">
+          Choisissez d'abord le type de classe ci-dessus
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+          SIL/CP/CE1/CE2 → compétences officielles MINEDUB · CM1/CM2 → matières classiques · Personnalisé → libre
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div class="input-group" style="margin-bottom:0; grid-column:1/-1;">
+          <label data-i18n="classes.name_label">Nom de la classe *</label>
+          <input type="text" id="cf-nom" class="input"
+                 data-i18n-placeholder="classes.name_placeholder"
+                 placeholder="Ex: 6ème A, Terminale S...">
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="classes.level_label">Niveau *</label>
+          <select id="cf-niveau" class="input">
+            <option value="" data-i18n="classes.select_placeholder">— Sélectionner —</option>
+            <option value="Primaire" data-i18n="classes.level_primary"> Primaire</option>
+            <option value="Secondaire" data-i18n="classes.level_secondary"> Secondaire</option>
+            <option value="Supérieur" data-i18n="classes.level_higher"> Supérieur</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:0;">
+          <label data-i18n="classes.system_label">Système éducatif</label>
+          <select id="cf-systeme" class="input">
+            <option value="francophone" data-i18n="classes.system_francophone">Francophone</option>
+            <option value="anglophone" data-i18n="classes.system_anglophone">Anglophone</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin-bottom:0; grid-column:1/-1;">
+          <label data-i18n="classes.head_teacher"> Professeur principal</label>
+          <select id="cf-prof-principal" class="input">
+            <option value="" data-i18n="classes.no_head_teacher">— Aucun professeur principal —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Info banner : affiché pour N1/N2 (compétences gérées automatiquement) -->
+      <div id="cf-competences-info" style="display:none; background:rgba(0,230,118,0.06);
+           border:1px solid rgba(0,230,118,0.2); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:700; color:var(--green-fifa); text-transform:uppercase;
+                    letter-spacing:0.5px; margin-bottom:6px;">📚 Curriculum officiel MINEDUB</div>
+        <div style="font-size:12px; color:var(--text-secondary); line-height:1.6;">
+          Cette classe utilise le système de <strong>compétences qualitatives</strong> (NA / ECA / A / A+).<br>
+          Les matières et sous-compétences sont définies automatiquement selon le programme officiel.<br>
+          <span id="cf-competences-detail" style="color:var(--text-muted);"></span>
+        </div>
+      </div>
+
+      <!-- Section matières manuelles : visible uniquement pour N3 et Personnalisé -->
+      <div id="cf-matieres-section" class="input-group" style="margin-bottom:16px;">
+        <label data-i18n="classes.subjects_label">Matières enseignées dans cette classe</label>
+        
+        <!-- Barre de recherche et ajout perso -->
+        <div style="display:flex; gap:8px; margin-top:8px; margin-bottom:10px;">
+          <div style="position:relative; flex:1;">
+            <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--text-muted); opacity:0.6;">🔍</span>
+            <input type="text" id="cf-search-matieres" class="input" style="padding-left:30px; font-size:12px; height:34px;" 
+                   data-i18n-placeholder="classes.search_subjects" placeholder="Rechercher...">
+          </div>
+          <div style="display:flex; gap:5px; flex:1;">
+            <input type="text" id="cf-custom-matiere" class="input" style="font-size:12px; height:34px;" 
+                   data-i18n-placeholder="classes.custom_subject_placeholder" placeholder="Nouvelle matière...">
+            <button type="button" class="btn btn-sm btn-secondary" id="cf-btn-add-custom" style="padding:0 12px; height:34px;">➕</button>
+          </div>
+        </div>
+
+        <div id="matieres-checkboxes"
+             style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:8px; 
+                    max-height:280px; overflow-y:auto; padding:10px; border:1px solid var(--border-color);
+                    border-radius:12px; background:var(--bg-secondary);">
+          <div style="color:var(--text-muted); font-size:13px; grid-column:1/-1; text-align:center; padding:20px;"
+               data-i18n="common.loading">
+            Chargement des matières...
+          </div>
+        </div>
+      </div>
+
+      <div id="cf-error" style="display:none; background:rgba(255,82,82,0.1);
+           border:1px solid rgba(255,82,82,0.3); color:var(--red-fifa); border-radius:8px;
+           padding:10px 14px; font-size:13px; margin-top:14px;"></div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button type="button" id="modal-classe-cancel" class="btn btn-secondary"
+                data-i18n="common.cancel">Annuler</button>
+        <button type="button" id="modal-classe-save" class="btn btn-primary"
+                data-i18n="classes.create_btn">Créer la classe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================
+       MODALE CONFIGURATION CLASSE
+       (Coefficients + Enseignants + Groupes)
+       =================================================== -->
+  <div id="modal-config-classe" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:95%; max-width:780px;
+                max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+
+      <!-- En-tête -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div>
+          <div id="config-classe-title"
+               style="font-family:'Rajdhani',sans-serif; font-size:20px;
+                      font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+               data-i18n="classes.config_title">
+            Configuration de la classe
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;"
+               data-i18n="classes.config_subtitle">
+            Coefficients, enseignants et groupes propres à cette classe
+          </div>
+        </div>
+        <button id="modal-config-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+
+      <!-- Onglets -->
+      <div style="display:flex; gap:6px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:0;">
+        <button class="config-tab-btn active" data-config-tab="matieres"
+                data-i18n="classes.tab_subjects">Matières & Enseignants</button>
+        <button class="config-tab-btn" data-config-tab="groupes"
+                data-i18n="classes.tab_groups">Groupes</button>
+      </div>
+
+      <!-- Onglet Matières & Enseignants -->
+      <div id="config-tab-matieres" class="config-tab-pane active">
+
+        <!-- En-tête colonnes -->
+        <div style="display:grid; grid-template-columns: 1fr 80px 140px 100px 160px;
+                    gap:8px; padding:6px 10px; margin-bottom:4px;
+                    font-size:11px; font-weight:600; color:var(--text-muted);
+                    text-transform:uppercase; letter-spacing:0.6px;">
+          <div data-i18n="classes.col_subject">Matière</div>
+          <div style="text-align:center;" data-i18n="classes.col_coeff">Coeff.</div>
+          <div data-i18n="classes.col_teacher">Enseignant</div>
+          <div style="text-align:center;" data-i18n="classes.col_principal">Principal</div>
+          <div data-i18n="classes.col_group">Groupe</div>
+        </div>
+
+        <div id="config-matieres-list" style="max-height:380px; overflow-y:auto; padding-right:4px;">
+          <div style="text-align:center; padding:30px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; padding:10px 12px; background:rgba(45,110,224,0.06);
+                    border:1px solid rgba(45,110,224,0.15); border-radius:8px;
+                    font-size:12px; color:var(--text-muted);"
+             id="config-tip"
+             data-i18n="classes.config_tip">
+          Cochez les matières enseignées dans cette classe. Le coefficient et l'enseignant
+          sont propres à chaque classe et n'affectent pas les autres.
+        </div>
+      </div>
+
+      <!-- Onglet Groupes -->
+      <div id="config-tab-groupes" class="config-tab-pane">
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+          <!-- Liste des groupes -->
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <div style="font-size:13px; font-weight:600; color:var(--text-primary);"
+                   data-i18n="classes.groups_list_title">Groupes de la classe</div>
+              <button type="button" class="btn btn-sm btn-secondary" id="btn-add-groupe-config"
+                      data-i18n="classes.group_new">➕ Nouveau</button>
+            </div>
+            <div id="config-groupes-list" style="min-height:80px; max-height:320px; overflow-y:auto;">
+              <div style="color:var(--text-muted); font-size:13px; text-align:center; padding:20px;"
+                   data-i18n="classes.no_groups">
+                Aucun groupe défini
+              </div>
+            </div>
+          </div>
+
+          <!-- Éditeur groupe -->
+          <div id="config-groupe-editeur" style="display:none;">
+            <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:10px;"
+                 data-i18n="classes.group_edit_title">
+              Éditer le groupe
+            </div>
+            <div class="input-group" style="margin-bottom:10px;">
+              <label data-i18n="classes.group_name">Nom du groupe</label>
+              <input type="text" id="config-groupe-nom" class="input"
+                     data-i18n-placeholder="classes.group_name_placeholder"
+                     placeholder="Ex: Groupe 1 — Sciences">
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"
+                 data-i18n="classes.group_subjects_label">
+              Matières dans ce groupe :
+            </div>
+            <div id="config-groupe-matieres"
+                 style="max-height:220px; overflow-y:auto; border:1px solid var(--border-color);
+                        border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:4px;">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button type="button" class="btn btn-sm btn-danger" id="btn-delete-groupe-config"
+                      data-i18n="common.delete">Supprimer</button>
+              <button type="button" class="btn btn-sm btn-primary" id="btn-save-groupe-config" style="flex:1;"
+                      data-i18n="common.save">Enregistrer</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Aperçu -->
+        <div style="margin-top:16px; padding:12px 14px; background:var(--bg-secondary);
+                    border-radius:10px; border:1px solid var(--border-color);">
+          <div style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase;
+                      letter-spacing:0.6px; margin-bottom:8px;"
+               data-i18n="classes.bulletin_preview">👁️ Aperçu du bulletin</div>
+          <div id="config-groupes-apercu" style="font-size:12px; color:var(--text-muted);"
+               data-i18n="classes.no_groups_preview">
+            Aucun groupe — matières dans l'ordre alphabétique
+          </div>
+        </div>
+      </div>
+
+      <!-- Pied de modale -->
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button type="button" id="btn-config-cancel" class="btn btn-secondary"
+                data-i18n="classes.config_close">Fermer</button>
+        <button type="button" id="btn-config-save" class="btn btn-primary"
+                data-i18n="classes.config_save">Enregistrer la configuration</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE DÉTAIL CLASSE ===== -->
+  <div id="modal-detail" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:640px;
+                max-height:88vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div id="detail-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="classes.detail_title">Détail de la classe</div>
+        <button id="modal-detail-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+      <div id="detail-content">
+        <div style="display:flex; justify-content:center; padding:30px;">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE IMPORT LISTE ÉLÈVES ===== -->
+  <div id="modal-import-liste" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:500px;
+                box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div id="import-liste-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="classes.import_list_title">Importer liste</div>
+        <button id="modal-import-liste-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;"
+         data-i18n="classes.import_list_desc">
+        Importez une liste d'élèves depuis un fichier Excel.<br>
+        Format : <strong>Col A = Nom</strong> · <strong>Col B = Prénom</strong> · Col C = Date naissance (optionnel) · ligne 1 ignorée.
+      </p>
+      <div style="margin-bottom: 16px;">
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-download-modele-import" style="width:100%; justify-content:center;">
+          📥 Télécharger le modèle Excel (.xlsx)
+        </button>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;
+                      padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); flex:1;">
+          <input type="radio" name="import-mode" id="import-mode-ajoute" checked
+                 style="accent-color:var(--green-fifa); margin-top:2px; flex-shrink:0;">
+          <div>
+            <div style="font-size:13px; font-weight:600; color:var(--text-primary);"
+                 data-i18n="classes.import_mode_add">➕ Ajouter seulement</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;"
+                 data-i18n="classes.import_mode_add_desc">Nouveaux élèves ajoutés, existants conservés</div>
+          </div>
+        </label>
+        <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;
+                      padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); flex:1;">
+          <input type="radio" name="import-mode" id="import-mode-ecrase"
+                 style="accent-color:var(--yellow-fifa); margin-top:2px; flex-shrink:0;">
+          <div>
+            <div style="font-size:13px; font-weight:600; color:var(--text-primary);"
+                 data-i18n="classes.import_mode_replace">🔄 Remplacer la liste</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;"
+                 data-i18n="classes.import_mode_replace_desc">Liste actuelle effacée et remplacée</div>
+          </div>
+        </label>
+      </div>
+      <div id="import-liste-dropzone"
+           style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
+                  text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);"
+           onmouseenter="this.style.borderColor='var(--green-fifa)';this.style.background='rgba(0,230,118,0.04)'"
+           onmouseleave="this.style.borderColor='var(--border-color)';this.style.background='transparent'">
+        <div style="font-size:28px; margin-bottom:6px;">📄</div>
+        <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:2px;"
+             data-i18n="classes.dropzone_label">
+          Cliquez pour choisir le fichier Excel
+        </div>
+        <div style="font-size:11px; color:var(--text-muted);"
+             data-i18n="classes.dropzone_ext">.xlsx ou .xls</div>
+        <div id="import-liste-filename" style="margin-top:8px; color:var(--green-fifa); font-size:12px; font-weight:600;"></div>
+      </div>
+      <div id="import-liste-result" class="backup-info" style="display:none; margin-bottom:14px; font-size:13px; line-height:1.8;"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('modal-import-liste').style.display='none'"
+                data-i18n="common.cancel">Annuler</button>
+        <button type="button" id="btn-import-liste-ok" class="btn btn-primary" disabled
+                data-i18n="classes.import_list_btn">✅ Importer la liste</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE IMPORT ABSENCES CSV ===== -->
+  <div id="modal-import-absences" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:16px; padding:28px; width:90%; max-width:520px;
+                box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700;
+                      color:var(--text-primary); text-transform:uppercase;" id="import-abs-title"
+               data-i18n="classes.import_abs_title">
+            🕐 Importer les absences
+          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;"
+               data-i18n="classes.import_abs_subtitle">Depuis un fichier CSV</div>
+        </div>
+        <button id="modal-import-absences-close" type="button"
+                style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; line-height:1;"
+                data-i18n="common.close">✕</button>
+      </div>
+      <div style="background:rgba(255,183,77,0.06); border:1px solid rgba(255,183,77,0.2);
+                  border-radius:10px; padding:12px 14px; margin-bottom:16px;">
+        <div style="font-size:11px; font-weight:600; color:var(--yellow-fifa);
+                    text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;"
+             data-i18n="classes.import_abs_format_title">📄 Format CSV accepté</div>
+        <div style="font-size:12px; color:var(--text-secondary); line-height:1.8;">
+          <strong style="color:var(--text-primary);" data-i18n="classes.import_abs_format_a">Format A</strong> — 5 colonnes :
+          <code style="background:var(--bg-secondary); padding:1px 6px; border-radius:4px; font-size:11px;">nom ; prenom ; T1 ; T2 ; T3</code><br>
+          <strong style="color:var(--text-primary);" data-i18n="classes.import_abs_format_b">Format B</strong> — 4 colonnes :
+          <code style="background:var(--bg-secondary); padding:1px 6px; border-radius:4px; font-size:11px;">nom ; prenom ; Trimestre 1 ; 4.5</code>
+        </div>
+      </div>
+      <div id="import-abs-dropzone"
+           style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
+                  text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);"
+           onmouseenter="this.style.borderColor='var(--yellow-fifa)';this.style.background='rgba(255,183,77,0.04)'"
+           onmouseleave="this.style.borderColor='var(--border-color)';this.style.background='transparent'">
+        <div style="font-size:28px; margin-bottom:6px;"></div>
+        <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:2px;"
+             data-i18n="classes.import_abs_dropzone">Cliquez pour choisir le fichier CSV</div>
+        <div style="font-size:11px; color:var(--text-muted);"
+             data-i18n="classes.import_abs_ext">.csv ou .txt</div>
+        <div id="import-abs-filename" style="margin-top:8px; color:var(--yellow-fifa); font-size:12px; font-weight:600;"></div>
+      </div>
+      <div id="import-abs-result" class="backup-info" style="display:none; margin-bottom:14px; font-size:13px; line-height:1.8;"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;
+                  padding-top:16px; border-top:1px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary" id="btn-import-abs-cancel"
+                data-i18n="common.cancel">Annuler</button>
+        <button type="button" id="btn-import-abs-ok" class="btn btn-primary" disabled
+                data-i18n="classes.import_abs_btn">✅ Importer les absences</button>
+      </div>
+    </div>
+  </div>
+
+</div>

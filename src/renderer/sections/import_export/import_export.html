@@ -1,0 +1,499 @@
+<!-- import_export.html - Section Import/Export d'Elimu -->
+
+<!-- Loader Global Import/Export (Design inspiré de Finance) -->
+<div id="ie-global-loader" class="modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; backdrop-filter: blur(15px); background: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+  <div class="card" style="width: 400px; padding: 30px; text-align: center; background: var(--bg-glass); border: 1px solid var(--border-accent); box-shadow: 0 32px 80px rgba(0,0,0,0.6); position: relative;">
+    <div class="spinner" style="margin: 0 auto 20px; width: 50px; height: 50px; border-width: 4px;"></div>
+    <h3 style="font-family: 'Rajdhani', sans-serif; font-size: 20px; color: var(--text-primary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;" id="ie-loader-title">Traitement en cours</h3>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;" id="ie-loader-text">Veuillez patienter...</p>
+    
+    <div style="height: 8px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-bottom: 10px; border: 1px solid var(--border-color);">
+      <div id="ie-loader-bar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.3s ease;"></div>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+      <span id="ie-loader-percent">0%</span>
+      <span id="ie-loader-count"></span>
+    </div>
+  </div>
+</div>
+
+<div class="animate-in">
+
+  <div style="margin-bottom:24px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+                color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;"
+         data-i18n="ie.title">
+       Import & Export
+    </div>
+    <div style="font-size:13px; color:var(--text-muted); margin-top:4px;"
+         data-i18n="ie.subtitle">
+      Importez des notes depuis Excel · Générez des bulletins PDF individuels ou par classe entière
+    </div>
+  </div>
+
+  <!-- Onglets -->
+  <div style="display:flex; gap:4px; margin-bottom:24px; border-bottom:1px solid var(--border-color);">
+    <button class="tab-btn active" data-tab="import"
+            data-i18n="ie.tab_import"> Importer des notes</button>
+    <button class="tab-btn" data-tab="import-abs"
+            data-i18n="ie.tab_import_abs"> Absences (Excel)</button>
+    <button class="tab-btn" data-tab="bulletin-ind"
+            data-i18n="ie.tab_bulletin_ind"> Bulletin individuel</button>
+    <button class="tab-btn" data-tab="bulletin-classe"
+            data-i18n="ie.tab_bulletin_class"> Bulletins par classe</button>
+    <button class="tab-btn" data-tab="bordereau"
+            data-i18n="ie.tab_bordereau_combined"> Bordereaux</button>
+  </div>
+
+  <!-- ═══ ONGLET IMPORT EXCEL ═══ -->
+  <div id="tab-import" class="tab-content active">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- Formulaire import -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.import_title"> Importer des notes Excel</div>
+          <span style="background:rgba(0,230,118,0.12); color:var(--green-fifa); font-size:11px;
+                       padding:3px 10px; border-radius:20px; font-weight:600;">.xlsx / .xls</span>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.class">Classe *</label>
+          <select id="import-classe" class="input">
+            <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.matiere">Matière *</label>
+          <select id="import-matiere" class="input" disabled>
+            <option value="" disabled selected data-i18n="ie.select_class_first">← Sélectionnez d'abord une classe</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin:0;">
+            <label data-i18n="ie.trimestre">Trimestre *</label>
+            <select id="import-periode" class="input">
+              <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+              <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+              <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+            </select>
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label data-i18n="ie.sequence">Séquence *</label>
+            <select id="import-sequence" class="input">
+              <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
+              <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="import-dropzone" style="border:2px dashed var(--border-color); border-radius:12px;
+             padding:28px; text-align:center; cursor:pointer; margin:16px 0; transition:var(--transition);">
+          <div style="font-size:36px; margin-bottom:8px;">📄</div>
+          <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;"
+               data-i18n="ie.dropzone">
+            Cliquez pour sélectionner un fichier Excel
+          </div>
+          <div style="font-size:12px; color:var(--text-muted);"
+               data-i18n="ie.dropzone_ext">.xlsx ou .xls — max 10 MB</div>
+          <div id="import-filename" style="margin-top:10px; color:var(--green-fifa);
+               font-size:13px; font-weight:600;"></div>
+        </div>
+
+        <button class="btn btn-primary w-full" id="btn-import" disabled
+                style="justify-content:center; padding:12px; margin-bottom:10px;"
+                data-i18n="ie.import_btn_notes">
+           Importer les notes
+        </button>
+
+        <button class="btn btn-secondary w-full" id="btn-dl-modele-notes"
+                style="justify-content:center; padding:10px;"
+                data-i18n="ie.model_notes_btn_label">
+           Télécharger le modèle pour la classe sélectionnée
+        </button>
+      </div>
+
+      <!-- Guide format + résultat -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+
+        <!-- Guide -->
+        <div class="card">
+          <div class="card-header"><div class="card-title" data-i18n="ie.format_title"> Format du fichier Excel</div></div>
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">
+            Le format dépend du niveau de la classe :
+          </p>
+
+          <!-- Format UA (N1/N2) -->
+          <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; margin-bottom:10px; border-left:3px solid var(--green-fifa);">
+            <div style="color:var(--green-fifa); font-weight:700; margin-bottom:6px;">Format UA — Niveaux 1 &amp; 2 (SIL, CP, CE1, CE2)</div>
+            <div style="color:var(--text-muted); margin-bottom:4px;">Fichier nommé : <code style="color:var(--green-fifa);">ELIMU_SIL_1A_UA1_2026.xlsx</code></div>
+            <div style="color:var(--text-muted);">Ligne 1 : En-tête (ignorée)</div>
+            <div>Col A : <span style="color:var(--yellow-fifa);">Nom</span></div>
+            <div>Col B : <span style="color:var(--yellow-fifa);">Prénom</span></div>
+            <div>Col C : <span style="color:var(--yellow-fifa);">Orale</span> /20</div>
+            <div>Col D : <span style="color:var(--yellow-fifa);">Écrite</span> /20</div>
+            <div>Col E : <span style="color:var(--yellow-fifa);">Pratique</span> /20</div>
+            <div>Col F : <span style="color:var(--yellow-fifa);">Savoir-Être</span> /20</div>
+            <div style="margin-top:6px; font-size:11px; color:var(--text-muted);">💡 Le fichier est automatiquement reconnu. La note agrégée est calculée selon les poids MINEDUB.</div>
+          </div>
+
+          <!-- Format classique (N3) -->
+          <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; margin-bottom:10px; border-left:3px solid var(--blue-fifa);">
+            <div style="color:var(--blue-fifa); font-weight:700; margin-bottom:6px;">Format Classique — Niveau 3 (CM1, CM2)</div>
+            <div style="color:var(--text-muted); margin-bottom:4px;">Deux formats acceptés :</div>
+            <div style="margin-bottom:4px;"><strong style="color:var(--green-fifa);">Format A</strong> (recommandé)</div>
+            <div>Col A : <span style="color:var(--yellow-fifa);">Nom</span> &nbsp; Col B : <span style="color:var(--yellow-fifa);">Prénom</span> &nbsp; Col C : <span style="color:var(--yellow-fifa);">Note</span> (0-20)</div>
+            <div style="margin-top:4px;"><strong style="color:var(--blue-fifa);">Format B</strong></div>
+            <div>Col A : <span style="color:var(--yellow-fifa);">Nom Prénom</span> (fusionnés) &nbsp; Col B : <span style="color:var(--yellow-fifa);">Note</span> (0-20)</div>
+          </div>
+
+          <div style="margin-top:10px; padding:8px; background:rgba(0,230,118,0.06);
+               border:1px solid rgba(0,230,118,0.2); border-radius:6px; font-size:12px; color:var(--text-muted);"
+               data-i18n="ie.format_decimal_tip">
+            💡 Les virgules sont acceptées comme séparateur décimal (ex: 12,5)
+          </div>
+        </div>
+
+        <!-- Résultat import -->
+        <div id="import-result" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title" data-i18n="ie.import_result_title"> Résultat de l'import</div>
+              <button class="btn btn-sm btn-secondary" id="btn-close-result"
+                      data-i18n="common.close">✕</button>
+            </div>
+            <div id="import-result-content"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ ONGLET IMPORT ABSENCES EXCEL ═══ -->
+  <div id="tab-import-abs" class="tab-content">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- Formulaire -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.abs_import_title"> Importer les absences Excel</div>
+          <span style="background:rgba(255,183,77,0.15); color:var(--yellow-fifa); font-size:11px;
+                       padding:3px 10px; border-radius:20px; font-weight:600;">.xlsx / .xls</span>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.class">Classe *</label>
+          <select id="abs-import-classe" class="input">
+            <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.trimestre">Trimestre *</label>
+          <select id="abs-import-periode" class="input">
+            <option value="all" data-i18n="dashboard.all_trimesters">Tous les trimestres</option>
+            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          </select>
+        </div>
+
+        <div id="abs-import-dropzone"
+             style="border:2px dashed var(--border-color); border-radius:12px;
+                    padding:28px; text-align:center; cursor:pointer; margin:16px 0; transition:var(--transition);">
+          <div style="font-size:36px; margin-bottom:8px;"></div>
+          <div style="font-weight:600; color:var(--text-primary); margin-bottom:4px;"
+               data-i18n="ie.abs_dropzone">
+            Cliquez pour sélectionner le fichier Excel
+          </div>
+          <div style="font-size:12px; color:var(--text-muted);"
+               data-i18n="ie.dropzone_ext_short">.xlsx ou .xls</div>
+          <div id="abs-import-filename"
+               style="margin-top:10px; color:var(--yellow-fifa); font-size:13px; font-weight:600;"></div>
+        </div>
+
+        <button class="btn btn-primary w-full" id="btn-abs-import" disabled
+                style="justify-content:center; padding:12px; margin-bottom:8px;"
+                data-i18n="ie.import_abs_btn_abs">
+           Importer les absences
+        </button>
+
+        <button class="btn btn-secondary w-full" id="btn-dl-modele-abs"
+                style="justify-content:center; padding:10px;"
+                data-i18n="ie.model_abs_btn_label">
+           Télécharger le modèle pour la classe sélectionnée
+        </button>
+
+        <div id="abs-import-result" class="backup-info"
+             style="display:none; margin-top:12px; font-size:13px; line-height:1.8;"></div>
+      </div>
+
+      <!-- Guide format -->
+      <div class="card">
+        <div class="card-header"><div class="card-title" data-i18n="ie.format_title"> Format du fichier Excel</div></div>
+
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;"
+           data-i18n="ie.abs_format_desc">
+          Plusieurs formats sont acceptés. La première ligne est ignorée.
+        </p>
+
+        <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; font-family:monospace; font-size:12px; margin-bottom:10px;">
+          <div style="color:var(--green-fifa); font-weight:700; margin-bottom:8px;">Format Simple (Recommandé)</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px;">Utilise le trimestre sélectionné à gauche</div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:6px;">
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--yellow-fifa); font-weight:700; font-size:11px;" data-i18n="common.name">Nom</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--yellow-fifa); font-weight:700; font-size:11px;" data-i18n="common.firstname">Prénom</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--blue-fifa); font-size:11px;">Heures</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; font-family:monospace; font-size:12px; margin-bottom:10px;">
+          <div style="color:var(--blue-fifa); font-weight:700; margin-bottom:8px;">Format Annuel — 3 trimestres</div>
+          <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:4px; margin-bottom:6px;">
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--yellow-fifa); font-weight:700; font-size:11px;" data-i18n="common.name">Nom</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--yellow-fifa); font-weight:700; font-size:11px;" data-i18n="common.firstname">Prénom</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--blue-fifa); font-size:11px;">T1</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--blue-fifa); font-size:11px;">T2</div>
+            <div style="background:var(--bg-card); padding:4px 6px; border-radius:4px; text-align:center; color:var(--blue-fifa); font-size:11px;">T3</div>
+          </div>
+        </div>
+
+        <div style="padding:10px; background:rgba(255,183,77,0.06);
+             border:1px solid rgba(255,183,77,0.2); border-radius:6px; font-size:12px; color:var(--text-muted);"
+             data-i18n="ie.abs_format_tip">
+          💡 Les noms sont comparés sans tenir compte des accents ni de la casse.<br>
+          Le bouton "Télécharger le modèle" génère un fichier pré-rempli avec les élèves de la classe.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ONGLET BULLETIN INDIVIDUEL
+       ══════════════════════════════════════════════ -->
+  <div id="tab-bulletin-ind" class="tab-content">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.bulletin_ind_title">📄 Bulletin individuel</div>
+          <span style="background:rgba(255,183,77,0.15); color:var(--yellow-fifa); font-size:11px;
+                       padding:3px 10px; border-radius:20px; font-weight:600;">PDF</span>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;"
+           data-i18n="ie.bulletin_ind_desc">
+          Génère le bulletin trimestriel complet d'un élève avec Séquence 1,
+          Séquence 2 et la moyenne pondérée, selon votre configuration dans Paramètres.
+        </p>
+
+        <!-- Sélecteur de classe pour filtrer -->
+        <div class="input-group">
+          <label data-i18n="ie.class">Classe *</label>
+          <select id="export-eleve-classe" class="input">
+            <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
+          </select>
+        </div>
+
+        <!-- Champ de recherche (optionnel, filtre la classe choisie) -->
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+          <input type="text" id="search-eleve" class="input"
+                 data-i18n-placeholder="ie.search_student_placeholder"
+                 placeholder="Rechercher par nom..." style="flex:1;">
+          <button type="button" id="btn-search-eleve" class="btn btn-secondary"
+                  data-i18n="ie.btn_search">🔍 Filtrer</button>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.student_label">Élève *</label>
+          <select id="export-eleve" class="input" disabled>
+            <option value="" data-i18n="ie.select_student_dash">— Choisir d'abord une classe —</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.trimestre">Trimestre *</label>
+          <select id="export-pdf-periode" class="input">
+            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary w-full" id="btn-export-pdf"
+                style="justify-content:center; padding:12px; margin-top:8px;"
+                data-i18n="ie.export_indiv_btn_pdf">
+          📄 Générer le bulletin PDF
+        </button>
+
+        <button class="btn btn-secondary w-full" id="btn-export-recap"
+                style="justify-content:center; padding:12px; margin-top:8px;
+                       border-color:var(--purple-fifa); color:var(--purple-fifa);"
+                data-i18n="ie.export_recap_btn_label">
+          📋 Générer le récapitulatif annuel
+        </button>
+
+        <div id="export-ind-status" style="display:none; margin-top:12px;" class="backup-info"></div>
+      </div>
+
+      <!-- Info config bulletin -->
+      <div class="card">
+        <div class="card-header"><div class="card-title" data-i18n="ie.applied_config"> Configuration appliquée</div></div>
+        <div id="bulletin-config-resume" style="font-size:13px; color:var(--text-muted);">
+          <div style="text-align:center; padding:20px;">
+            <div class="spinner" style="margin:0 auto;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ONGLET BULLETINS PAR CLASSE
+       ══════════════════════════════════════════════ -->
+  <div id="tab-bulletin-classe" class="tab-content">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.tab_bulletin_class"> Bulletins de toute une classe</div>
+          <span style="background:rgba(156,77,255,0.15); color:var(--purple-fifa); font-size:11px;
+                       padding:3px 10px; border-radius:20px; font-weight:600;">PDF × n</span>
+        </div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;"
+           data-i18n="ie.bulletin_class_desc">
+          Génère un bulletin PDF pour <strong>chaque élève</strong> de la classe en une seule opération.
+          Les fichiers sont sauvegardés dans le dossier de votre choix.
+        </p>
+
+        <div class="input-group">
+          <label data-i18n="ie.class">Classe *</label>
+          <select id="export-classe-bulletins" class="input">
+            <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label data-i18n="ie.trimestre">Trimestre *</label>
+          <select id="export-classe-periode" class="input">
+            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary w-full" id="btn-export-classe"
+                style="justify-content:center; padding:12px;"
+                data-i18n="ie.export_class_bulletin_btn_label">
+           Générer tous les bulletins trimestriels
+        </button>
+
+        <button class="btn btn-secondary w-full" id="btn-export-recap-classe"
+                style="justify-content:center; padding:12px; margin-top:8px;
+                       border-color:var(--purple-fifa); color:var(--purple-fifa);"
+                data-i18n="ie.export_class_recap_btn_label">
+           Générer tous les récapitulatifs annuels
+        </button>
+
+        <div id="export-classe-status" style="display:none; margin-top:12px;" class="backup-info"></div>
+      </div>
+
+      <!-- Info & conseils -->
+      <div class="card">
+        <div class="card-header"><div class="card-title" data-i18n="ie.how_it_works">💡 Comment ça fonctionne</div></div>
+        <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
+          <div style="margin-bottom:12px;">
+            <span style="color:var(--green-fifa); font-weight:700;">1.</span>
+            <span data-i18n="ie.step1">Sélectionnez la classe et le trimestre à imprimer</span>
+          </div>
+          <div style="margin-bottom:12px;">
+            <span style="color:var(--green-fifa); font-weight:700;">2.</span>
+            <span data-i18n="ie.step2">Cliquez sur "Générer tous les bulletins"</span>
+          </div>
+          <div style="margin-bottom:12px;">
+            <span style="color:var(--green-fifa); font-weight:700;">3.</span>
+            <span data-i18n="ie.step3">Choisissez le dossier de destination</span>
+          </div>
+          <div style="margin-bottom:12px;">
+            <span style="color:var(--green-fifa); font-weight:700;">4.</span>
+            <span data-i18n="ie.step4">Les bulletins sont générés automatiquement — un PDF par élève</span>
+          </div>
+          <div style="padding:10px; background:rgba(0,230,118,0.06);
+               border:1px solid rgba(0,230,118,0.2); border-radius:8px; margin-top:8px;">
+             <span data-i18n="ie.filename_tip">Chaque fichier est nommé automatiquement :</span><br>
+            <code style="font-size:11px; color:var(--green-fifa);">bulletin_NOM_Prénom_Trimestre_1.pdf</code>
+          </div>
+          <div style="padding:10px; background:rgba(255,183,77,0.06);
+               border:1px solid rgba(255,183,77,0.2); border-radius:8px; margin-top:8px;"
+               data-i18n="ie.settings_tip">
+            ⚙️ La mise en page applique votre configuration depuis
+            <strong style="color:var(--yellow-fifa);">Paramètres → Bulletin</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       ONGLET BORDEREAU (Notes & Absences)
+       ══════════════════════════════════════════════ -->
+  <div id="tab-bordereau" class="tab-content">
+    <div class="card" style="max-width: 500px;">
+      <div class="card-header">
+        <div class="card-title" data-i18n="ie.tab_bordereau_combined">📄 Bordereaux</div>
+      </div>
+
+      <div class="input-group">
+        <label data-i18n="ie.tally_type">Type de bordereau *</label>
+        <select id="bordereau-type" class="input">
+          <option value="notes" data-i18n="ie.tally_notes">Bordereau de notes</option>
+          <option value="absences" data-i18n="ie.tally_absences">Bordereau d'absences</option>
+          <option value="emargement" data-i18n="ie.tally_emargement">Bordereau d'émargement</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label data-i18n="ie.class">Classe *</label>
+        <select id="bordereau-classe" class="input">
+          <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
+        </select>
+      </div>
+
+      <div class="input-group" id="group-matiere">
+        <label data-i18n="ie.matiere">Matière *</label>
+        <select id="bordereau-matiere" class="input" disabled>
+          <option value="" data-i18n="ie.select_subject_dash">— Sélectionner une matière —</option>
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="input-group">
+          <label data-i18n="ie.trimestre">Trimestre *</label>
+          <select id="bordereau-periode" class="input">
+            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          </select>
+        </div>
+        <div class="input-group" id="group-sequence">
+          <label data-i18n="ie.sequence">Séquence *</label>
+          <select id="bordereau-sequence" class="input">
+            <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
+            <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-full" id="btn-export-bordereau"
+              style="justify-content:center; padding:12px; margin-top:8px;"
+              data-i18n="ie.btn_generate_bordereau_combined">
+        Générer le bordereau PDF
+      </button>
+    </div>
+  </div>
+
+</div>

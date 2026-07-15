@@ -1,0 +1,284 @@
+<!-- parents.html — Section Parents d'Elimu -->
+
+<style>
+  /* Masquer la scrollbar globale pour cette section */
+  .content-area:has(.section-parents-container) {
+    overflow: hidden !important;
+    padding: 10px 15px !important;
+  }
+
+  .parents-scroll-container::-webkit-scrollbar { width: 4px; }
+  .parents-scroll-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+  
+  /* ── Grille de cartes parents (Style Professeurs) ── */
+  .parents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 10px;
+  }
+
+  .parent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s ease, box-shadow 0.25s ease;
+    position: relative; overflow: hidden;
+  }
+  .parent-card:hover { transform: translateY(-4px) scale(1.01); border-color: var(--border-accent); box-shadow: var(--shadow-hover); }
+
+  .parent-card-band { height: 4px; width: 100%; border-radius: 16px 16px 0 0; }
+  .parent-card-inner { padding: 16px 18px 12px; }
+
+  .parent-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-fifa), var(--blue-fifa));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: white; flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+
+  .parent-phone {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--text-primary); line-height: 1.2;
+  }
+
+  .parent-name {
+    font-size: 13px; color: var(--text-muted);
+    margin-top: 4px; font-weight: 500;
+  }
+
+  .parent-children-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(61,142,248,0.1); border: 1px solid rgba(61,142,248,0.2);
+    color: var(--blue-fifa); font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 6px; margin-top: 8px;
+  }
+
+  .parent-card-actions {
+    border-top: 1px solid var(--border-color);
+    padding: 10px 14px 12px;
+    display: flex; gap: 6px;
+    background: rgba(0,0,0,0.02);
+  }
+  .parent-card-actions .btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px; }
+
+  .tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    color: var(--purple-fifa);
+    border-bottom-color: var(--purple-fifa) !important;
+  }
+
+  .child-tag-mini {
+    background: rgba(61, 142, 248, 0.1); color: var(--blue-fifa);
+    padding: 0px 4px; border-radius: 3px; font-size: 10px; font-weight: 700;
+    margin-right: 4px;
+  }
+</style>
+
+<div class="animate-in" style="padding: 0; display: flex; flex-direction: column; height: calc(100vh - 130px); overflow: hidden;">
+  
+  <!-- En-tête (Style Unifié) -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:10px; flex-shrink: 0;">
+    <div>
+      <div style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
+                  color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;"
+           data-i18n="parents.title">
+         Parents
+      </div>
+      <div style="font-size:13px; color:var(--text-muted); margin-top:2px;"
+           data-i18n="parents.subtitle">
+        Gestion des accès et portail parent
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-primary" id="btn-generate-all-passwords" title="Générer les accès pour tous les parents et exporter le PDF immédiatement">
+        <span data-i18n="parents.btn_generate_all">Générer les accès</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Navigation par onglets -->
+  <div class="tabs-nav animate-in" style="margin-bottom: 20px; flex-shrink: 0; display: flex; gap: 5px; border-bottom: 1px solid var(--border-color);">
+    <button class="tab-btn active" data-tab="accounts">
+      <span data-i18n="parents.tab_accounts">Comptes</span>
+    </button>
+    <button class="tab-btn" data-tab="sync">
+      <span data-i18n="parents.tab_sync">Synchro & Cloud</span>
+    </button>
+  </div>
+
+  <!-- Contenu des onglets -->
+  <div style="flex: 1; overflow-y: auto; padding-right: 5px;" class="parents-scroll-container">
+    
+    <!-- ONGLET COMPTES -->
+    <div id="tab-accounts" class="tab-content active animate-in">
+      
+      <!-- Barre d'outils (Style Unifié comme Élèves) -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+        <div style="position:relative; flex:1; min-width:200px; max-width:340px;">
+          <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%);
+                       font-size:15px; pointer-events:none; color:var(--text-muted);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="text" id="search-parents" class="input"
+                 data-i18n-placeholder="parents.search_placeholder"
+                 placeholder="Rechercher un parent..." style="padding-left:38px;">
+        </div>
+        
+        <select id="filter-parents-classe" class="input" style="width:200px;">
+          <option value="" data-i18n="common.all_classes">Toutes les classes</option>
+        </select>
+        
+        <div style="flex: 1;"></div>
+      </div>
+
+      <div id="parents-grid" class="parents-grid">
+        <!-- Les cartes parents seront injectées ici -->
+      </div>
+
+      <div id="parents-pagination" style="margin-top: 24px; display: flex; justify-content: center; gap: 10px;"></div>
+    </div>
+
+    <!-- ONGLET SYNCHRO -->
+    <div id="tab-sync" class="tab-content animate-in" style="display: none; padding: 10px 0;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+        
+        <!-- Configuration Sync -->
+        <div class="card" style="padding: 24px;">
+          <h3 style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px; font-family:'Rajdhani', sans-serif; text-transform:uppercase;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span data-i18n="parents.tab_sync">Synchronisation Portail</span>
+          </h3>
+          
+          <div class="input-group">
+            <label data-i18n="parents.sync_url_label">URL du Portail Elimu</label>
+            <input type="text" id="sync-url" class="input" placeholder="https://votre-ecole.elimu.app">
+          </div>
+
+          <div class="input-group">
+            <label data-i18n="parents.sync_api_key_label">Clé API de l'école</label>
+            <input type="password" id="sync-api-key" class="input" placeholder="••••••••••••••••">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+            <button class="btn btn-secondary" id="btn-save-sync-config" data-i18n="common.save">Enregistrer</button>
+            <button class="btn btn-secondary" id="btn-test-sync-conn" data-i18n="parents.sync_btn_test">Tester la connexion</button>
+          </div>
+          
+          <div style="margin-top: 12px;">
+            <button class="btn btn-primary w-full" id="btn-start-sync" style="padding: 12px;" data-i18n="parents.sync_btn_export">🚀 Lancer la Synchronisation</button>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <button class="btn btn-secondary w-full" id="btn-restore-sync" style="color: var(--text-muted); border-style: dashed;" data-i18n="parents.sync_btn_restore">☁️ Restaurer depuis le Cloud</button>
+          </div>
+
+          <div id="sync-status" style="margin-top: 16px; padding: 12px; border-radius: 8px; display: none; font-size: 13px; text-align: center;"></div>
+
+          <div id="last-sync-info" style="margin-top: 12px; font-size: 11px; color: var(--text-muted); text-align: center; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 6px;">
+            <span data-i18n="parents.sync_last_sync">Dernière synchronisation réussie</span> : <br>
+            <strong id="last-sync-date" style="color: var(--text-primary);">—</strong>
+          </div>
+        </div>
+
+        <!-- Info & Conseils -->
+        <div class="card" style="padding: 24px;">
+          <div class="card-header" style="margin-bottom: 20px;">
+            <div class="card-title" data-i18n="parents.how_it_works" style="font-family:'Rajdhani', sans-serif; text-transform:uppercase;">💡 Comment ça fonctionne</div>
+          </div>
+          <div style="font-size:13px; color:var(--text-muted); line-height:1.8;">
+            <div style="margin-bottom:12px; display: flex; gap: 10px;">
+              <span style="color:var(--purple-fifa); font-weight:700;">1.</span>
+              <span data-i18n="parents.step1">Configurez votre URL et votre Clé API (disponibles sur votre tableau de bord en ligne).</span>
+            </div>
+            <div style="margin-bottom:12px; display: flex; gap: 10px;">
+              <span style="color:var(--purple-fifa); font-weight:700;">2.</span>
+              <span data-i18n="parents.step2">Lancez la synchronisation pour envoyer les élèves, parents et notes vers le portail.</span>
+            </div>
+            <div style="margin-bottom:12px; display: flex; gap: 10px;">
+              <span style="color:var(--purple-fifa); font-weight:700;">3.</span>
+              <span data-i18n="parents.step3">Les parents peuvent alors se connecter avec leur numéro de téléphone et le mot de passe généré.</span>
+            </div>
+            <div style="margin-bottom:12px; display: flex; gap: 10px;">
+              <span style="color:var(--purple-fifa); font-weight:700;">4.</span>
+              <span data-i18n="parents.step4">La restauration Cloud permet de récupérer toutes vos données en cas de changement de PC.</span>
+            </div>
+
+            <div style="padding:12px; background:rgba(156,77,255,0.06); border:1px solid rgba(156,77,255,0.2); border-radius:10px; margin-top:20px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--purple-fifa);"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <strong style="color:var(--text-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Conseil de sécurité</strong>
+              </div>
+              <p style="font-size: 12px; margin: 0;" data-i18n="parents.sync_tip">Pensez à synchroniser après chaque période de saisie de notes pour informer les parents en temps réel.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loader Global Parents (Synchro, Restauration, Génération) -->
+<div id="sync-global-loader" class="modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; backdrop-filter: blur(15px); background: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
+  <div class="card animate-in" style="width: 420px; padding: 35px; text-align: center; background: var(--bg-glass); backdrop-filter: blur(15px); border: 1px solid var(--border-accent); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+    <div class="spinner" style="margin: 0 auto 25px; width: 55px; height: 55px; border-width: 4px; border-top-color: var(--purple-fifa);"></div>
+    <h3 id="sync-loader-title" style="font-family: 'Rajdhani', sans-serif; font-size: 22px; color: var(--text-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px;">Traitement en cours</h3>
+    <p id="sync-loader-text" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 25px;">Veuillez patienter...</p>
+    
+    <div id="sync-loader-progress-container" style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; display: none;">
+      <div id="sync-loader-bar" style="width: 0%; height: 100%; background: var(--gradient-primary); transition: width 0.3s ease;"></div>
+    </div>
+    
+    <div id="sync-loader-stats" style="display: none; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
+      <span id="sync-loader-percent">0%</span>
+      <span id="sync-loader-count"></span>
+    </div>
+  </div>
+</div>
+
+<div id="modal-parent-detail" class="modal-overlay" style="display: none;">
+  <div class="modal-content animate-in" style="max-width: 400px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 28px; width: 90%; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);">
+    <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+      <h3 id="modal-parent-name" style="font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700; color: var(--text-primary); text-transform: uppercase;" data-i18n="parents.account_details">Détails du compte</h3>
+      <span class="close-modal" style="background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 14px;">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div style="display: flex; flex-direction: column; gap: 15px; padding: 10px 0;">
+        <div style="text-align: center; margin-bottom: 10px;">
+          <div id="modal-parent-avatar" class="parent-avatar" style="width: 60px; height: 60px; font-size: 24px; margin: 0 auto 10px;">?</div>
+          <div id="modal-parent-phone" style="font-size: 18px; font-weight: 700; color: var(--text-primary);"></div>
+        </div>
+        <div class="card" style="background: rgba(0,0,0,0.2); padding: 12px; border: 1px solid var(--border-color);">
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 5px;" data-i18n="parents.password_label">ACCÈS PORTAIL</label>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span id="modal-parent-password" style="font-family: monospace; font-size: 18px; font-weight: 700; color: var(--purple-fifa); letter-spacing: 2px;">********</span>
+            <button class="btn btn-sm btn-secondary" id="btn-toggle-password" style="display:none;" data-i18n="common.show">Afficher</button>
+          </div>
+          <p style="font-size: 10px; color: var(--text-muted); margin-top: 8px;" data-i18n="parents.password_hint">Le mot de passe est haché et invisible par sécurité.</p>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px;" data-i18n="parents.children_list">ÉLÈVES RATTACHÉS</label>
+          <div id="modal-parent-children" style="display: flex; flex-direction: column; gap: 5px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display: flex; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-color); justify-content: flex-end;">
+      <button class="btn btn-primary w-full" id="btn-modal-regen-mdp" data-i18n="parents.btn_regenerate">Régénérer l'accès</button>
+    </div>
+  </div>
+</div>
