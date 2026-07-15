@@ -820,6 +820,8 @@ const fr = {
   'params.seuils.ua_active': "Unité d'Apprentissage (UA) active (N1/N2)",
   'params.seuils.ua_active_tip': "UA active pour la saisie PWA et les imports N1/N2",
   'params.bulletin.warning_n3_only': "⚠️ Concerne uniquement le Niveau 3 (CM1/CM2)",
+  'params.bulletin.info_n1n2_title': "Niveaux 1 & 2 (SIL, CP, CE1, CE2)",
+  'params.bulletin.info_n1n2_desc': "Les bulletins des Niveaux 1 et 2 utilisent un template qualitatif conforme au curriculum officiel MINEDUB (compétences, UA, cotation NA/ECA/A/A+). Ce format est intégré directement dans le moteur de calcul et ne nécessite aucune configuration manuelle. Les paramètres ci-dessus (Notation & Poids, Colonnes) ne s'appliquent qu'au Niveau 3.",
 
   // Onglet Matières
   'params.matieres.title':         'Matières enseignées',

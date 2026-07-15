@@ -891,6 +891,8 @@ const en = {
   'params.seuils.ua_active': 'Active Learning Unit (UA) (N1/N2)',
   'params.seuils.ua_active_tip': 'Active UA for PWA entry and N1/N2 imports',
   'params.bulletin.warning_n3_only': '⚠️ Only concerns Level 3 (CM1/CM2)',
+  'params.bulletin.info_n1n2_title': 'Levels 1 & 2 (SIL, CP, CE1, CE2)',
+  'params.bulletin.info_n1n2_desc': 'Report cards for Levels 1 and 2 use a qualitative template that complies with the official MINEDUB curriculum (competencies, learning units, NA/ECA/A/A+ grading). This format is built into the calculation engine and requires no manual configuration. The settings above (Notation & Weights, Columns) only apply to Level 3.',
 
   // Subjects Tab
   'params.matieres.title':         'Taught subjects',
