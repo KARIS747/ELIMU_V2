@@ -126,18 +126,19 @@
             Le format dépend du niveau de la classe :
           </p>
 
-          <!-- Format UA (N1/N2) -->
+          <!-- Format B (N1/N2) — 1 fichier par classe -->
           <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; margin-bottom:10px; border-left:3px solid var(--green-fifa);">
             <div style="color:var(--green-fifa); font-weight:700; margin-bottom:6px;">Format UA — Niveaux 1 &amp; 2 (SIL, CP, CE1, CE2)</div>
-            <div style="color:var(--text-muted); margin-bottom:4px;">Fichier nommé : <code style="color:var(--green-fifa);">ELIMU_SIL_1A_UA1_2026.xlsx</code></div>
-            <div style="color:var(--text-muted);">Ligne 1 : En-tête (ignorée)</div>
-            <div>Col A : <span style="color:var(--yellow-fifa);">Nom</span></div>
-            <div>Col B : <span style="color:var(--yellow-fifa);">Prénom</span></div>
-            <div>Col C : <span style="color:var(--yellow-fifa);">Orale</span> /20</div>
-            <div>Col D : <span style="color:var(--yellow-fifa);">Écrite</span> /20</div>
-            <div>Col E : <span style="color:var(--yellow-fifa);">Pratique</span> /20</div>
-            <div>Col F : <span style="color:var(--yellow-fifa);">Savoir-Être</span> /20</div>
-            <div style="margin-top:6px; font-size:11px; color:var(--text-muted);">💡 Le fichier est automatiquement reconnu. La note agrégée est calculée selon les poids MINEDUB.</div>
+            <div style="color:var(--text-muted); margin-bottom:4px;">Fichier nommé : <code style="color:var(--green-fifa);">ELIMU_CE1-A_2025-2026.xlsx</code></div>
+            <div style="color:var(--text-muted);">Ligne 1 : En-tête (ignorée). Une ligne par (élève × sous-compétence × UA).</div>
+            <div>Col A : <span style="color:var(--yellow-fifa);">Nom et Prénom</span></div>
+            <div>Col B : <span style="color:var(--yellow-fifa);">Sous-Comp.</span> (ex: 1A, 2B, 4, 6A1)</div>
+            <div>Col C : <span style="color:var(--yellow-fifa);">UA</span> (UA1 à UA8)</div>
+            <div>Col D : <span style="color:var(--yellow-fifa);">Orale</span> (note sur le max MINEDUB, ex: sur 20, 12, 8…)</div>
+            <div>Col E : <span style="color:var(--yellow-fifa);">Écrite</span> (note sur le max MINEDUB, ex: sur 15, 28…)</div>
+            <div>Col F : <span style="color:var(--yellow-fifa);">Pratique</span> (note sur le max MINEDUB)</div>
+            <div>Col G : <span style="color:var(--yellow-fifa);">Savoir-être</span> (note sur le max MINEDUB)</div>
+            <div style="margin-top:6px; font-size:11px; color:var(--text-muted);">💡 Un seul fichier par classe. Les notes sont saisies sur l'échelle réelle de l'épreuve. ÉLIMU convertit automatiquement sur /20 et calcule la moyenne pondérée.</div>
           </div>
 
           <!-- Format classique (N3) -->

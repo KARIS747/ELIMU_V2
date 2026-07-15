@@ -775,19 +775,23 @@ function setupEvents() {
 function isV2File(filePath) {
   if (!filePath) return false;
   const filename = filePath.split(/[/\\]/).pop();
-  return /^ELIMU_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^\.]+)\.xlsx$/i.test(filename);
+  return /^ELIMU_([^_]+)_(\d{4}-\d{4})\.xlsx$/i.test(filename);
 }
 
 function toggleImportFieldsForNiveau(classeId) {
   if (!classeId) return;
   const c = classes.find(cl => cl.id === parseInt(classeId));
   const isV2 = c && (c.niveau_v2 === 'N1' || c.niveau_v2 === 'N2');
-  
-  const seqGroup = document.getElementById('import-sequence')?.closest('.input-group');
-  if (seqGroup) seqGroup.style.display = isV2 ? 'none' : 'block';
-  
+
   const matGroup = document.getElementById('import-matiere')?.closest('.input-group');
   if (matGroup) matGroup.style.display = isV2 ? 'none' : 'block';
+
+  const seqGroup = document.getElementById('import-sequence')?.closest('.input-group');
+  if (seqGroup) seqGroup.style.display = isV2 ? 'none' : 'block';
+
+  const perGroup = document.getElementById('import-periode')?.closest('.input-group');
+  if (perGroup) perGroup.style.display = isV2 ? 'none' : 'block';
+
 }
 
 function toggleBordereauFieldsForNiveau(classeId) {
@@ -805,15 +809,15 @@ function checkImportReady() {
   const classeId  = document.getElementById('import-classe')?.value;
   const matiereId = document.getElementById('import-matiere')?.value;
   const btn = document.getElementById('btn-import');
-  const isV2 = isV2File(selectedFilePath);
+  const c = classes.find(cl => cl.id === parseInt(classeId));
+  const classeEstV2 = c && (c.niveau_v2 === 'N1' || c.niveau_v2 === 'N2');
   
-  if (btn) btn.disabled = !(classeId && selectedFilePath && (isV2 || matiereId));
+  if (btn) btn.disabled = !(classeId && selectedFilePath && (classeEstV2 || isV2File(selectedFilePath) || matiereId));
 
-  // Masquer dynamiquement le choix de la matière s'il s'agit d'un import UA V2
   const matSelect = document.getElementById('import-matiere');
   const matGroup = matSelect?.closest('.input-group');
   if (matGroup) {
-    matGroup.style.display = isV2 ? 'none' : 'block';
+    matGroup.style.display = classeEstV2 ? 'none' : 'block';
   }
 }
 

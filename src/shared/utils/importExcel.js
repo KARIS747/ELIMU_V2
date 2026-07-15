@@ -2,12 +2,11 @@
  * importExcel.js - Module d'importation robuste et hybride d'Élimu V2
  * 
  * Ce module implémente le Dispatcher Pattern :
- * - Détecte automatiquement si un fichier provient de la PWA Enseignants (Système UA N1/N2)
- *   via son nom de fichier strict (ex: ELIMU_SIL_1A_UA1_2026_99.xlsx).
- * - Oriente l'importation soit vers le moteur UA (importUANotes), soit vers le moteur
+ * - Détecte le format via le nom du fichier :
+ *   - Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx → colonnes : Nom&Prénom, Sous-Comp, UA, notes brutes
+ *   - Format classique (N3) : tout autre fichier Excel
+ * - Oriente l'importation soit vers le moteur UA (importUANotesFormatB), soit vers le moteur
  *   classique V1 (importClassicNotes).
- *
- * Développé selon des standards de niveau Senior (isolation, robustesse, transactions).
  */
 
 const ExcelJS = require('exceljs');
@@ -72,14 +71,12 @@ function trouverEleve(eleves, nom, prenom) {
 async function importExcel(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId = null) {
   const fileName = filePath.split('/').pop().split('\\').pop();
   
-  // Format attendu V2 : ELIMU_{CLASSE}_{CODE}_{UA}_{ANNEE}_{ID}.xlsx
-  const uaMatch = fileName.match(/^ELIMU_([^_]+)_([^_]+)_([^_]+)_([^_]+)_([^\.]+)\.xlsx$/i);
+  // Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx
+  const formatBMatch = fileName.match(/^ELIMU_([^_]+)_(\d{4}-\d{4})\.xlsx$/i);
   
-  if (uaMatch) {
-    const sousCompetenceCode = uaMatch[2].toUpperCase();
-    const ua = uaMatch[3].toUpperCase();
-    console.log(`🚀 Dispatcher : Format V2 détecté. Ingestion UA (${sousCompetenceCode} - ${ua}) pour la classe ${classeId}`);
-    return await importUANotes(filePath, classeId, sousCompetenceCode, ua, utilisateurId, anneeId);
+  if (formatBMatch) {
+    console.log(`🚀 Dispatcher : Format B détecté pour la classe ${classeId}`);
+    return await importUANotesFormatB(filePath, classeId, utilisateurId, anneeId);
   } else {
     console.log(`🚀 Dispatcher : Format classique V1 détecté pour la classe ${classeId}`);
     return await importClassicNotes(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId);
@@ -87,9 +84,14 @@ async function importExcel(filePath, classeId, matiereId, periode, sequence, uti
 }
 
 /**
- * MOTEUR D'INGESTION V2 (Système qualitatif par Unités d'Apprentissage)
+ * MOTEUR D'INGESTION FORMAT B (N1/N2 — 1 fichier par classe)
+ * 
+ * Format attendu : ELIMU_{CLASSE}_{ANNEE}.xlsx
+ * Colonnes : Nom et Prénom | Sous-Comp. | UA | Orale | Écrite | Pratique | Savoir-être
+ * Les notes sont sur l'échelle réelle MINEDUB (ex: 20/28 pour écrite de 2A).
+ * L'import convertit automatiquement sur /20 avant stockage.
  */
-async function importUANotes(filePath, classeId, sousCompetenceCode, ua, utilisateurId, anneeId = null) {
+async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId = null) {
   const resultat = {
     success: false,
     nbImportes: 0,
@@ -99,19 +101,17 @@ async function importUANotes(filePath, classeId, sousCompetenceCode, ua, utilisa
   };
 
   const { genererTranchesPourEleve } = require('../../main/utils/financeUtils');
+  const fs = require('fs');
 
   // 1. Validation taille fichier
-  const fs = require('fs');
   const stats = fs.statSync(filePath);
   if (stats.size > 10 * 1024 * 1024) {
     return { ...resultat, error: 'Fichier trop volumineux (max 10MB)' };
   }
 
-  // 2. Détermination du niveau technique (N1 ou N2)
-  const classe = get('SELECT nom_classe, niveau, niveau_v2 FROM classes WHERE id = ?', [classeId]);
-  if (!classe) {
-    return { ...resultat, error: 'Classe non trouvée' };
-  }
+  // 2. Détermination du niveau (N1/N2)
+  const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ?', [classeId]);
+  if (!classe) return { ...resultat, error: 'Classe non trouvée' };
 
   let lvl = classe.niveau_v2;
   if (!lvl) {
@@ -119,49 +119,26 @@ async function importUANotes(filePath, classeId, sousCompetenceCode, ua, utilisa
     if (nom.includes('SIL') || nom.includes('CP')) lvl = 'N1';
     else if (nom.includes('CE1') || nom.includes('CE2')) lvl = 'N2';
   }
-
   if (lvl !== 'N1' && lvl !== 'N2') {
-    return { ...resultat, error: `La classe "${classe.nom_classe}" n'est pas configurée pour le système d'UA (Niveau 1 ou 2).` };
+    return { ...resultat, error: `La classe "${classe.nom_classe}" n'est pas configurée pour le système UA.` };
   }
 
-  // 3. Récupération et validation du curriculum
-  const template = CURRICULUM_TEMPLATES[lvl];
-  if (!template) {
-    return { ...resultat, error: `Curriculum non trouvé pour le niveau "${lvl}"` };
-  }
-
-  let subComp = null;
-  for (const compId in template.competences) {
-    const comp = template.competences[compId];
-    if (comp.sousCompetences && comp.sousCompetences[sousCompetenceCode]) {
-      subComp = comp.sousCompetences[sousCompetenceCode];
-      break;
-    }
-  }
-
-  if (!subComp) {
-    return { ...resultat, error: `Code de sous-compétence "${sousCompetenceCode}" invalide pour le niveau "${lvl}"` };
+  // 3. Récupération des élèves
+  const eleves = all(
+    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
+    [classeId, anneeId]
+  );
+  if (!eleves || eleves.length === 0) {
+    return { ...resultat, error: 'Aucun élève trouvé dans cette classe' };
   }
 
   // 4. Lecture du fichier Excel
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
   const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
-    return { ...resultat, error: 'Fichier Excel vide ou invalide' };
-  }
+  if (!worksheet) return { ...resultat, error: 'Fichier Excel vide ou invalide' };
 
-  // 5. Récupération des élèves
-  const eleves = all(
-    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
-    [classeId, anneeId]
-  );
-
-  if (!eleves || eleves.length === 0) {
-    return { ...resultat, error: 'Aucun élève trouvé dans cette classe' };
-  }
-
-  // 6. Enregistrement de l'import (matiere_id = NULL pour UA)
+  // 5. Enregistrement de l'import
   const fileName = filePath.split('/').pop().split('\\').pop();
   const importRecord = run(
     `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id)
@@ -170,145 +147,157 @@ async function importUANotes(filePath, classeId, sousCompetenceCode, ua, utilisa
   );
   const importId = importRecord.lastID;
 
-  // 7. Lecture des lignes
+  // 6. Lecture des lignes
   const lignes = [];
   worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return; // Ignorer l'en-tête
+    if (rowNumber === 1) return;
     lignes.push({ row, rowNumber });
   });
 
-  // 8. Transaction atomique
+  // 7. Transaction atomique
   run('BEGIN');
   try {
     for (const { row, rowNumber } of lignes) {
       try {
-        const col1 = String(row.getCell(1).value || '').trim();
-        const col2 = row.getCell(2).value;
+        const nomPrenom = String(row.getCell(1).value || '').trim();
+        if (!nomPrenom || nomPrenom === 'N°' || nomPrenom === 'Nom et Prénom') continue;
 
-        if (!col1 || col1 === 'N°' || col1 === 'N' || /^\d+$/.test(col1)) {
+        const sousCode = String(row.getCell(2).value || '').trim().toUpperCase();
+        if (!sousCode) {
+          resultat.erreurs.push(`Ligne ${rowNumber}: Sous-compétence manquante pour "${nomPrenom}"`);
+          resultat.nbErreurs++;
           continue;
         }
 
-        const nomLu = col1;
-        const prenomLu = String(col2 || '').trim();
+        const ua = String(row.getCell(3).value || '').trim().toUpperCase();
+        if (!ua || !ua.startsWith('UA')) {
+          resultat.erreurs.push(`Ligne ${rowNumber}: UA invalide "${ua}" pour "${nomPrenom}"`);
+          resultat.nbErreurs++;
+          continue;
+        }
 
+        // Recherche élève : "NOM Prenom" → split premier mot = nom, reste = prénom
+        const parts = nomPrenom.split(' ');
+        const nomLu = parts[0] || '';
+        const prenomLu = parts.slice(1).join(' ') || '';
         let eleve = trouverEleve(eleves, nomLu, prenomLu);
-        let eleveId;
 
         if (!eleve) {
-          // Création automatique de l'élève si absent
           try {
             const inserted = run(
               'INSERT INTO eleves (nom, prenom, sexe, classe_id, annee_scolaire_id) VALUES (?, ?, ?, ?, ?)',
               [nomLu, prenomLu, 'M', classeId, anneeId]
             );
-            eleveId = inserted.lastID;
-            eleve = { id: eleveId, nom: nomLu, prenom: prenomLu };
+            eleve = { id: inserted.lastID, nom: nomLu, prenom: prenomLu };
             eleves.push(eleve);
-            resultat.avertissements.push(`Ligne ${rowNumber}: Élève "${nomLu} ${prenomLu}" créé automatiquement.`);
-            if (anneeId) {
-              genererTranchesPourEleve(eleveId, anneeId, defaultLogger);
-            }
+            resultat.avertissements.push(`Ligne ${rowNumber}: Élève "${nomPrenom}" créé automatiquement.`);
+            if (anneeId) genererTranchesPourEleve(eleve.id, anneeId, defaultLogger);
           } catch (createErr) {
-            resultat.erreurs.push(`Ligne ${rowNumber}: Impossible de créer l'élève "${nomLu} ${prenomLu}" — ${createErr.message}`);
+            resultat.erreurs.push(`Ligne ${rowNumber}: Impossible de créer "${nomPrenom}" — ${createErr.message}`);
             resultat.nbErreurs++;
             continue;
           }
-        } else {
-          eleveId = eleve.id;
         }
 
-        // Déterminer le trimestre depuis l'UA
+        // Validation du code sous-compétence
+        const weights = getWeightsForSousCompetence(lvl, sousCode);
+        if (!weights) {
+          resultat.erreurs.push(`Ligne ${rowNumber}: Code "${sousCode}" invalide pour le niveau ${lvl}`);
+          resultat.nbErreurs++;
+          continue;
+        }
+
         const periode = getPeriodeForUA(ua);
+        if (!periode) {
+          resultat.erreurs.push(`Ligne ${rowNumber}: UA "${ua}" invalide`);
+          resultat.nbErreurs++;
+          continue;
+        }
 
-        // Configuration dynamique des types d'évaluations selon le curriculum
-        const evaluations = [
-          { type: 'orale',       col: 3, max: subComp.orale },
-          { type: 'ecrite',      col: 4, max: subComp.ecrite },
-          { type: 'pratique',    col: 5, max: subComp.pratique },
-          { type: 'savoirEtre',  col: 6, max: subComp.savoirEtre }
-        ];
-
+        // Lecture et conversion des notes brutes → /20
+        const types = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
         const subNotes = {};
-        let hasSaves = false;
+        let hasNote = false;
 
-        for (const evalInfo of evaluations) {
-          if (evalInfo.max && evalInfo.max > 0) {
-            const rawVal = row.getCell(evalInfo.col).value;
-            if (rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '') {
-              const val = parseFloat(String(rawVal).replace(',', '.'));
-              if (isNaN(val) || val < 0 || val > evalInfo.max) {
-                resultat.erreurs.push(`Ligne ${rowNumber}: Note ${evalInfo.type} "${rawVal}" invalide (Maximum autorisé : ${evalInfo.max})`);
-                resultat.nbErreurs++;
-              } else {
-                // Nettoyage avant insertion pour garantir l'unicité du couple
-                run(
-                  `DELETE FROM notes 
-                   WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type = ? AND ua = ? AND annee_scolaire_id = ?`,
-                  [eleveId, sousCompetenceCode, evalInfo.type, ua, anneeId]
-                );
+        for (let i = 0; i < types.length; i++) {
+          const type = types[i];
+          const maxPoids = weights[type] || 0;
+          if (maxPoids <= 0) continue;
 
-                // Insertion de la sous-note
-                run(
-                  `INSERT INTO notes 
-                     (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
-                   VALUES (?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?)`,
-                  [eleveId, val, ua, sousCompetenceCode, evalInfo.type, importId, anneeId, periode]
-                );
-                resultat.nbImportes++;
-                hasSaves = true;
-                subNotes[evalInfo.type] = val;
-              }
-            }
+          const cellVal = row.getCell(4 + i).value;
+          if (cellVal === null || cellVal === undefined || String(cellVal).trim() === '') continue;
+
+          const raw = parseFloat(String(cellVal).replace(',', '.'));
+          if (isNaN(raw) || raw < 0) {
+            resultat.erreurs.push(`Ligne ${rowNumber}: Note ${type} "${cellVal}" invalide`);
+            resultat.nbErreurs++;
+            continue;
           }
+          if (raw > maxPoids) {
+            resultat.erreurs.push(`Ligne ${rowNumber}: Note ${type} "${raw}" dépasse le max ${maxPoids} pour ${sousCode}`);
+            resultat.nbErreurs++;
+            continue;
+          }
+
+          // Conversion sur /20
+          const note20 = (raw / maxPoids) * 20;
+
+          // Nettoyage avant insertion
+          run(
+            `DELETE FROM notes
+             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type = ? AND ua = ? AND annee_scolaire_id = ?`,
+            [eleve.id, sousCode, type, ua, anneeId]
+          );
+
+          run(
+            `INSERT INTO notes
+               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
+             VALUES (?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?)`,
+            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, importId, anneeId, periode]
+          );
+          resultat.nbImportes++;
+          hasNote = true;
+          subNotes[type] = Math.round(note20 * 100) / 100;
         }
 
-        // Calculer et insérer la note agrégée pondérée
-        const weights = getWeightsForSousCompetence(lvl, sousCompetenceCode);
-        if (weights && Object.keys(subNotes).length > 0) {
-          const aggNote = calcAggregateFromSubNotes(subNotes, weights);
-          if (aggNote !== null) {
-            // Nettoyer l'ancien agrégat
-            run(
-              `DELETE FROM notes
-               WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type IS NULL AND ua = ? AND annee_scolaire_id = ?`,
-              [eleveId, sousCompetenceCode, ua, anneeId]
-            );
-            run(
-              `INSERT INTO notes
-                 (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
-               VALUES (?, ?, ?, ?, NULL, 'EXCEL', ?, ?, ?)`,
-              [eleveId, aggNote, ua, sousCompetenceCode, importId, anneeId, periode]
-            );
-            resultat.nbImportes++;
-          }
+        if (!hasNote) {
+          resultat.avertissements.push(`Ligne ${rowNumber}: Aucune note pour "${nomPrenom}" (${sousCode} ${ua})`);
+          continue;
         }
 
-        if (!hasSaves && resultat.nbErreurs === 0) {
-          resultat.avertissements.push(`Ligne ${rowNumber}: Aucune évaluation trouvée pour "${nomLu} ${prenomLu}"`);
+        // Calcul et insertion de l'agrégat
+        const aggNote = calcAggregateFromSubNotes(subNotes, weights);
+        if (aggNote !== null) {
+          run(
+            `DELETE FROM notes
+             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type IS NULL AND ua = ? AND annee_scolaire_id = ?`,
+            [eleve.id, sousCode, ua, anneeId]
+          );
+          run(
+            `INSERT INTO notes
+               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
+             VALUES (?, ?, ?, ?, NULL, 'EXCEL', ?, ?, ?)`,
+            [eleve.id, Math.round(aggNote * 100) / 100, ua, sousCode, importId, anneeId, periode]
+          );
+          resultat.nbImportes++;
         }
 
       } catch (rowError) {
-        resultat.erreurs.push(`Ligne ${rowNumber}: Erreur — ${rowError.message}`);
+        resultat.erreurs.push(`Ligne ${rowNumber}: ${rowError.message}`);
         resultat.nbErreurs++;
       }
     }
     run('COMMIT');
   } catch (globalError) {
     run('ROLLBACK');
-    return { ...resultat, error: `Erreur critique lors de l'insertion : ${globalError.message}` };
+    return { ...resultat, error: `Erreur critique : ${globalError.message}` };
   }
 
   const statut = resultat.nbErreurs === 0 ? 'Succès' : resultat.nbImportes > 0 ? 'Partiel' : 'Échec';
   run(
     `UPDATE imports SET statut=?, nb_importes=?, nb_erreurs=?, message=? WHERE id=?`,
-    [
-      statut,
-      resultat.nbImportes,
-      resultat.nbErreurs,
-      `${resultat.nbImportes} évaluation(s) UA importée(s), ${resultat.nbErreurs} erreur(s)`,
-      importId
-    ]
+    [statut, resultat.nbImportes, resultat.nbErreurs,
+      `${resultat.nbImportes} note(s) importée(s), ${resultat.nbErreurs} erreur(s)`, importId]
   );
 
   resultat.success = resultat.nbImportes > 0;
@@ -872,4 +861,4 @@ async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = nul
   return resultat;
 }
 
-module.exports = { importExcel, importListeEleves, importListeProfesseurs, importAbsencesExcel };
+module.exports = { importExcel, importListeEleves, importListeProfesseurs, importAbsencesExcel, importUANotesFormatB };
