@@ -252,7 +252,7 @@ function buildSubCompIndex(lvl) {
  * UA1-3 en colonnes horizontales · sous-compétences en lignes
  */
 function drawBulletinQualitatif(doc, data, lang = 'fr') {
-  const { eleve, notesAgg, notesSub, cfg, periode, rangGeneral, nbElevesClasse } = data;
+  const { eleve, notesAgg, notesSub, cfg, periode, rangGeneral, nbElevesClasse, heuresAbsence } = data;
   const t = getDocTranslator(lang);
   const coulPrimaire = cfg.couleur_primaire || '#26337A';
   const lvl = eleve.niveau_v2;
@@ -455,14 +455,19 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
   doc.font('Helvetica-Bold').fontSize(7).fillColor('#111').text(`${eleve.nom_classe || '—'} | Niveau ${lvl}`, LEFT + colW1 + colW2 + 4, y + 8);
 
   doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#666').text('EFFECTIF + TITULAIRE', LEFT + colW1 + colW2 + colW3 + 4, y + 2);
-  doc.font('Helvetica').fontSize(7).fillColor('#111').text(`Eff: ${nbElevesClasse} | M. ${profName.nom.toUpperCase()}`, LEFT + colW1 + colW2 + colW3 + 4, y + 8, { width: colW4 - 8, ellipsis: true });
+  doc.font('Helvetica').fontSize(7).fillColor('#111').text(`Eff: ${nbElevesClasse} | M. ${(profName.nom || '').toUpperCase()}`, LEFT + colW1 + colW2 + colW3 + 4, y + 8, { width: colW4 - 8, ellipsis: true });
   y += carteH + 6;
 
   // 5. Tableau principal des compétences
-  const headerH = 14;
-  const evalRowH = 7.2;
-  const totRowH = 8.2;
-  const grandTotRowH = 10;
+  const headerH = 15;
+  const evalRowH = 8.0;
+  const totRowH = 9.0;
+  const grandTotRowH = 11;
+  
+  const fontHeader = 6.2;
+  const fontEval = 5.8;
+  const fontTotal = 6.0;
+  const fontGrandTotal = 6.5;
 
   // Couleurs de fond par compétence
   const COMP_COLORS = {
@@ -485,42 +490,42 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
 
   // Dessin de l'en-tête du tableau
   doc.rect(LEFT, y, pageW, headerH).fill('#26337A');
-  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(5.5);
+  doc.fillColor('#fff').font('Helvetica-Bold');
   let cx = LEFT;
   
-  doc.text('COMPÉTENCE', cx + 2, y + 5, { width: colComp - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('COMPÉTENCE', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colComp - 4, align: 'center' });
   cx += colComp;
   
-  doc.text('SOUS-COMPÉTENCE', cx + 2, y + 5, { width: colSousComp - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('SOUS-COMPÉTENCE', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colSousComp - 4, align: 'center' });
   cx += colSousComp;
   
-  doc.text('ÉVALUATION', cx + 2, y + 5, { width: colEval - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('ÉVALUATION', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colEval - 4, align: 'center' });
   cx += colEval;
   
   lesUA.forEach(ua => {
-    doc.fontSize(5).text(ua, cx + 2, y + 1.5, { width: noteW + coteW - 4, align: 'center' });
-    doc.fontSize(5.5).text('Note', cx + 2, y + 8, { width: noteW - 4, align: 'center' });
+    doc.fontSize(fontHeader - 1.0).text(ua, cx + 2, y + 2, { width: noteW + coteW - 4, align: 'center' });
+    doc.fontSize(fontHeader - 0.4).text('Note', cx + 2, y + 8, { width: noteW - 4, align: 'center' });
     cx += noteW;
     doc.text('Cote', cx + 2, y + 8, { width: coteW - 4, align: 'center' });
     cx += coteW;
   });
   
-  doc.fontSize(5.5).text('TOTAL', cx + 2, y + 5, { width: colTot - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('TOTAL', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colTot - 4, align: 'center' });
   cx += colTot;
   
-  doc.text('MOY./20', cx + 2, y + 5, { width: colMoy20 - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('MOY./20', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
   cx += colMoy20;
   
-  doc.text('COTE', cx + 2, y + 5, { width: colCoteFinale - 4, align: 'center' });
+  doc.fontSize(fontHeader).text('COTE', cx + 2, y + (headerH - fontHeader) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
 
-  // Tracer les bordures de l'en-tête
-  doc.rect(LEFT, y, pageW, headerH).stroke('#d0d8e4').lineWidth(0.15);
+  // Tracer les bordures de l'en-tête (sharper lines: 0.25 width, light blue-gray color)
+  doc.rect(LEFT, y, pageW, headerH).stroke('#b0c4de').lineWidth(0.25);
   let tcx = LEFT;
   colWidths.forEach(w => {
-    doc.moveTo(tcx, y).lineTo(tcx, y + headerH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    doc.moveTo(tcx, y).lineTo(tcx, y + headerH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
     tcx += w;
   });
-  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + headerH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + headerH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
   y += headerH;
 
@@ -548,51 +553,51 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
         let cellX = LEFT + colComp + colSousComp;
         
         // Col 3: Evaluation
-        doc.fillColor('#333').font('Helvetica').fontSize(5.2)
-           .text(`${ev.label} /${ev.maxPt}`, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+        doc.fillColor('#333').font('Helvetica').fontSize(fontEval)
+           .text(`${ev.label} /${ev.maxPt}`, cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: colEval - 4, align: 'center' });
         cellX += colEval;
 
         // UAs Note & Cote
         lesUA.forEach(ua => {
           const uaData = ev.uas[ua];
           if (uaData) {
-            doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-               .text(String(uaData.note), cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontEval)
+               .text(String(uaData.note), cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: noteW - 4, align: 'center' });
             cellX += noteW;
-            doc.fillColor('#333').font('Helvetica').fontSize(5.2)
-               .text(uaData.cote, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            doc.fillColor('#333').font('Helvetica').fontSize(fontEval)
+               .text(uaData.cote, cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: coteW - 4, align: 'center' });
             cellX += coteW;
           } else {
-            doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
-               .text('—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            doc.fillColor('#bbb').font('Helvetica').fontSize(fontEval)
+               .text('—', cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: noteW - 4, align: 'center' });
             cellX += noteW;
-            doc.text('—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            doc.text('—', cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: coteW - 4, align: 'center' });
             cellX += coteW;
           }
         });
 
         // Column TOTAL
         const totStr = ev.totalMax > 0 ? `${Math.round(ev.totalObtained * 10) / 10}/${ev.totalMax}` : '—';
-        doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-           .text(totStr, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+        doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontEval)
+           .text(totStr, cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: colTot - 4, align: 'center' });
         cellX += colTot;
 
         // Column MOY./20
         const moy20Val = ev.totalMax > 0 ? (ev.totalObtained / ev.totalMax) * 20 : null;
-        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
         cellX += colMoy20;
 
         // Column COTE
-        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (evalRowH - fontEval) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
 
-        // Tracer les bordures de la ligne
-        doc.moveTo(LEFT + colComp + colSousComp, y + evalRowH).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        // Tracer les bordures de la ligne (sharper lines: 0.25 width, light blue-gray color)
+        doc.moveTo(LEFT + colComp + colSousComp, y + evalRowH).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
         let borderX = LEFT;
         colWidths.forEach(w => {
-          doc.moveTo(borderX, y).lineTo(borderX, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+          doc.moveTo(borderX, y).lineTo(borderX, y + evalRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
           borderX += w;
         });
-        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
         y += evalRowH;
       });
@@ -610,70 +615,71 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
         let cellX = LEFT + colComp;
         
         // Col 2: TOTAL sous-compétence
-        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
-           .text(`TOTAL ${sc.code}`, cellX + 3, y + (totRowH - 5.2) / 2 - 0.5, { width: colSousComp - 6, align: 'left' });
+        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal)
+           .text(`TOTAL ${sc.code}`, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, { width: colSousComp - 6, align: 'left' });
         cellX += colSousComp;
 
         // Col 3: TOTAL weight
-        doc.text(`TOTAL /${sc.totalWeight}`, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+        doc.text(`TOTAL /${sc.totalWeight}`, cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colEval - 4, align: 'center' });
         cellX += colEval;
 
         // UAs Note & Cote
         lesUA.forEach(ua => {
           if (sc.uaMax[ua] > 0) {
             const scUAAverage = (sc.uaObtained[ua] / sc.uaMax[ua]) * 20;
-            doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-               .text(String(Math.round(sc.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontTotal)
+               .text(String(Math.round(sc.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: noteW - 4, align: 'center' });
             cellX += noteW;
-            doc.fillColor(coulPrimaire).text(getNoteToCode(scUAAverage), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            doc.fillColor(coulPrimaire).text(getNoteToCode(scUAAverage), cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: coteW - 4, align: 'center' });
             cellX += coteW;
           } else {
-            doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
-               .text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            doc.fillColor('#bbb').font('Helvetica').fontSize(fontTotal)
+               .text('—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: noteW - 4, align: 'center' });
             cellX += noteW;
-            doc.text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            doc.text('—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: coteW - 4, align: 'center' });
             cellX += coteW;
           }
         });
 
         // Column TOTAL
         const totStr = sc.totalMax > 0 ? `${Math.round(sc.totalObtained * 10) / 10}/${sc.totalMax}` : '—';
-        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
-           .text(totStr, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal)
+           .text(totStr, cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colTot - 4, align: 'center' });
         cellX += colTot;
 
         // Column MOY./20
         const moy20Val = sc.totalMax > 0 ? (sc.totalObtained / sc.totalMax) * 20 : null;
-        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
         cellX += colMoy20;
 
         // Column COTE
-        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
 
-        // Tracer les bordures de la ligne
-        doc.moveTo(LEFT + colComp, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        // Tracer les bordures de la ligne (sharper lines: 0.25 width, light blue-gray color)
+        doc.moveTo(LEFT + colComp, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
         let borderX = LEFT;
         colWidths.forEach(w => {
-          doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+          doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
           borderX += w;
         });
-        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
         y += totRowH;
       }
 
       // Tracer la ligne de séparation sous-compétence Col 2
-      doc.moveTo(LEFT + colComp, y).lineTo(LEFT + colComp + colSousComp, y).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+      doc.moveTo(LEFT + colComp, y).lineTo(LEFT + colComp + colSousComp, y).strokeColor('#b0c4de').lineWidth(0.25).stroke();
       
       // Dessiner le texte sous-compétence centré
       const evalRowsH = evalsCount * evalRowH;
       const scText = `${sc.code} - ${sc.nom} (${sc.totalWeight} pts)`;
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-         .text(scText, LEFT + colComp + 3, scYStart + (evalRowsH - 5.2) / 2 - 0.5, {
-           width: colSousComp - 6,
-           align: 'left',
-           ellipsis: true
-         });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontTotal);
+      const scTextH = doc.heightOfString(scText, { width: colSousComp - 6 });
+      doc.text(scText, LEFT + colComp + 3, scYStart + Math.max(1, (evalRowsH - scTextH) / 2), {
+        width: colSousComp - 6,
+        align: 'left',
+        ellipsis: true
+      });
     });
 
     // Ligne TOTAL COMPÉTENCE
@@ -685,75 +691,76 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
 
     let cellX = LEFT;
     // Col 1: TOTAL compétence
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
-       .text(`TOTAL ${comp.code}`, cellX + 3, y + (totRowH - 5.5) / 2 - 0.5, { width: colComp - 6, align: 'left' });
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal + 0.3)
+       .text(`TOTAL ${comp.code}`, cellX + 3, y + (totRowH - (fontTotal + 0.3)) / 2 - 0.5, { width: colComp - 6, align: 'left' });
     cellX += colComp;
 
     // Col 2: Nom compétence
-    doc.fillColor('#333').font('Helvetica-Bold').fontSize(5.2)
-       .text(comp.nom, cellX + 3, y + (totRowH - 5.2) / 2 - 0.5, { width: colSousComp - 6, align: 'left', ellipsis: true });
+    doc.fillColor('#333').font('Helvetica-Bold').fontSize(fontTotal)
+       .text(comp.nom, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, { width: colSousComp - 6, align: 'left', ellipsis: true });
     cellX += colSousComp;
 
     // Col 3: TOTAL weight
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
-       .text(`TOTAL /${comp.totalWeight}`, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal)
+       .text(`TOTAL /${comp.totalWeight}`, cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colEval - 4, align: 'center' });
     cellX += colEval;
 
     // UAs Note & Cote
     lesUA.forEach(ua => {
       if (comp.uaMax[ua] > 0) {
         const compUAAverage = (comp.uaObtained[ua] / comp.uaMax[ua]) * 20;
-        doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-           .text(String(Math.round(comp.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+        doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontTotal)
+           .text(String(Math.round(comp.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: noteW - 4, align: 'center' });
         cellX += noteW;
-        doc.fillColor(coulPrimaire).text(getNoteToCode(compUAAverage), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+        doc.fillColor(coulPrimaire).text(getNoteToCode(compUAAverage), cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: coteW - 4, align: 'center' });
         cellX += coteW;
       } else {
-        doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
-           .text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+        doc.fillColor('#bbb').font('Helvetica').fontSize(fontTotal)
+           .text('—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: noteW - 4, align: 'center' });
         cellX += noteW;
-        doc.text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+        doc.text('—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: coteW - 4, align: 'center' });
         cellX += coteW;
       }
     });
 
     // Column TOTAL
     const totStr = comp.totalMax > 0 ? `${Math.round(comp.totalObtained * 10) / 10}/${comp.totalMax}` : '—';
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
-       .text(totStr, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal)
+       .text(totStr, cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colTot - 4, align: 'center' });
     cellX += colTot;
 
     // Column MOY./20
     const moy20Val = comp.totalMax > 0 ? (comp.totalObtained / comp.totalMax) * 20 : null;
-    doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+    doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
     cellX += colMoy20;
 
     // Column COTE
-    doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+    doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - fontTotal) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
 
-    // Tracer les bordures de la ligne
-    doc.moveTo(LEFT, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    // Tracer les bordures de la ligne (sharper lines: 0.25 width, light blue-gray color)
+    doc.moveTo(LEFT, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
     let borderX = LEFT;
     colWidths.forEach(w => {
-      doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+      doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
       borderX += w;
     });
-    doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
     y += totRowH;
 
     // Tracer la ligne de séparation sous-compétence Col 1
-    doc.moveTo(LEFT, y).lineTo(LEFT + colComp, y).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    doc.moveTo(LEFT, y).lineTo(LEFT + colComp, y).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
     // Dessiner le texte compétence centré dans Col 1
     const compSpanH = y - compYStart - totRowH;
     const compText = `${comp.code}\n${comp.nom}`;
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
-       .text(compText, LEFT + 3, compYStart + (compSpanH - 18) / 2 - 0.5, {
-         width: colComp - 6,
-         align: 'center',
-         ellipsis: true
-       });
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal + 0.3);
+    const textH = doc.heightOfString(compText, { width: colComp - 6 });
+    doc.text(compText, LEFT + 3, compYStart + Math.max(2, (compSpanH - textH) / 2), {
+      width: colComp - 6,
+      align: 'center',
+      ellipsis: true
+    });
   });
 
   // --- LIGNE TOTAL GÉNÉRAL ---
@@ -764,53 +771,53 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
   });
 
   let cellX = LEFT;
-  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(6)
-     .text('TOTAL GÉNÉRAL', cellX + 3, y + (grandTotRowH - 6) / 2 - 0.5, { width: colComp - 6, align: 'left' });
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontGrandTotal)
+     .text('TOTAL GÉNÉRAL', cellX + 3, y + (grandTotRowH - fontGrandTotal) / 2 - 0.5, { width: colComp - 6, align: 'left' });
   cellX += colComp;
   cellX += colSousComp; // laisser vide Col 2
 
-  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
-     .text('TOTAL /320', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontGrandTotal - 0.5)
+     .text('TOTAL /320', cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.5)) / 2 - 0.5, { width: colEval - 4, align: 'center' });
   cellX += colEval;
 
   lesUA.forEach(ua => {
     if (uaGeneralMax[ua] > 0) {
       const uaAverage = (uaGeneralObtained[ua] / uaGeneralMax[ua]) * 20;
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
-         .text(String(Math.round(uaGeneralObtained[ua] * 10) / 10), cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontGrandTotal - 0.7)
+         .text(String(Math.round(uaGeneralObtained[ua] * 10) / 10), cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.7)) / 2 - 0.5, { width: noteW - 4, align: 'center' });
       cellX += noteW;
-      doc.fillColor(coulPrimaire).text(getNoteToCode(uaAverage), cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+      doc.fillColor(coulPrimaire).text(getNoteToCode(uaAverage), cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.7)) / 2 - 0.5, { width: coteW - 4, align: 'center' });
       cellX += coteW;
     } else {
-      doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
-         .text('—', cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+      doc.fillColor('#bbb').font('Helvetica').fontSize(fontGrandTotal - 0.7)
+         .text('—', cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.7)) / 2 - 0.5, { width: noteW - 4, align: 'center' });
       cellX += noteW;
-      doc.text('—', cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+      doc.text('—', cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.7)) / 2 - 0.5, { width: coteW - 4, align: 'center' });
       cellX += coteW;
     }
   });
 
   // Column TOTAL
   const totGeneralStr = totalGeneralMax > 0 ? `${Math.round(totalGeneralObtained * 10) / 10}/${totalGeneralMax}` : '—';
-  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
-     .text(totGeneralStr, cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontGrandTotal - 0.5)
+     .text(totGeneralStr, cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.5)) / 2 - 0.5, { width: colTot - 4, align: 'center' });
   cellX += colTot;
 
   // Column MOY./20
-  doc.text(moy20General !== null ? moy20General.toFixed(1) : '—', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+  doc.text(moy20General !== null ? moy20General.toFixed(1) : '—', cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.5)) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
   cellX += colMoy20;
 
   // Column COTE
-  doc.text(moy20General !== null ? getNoteToCode(moy20General) : '—', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+  doc.text(moy20General !== null ? getNoteToCode(moy20General) : '—', cellX + 2, y + (grandTotRowH - (fontGrandTotal - 0.5)) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
 
-  // Tracer les bordures de la ligne
-  doc.moveTo(LEFT, y + grandTotRowH).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+  // Tracer les bordures de la ligne (sharper lines: 0.25 width, light blue-gray color)
+  doc.moveTo(LEFT, y + grandTotRowH).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
   let borderX = LEFT;
   colWidths.forEach(w => {
-    doc.moveTo(borderX, y).lineTo(borderX, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    doc.moveTo(borderX, y).lineTo(borderX, y + grandTotRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
     borderX += w;
   });
-  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
   y += grandTotRowH + 6;
 
@@ -822,7 +829,26 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
   doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5);
   doc.text(moyText, LEFT + 8, y + (bandeauH - 7.5) / 2 - 0.5);
   doc.text(rangText, LEFT + pageW - 158, y + (bandeauH - 7.5) / 2 - 0.5, { width: 150, align: 'right' });
-  y += bandeauH + 6;
+  y += bandeauH + 4;
+
+  // 6b. ABSENCES (Bandeau vert, orange ou rouge selon la gravité)
+  if (cfg.afficher_absences !== '0') {
+    const absColor = heuresAbsence === 0 ? '#2e7d32' : (heuresAbsence < 10 ? '#e65100' : '#b71c1c');
+    const absBg = heuresAbsence === 0 ? '#f0fff4' : '#fff8f0';
+    doc.rect(LEFT, y, pageW, bandeauH).fill(absBg);
+    doc.rect(LEFT, y, pageW, bandeauH).stroke(absColor).lineWidth(0.4);
+    
+    doc.fillColor('#444').font('Helvetica-Bold').fontSize(7);
+    doc.text(t('unjustified_absences') + ' :', LEFT + 8, y + (bandeauH - 7) / 2 - 0.5);
+    
+    const hLabel = heuresAbsence === 0 
+      ? t('no_absence_recorded') 
+      : `${heuresAbsence} ${lang === 'en' ? 'unjustified hour(s)' : 'heure(s) non justifiée(s)'}`;
+    
+    doc.fillColor(absColor).font('Helvetica-Bold').fontSize(7.5);
+    doc.text(hLabel, LEFT + pageW - 158, y + (bandeauH - 7.5) / 2 - 0.5, { width: 150, align: 'right' });
+    y += bandeauH + 6;
+  }
 
   // 7. LÉGENDE COTATION (Tableau 4 colonnes)
   const legH = 9;
@@ -877,7 +903,7 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
     doc.fillColor('#bbb').font('Helvetica').fontSize(5).text(title === titreDir ? '(Signature et cachet)' : '(Signature)', x + 2, y + sigH - 7, { width: colSigW - 4, align: 'center' });
   };
 
-  const profFull = profName.nom !== '—' ? `${profName.nom.toUpperCase()} ${profName.prenom}` : '—';
+  const profFull = profName.nom !== '—' ? `${(profName.nom || '').toUpperCase()} ${profName.prenom}` : '—';
   drawSigBox("Observations de l'enseignant", appAuto, LEFT);
   drawSigBox(lang === 'en' ? 'The Class Teacher' : 'Le Professeur Principal', profFull, LEFT + colSigW);
   drawSigBox(titreDir, nomDir, LEFT + colSigW * 2);
