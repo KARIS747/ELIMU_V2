@@ -529,6 +529,10 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
 
   y += headerH;
 
+  // Tableau de textes différés pour les colonnes 1 (compétence) et 2 (sous-compétence)
+  // On les dessine APRÈS tous les fonds du tableau pour éviter qu'ils soient masqués
+  const deferredLabels = [];
+
   // Parcourir les compétences
   dataTree.forEach(comp => {
     const compYStart = y;
@@ -616,7 +620,12 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
         
         // Col 2: TOTAL sous-compétence
         doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal)
-           .text(`TOTAL ${sc.code}`, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, { width: colSousComp - 6, align: 'left' });
+           .text(`TOTAL ${sc.code}`, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, {
+             width: colSousComp - 6,
+             height: totRowH - 0.5,
+             align: 'left',
+             ellipsis: true
+           });
         cellX += colSousComp;
 
         // Col 3: TOTAL weight
@@ -670,15 +679,16 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
       // Tracer la ligne de séparation sous-compétence Col 2
       doc.moveTo(LEFT + colComp, y).lineTo(LEFT + colComp + colSousComp, y).strokeColor('#b0c4de').lineWidth(0.25).stroke();
       
-      // Dessiner le texte sous-compétence centré
+      // Différer le dessin du texte sous-compétence (sera dessiné après tous les fonds)
       const evalRowsH = evalsCount * evalRowH;
-      const scText = `${sc.code} - ${sc.nom} (${sc.totalWeight} pts)`;
-      doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontTotal);
-      const scTextH = doc.heightOfString(scText, { width: colSousComp - 6 });
-      doc.text(scText, LEFT + colComp + 3, scYStart + Math.max(1, (evalRowsH - scTextH) / 2), {
+      deferredLabels.push({
+        type: 'sc',
+        text: `${sc.code} - ${sc.nom} (${sc.totalWeight} pts)`,
+        x: LEFT + colComp + 3,
+        areaY: scYStart,
+        areaH: evalRowsH,
         width: colSousComp - 6,
-        align: 'left',
-        ellipsis: true
+        align: 'left'
       });
     });
 
@@ -692,12 +702,22 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
     let cellX = LEFT;
     // Col 1: TOTAL compétence
     doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal + 0.3)
-       .text(`TOTAL ${comp.code}`, cellX + 3, y + (totRowH - (fontTotal + 0.3)) / 2 - 0.5, { width: colComp - 6, align: 'left' });
+       .text(`TOTAL ${comp.code}`, cellX + 3, y + (totRowH - (fontTotal + 0.3)) / 2 - 0.5, {
+         width: colComp - 6,
+         height: totRowH - 0.5,
+         align: 'left',
+         ellipsis: true
+       });
     cellX += colComp;
 
-    // Col 2: Nom compétence
+    // Col 2: Nom compétence (tronqué pour tenir sur 1 ligne et ne pas déborder sur les lignes/compétences suivantes)
     doc.fillColor('#333').font('Helvetica-Bold').fontSize(fontTotal)
-       .text(comp.nom, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, { width: colSousComp - 6, align: 'left', ellipsis: true });
+       .text(comp.nom, cellX + 3, y + (totRowH - fontTotal) / 2 - 0.5, {
+         width: colSousComp - 6,
+         height: totRowH - 0.5,
+         align: 'left',
+         ellipsis: true
+       });
     cellX += colSousComp;
 
     // Col 3: TOTAL weight
@@ -751,15 +771,17 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
     // Tracer la ligne de séparation sous-compétence Col 1
     doc.moveTo(LEFT, y).lineTo(LEFT + colComp, y).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
-    // Dessiner le texte compétence centré dans Col 1
+    // Différer le dessin du texte compétence (sera dessiné après tous les fonds)
     const compSpanH = y - compYStart - totRowH;
-    const compText = `${comp.code}\n${comp.nom}`;
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(fontTotal + 0.3);
-    const textH = doc.heightOfString(compText, { width: colComp - 6 });
-    doc.text(compText, LEFT + 3, compYStart + Math.max(2, (compSpanH - textH) / 2), {
+    deferredLabels.push({
+      type: 'comp',
+      text: `${comp.code}\n${comp.nom}`,
+      x: LEFT + 3,
+      areaY: compYStart,
+      areaH: compSpanH,
       width: colComp - 6,
       align: 'center',
-      ellipsis: true
+      color: coulPrimaire
     });
   });
 
@@ -820,6 +842,32 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
   doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#b0c4de').lineWidth(0.25).stroke();
 
   y += grandTotRowH + 6;
+
+  // --- DESSINER LES TEXTES DIFFÉRÉS (colonnes 1 et 2) ---
+  // Maintenant que tous les fonds de tableau sont peints, on dessine les labels par-dessus
+  deferredLabels.forEach(lbl => {
+    if (lbl.type === 'sc') {
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(fontTotal);
+      const h = doc.heightOfString(lbl.text, { width: lbl.width });
+      const clippedH = Math.min(h, lbl.areaH);
+      doc.text(lbl.text, lbl.x, lbl.areaY + Math.max(0.5, (lbl.areaH - clippedH) / 2), {
+        width: lbl.width,
+        height: lbl.areaH,
+        align: lbl.align,
+        ellipsis: true
+      });
+    } else {
+      doc.fillColor(lbl.color).font('Helvetica-Bold').fontSize(fontTotal + 0.3);
+      const h = doc.heightOfString(lbl.text, { width: lbl.width });
+      const clippedH = Math.min(h, lbl.areaH);
+      doc.text(lbl.text, lbl.x, lbl.areaY + Math.max(1, (lbl.areaH - clippedH) / 2), {
+        width: lbl.width,
+        height: lbl.areaH,
+        align: lbl.align,
+        ellipsis: true
+      });
+    }
+  });
 
   // 6. RANG ET MOYENNE (Bandeau bleu marine)
   const bandeauH = 13;

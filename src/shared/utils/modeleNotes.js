@@ -11,8 +11,9 @@ const { CURRICULUM_TEMPLATES } = require('../constants/curriculum');
  * exportModeleNotes — génère un fichier Excel modèle pour l'import des notes
  * 
  * Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx
- * Colonnes : Nom et Prénom | Sous-Comp. | UA | Orale/sur X | Écrite/sur X | Pratique/sur X | Savoir-être/sur X
- * Les en-têtes de note incluent le max MINEDUB (ex: Orale/20, Écrite/15)
+ * Colonnes : Nom et Prénom | Sous-Comp. | UA | Orale | Écrite | Pratique | Savoir-être
+ * Les en-têtes incluent le max MINEDUB entre parenthèses (ex: Orale (/20))
+ * Chaque ligne a un commentaire Excel indiquant le max exact de sa sous-compétence
  * 
  * Format classique (N3) : modèle simple Nom + Prénom + Note
  */
@@ -41,44 +42,42 @@ async function exportModeleNotes(classeId, outputPath, lang = 'fr') {
       const sheetName = `${compCode} - ${(comp.nom || compCode).substring(0, 25)}`;
       const sheet = workbook.addWorksheet(sheetName.substring(0, 31));
 
-      // En-tête : on détermine les colonnes max à partir de la 1ère sous-comp
+      // En-tête : max MINEDUB dans les colonnes de notes (1ère sous-compétence comme référence)
+      const firstSC = Object.values(comp.sousCompetences)[0];
       sheet.addRow([
         t('col_fullname') || 'Nom et Prénom',
         'Sous-Comp.',
         'UA',
-        'Orale',
-        'Écrite',
-        'Pratique',
-        'Savoir-être'
+        firstSC ? `Orale (/${firstSC.orale || 0})` : 'Orale',
+        firstSC ? `Écrite (/${firstSC.ecrite || 0})` : 'Écrite',
+        firstSC ? `Pratique (/${firstSC.pratique || 0})` : 'Pratique',
+        firstSC ? `Savoir-être (/${firstSC.savoirEtre || 0})` : 'Savoir-être'
       ]);
 
-      // Ligne d'info : max pour chaque sous-compétence
       const headerRow = sheet.getRow(1);
       headerRow.eachCell(cell => {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1a3c6e' } };
         cell.font = { bold: true, color: { argb: 'FFffffff' }, size: 10 };
         cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       });
-      headerRow.height = 25;
+      headerRow.height = 30;
 
-      // Lignes élèves
+      // Lignes élèves : une par sous-compétence, avec note indiquant les max exacts
       for (const eleve of eleves) {
         for (const [sousCode, sc] of Object.entries(comp.sousCompetences)) {
-          const maxStr = `/${sc.orale || 0} | /${sc.ecrite || 0} | /${sc.pratique || 0} | /${sc.savoirEtre || 0}`;
-          sheet.addRow([
+          const row = sheet.addRow([
             `${eleve.nom} ${eleve.prenom}`,
             sousCode,
             '',
             '', '', '', ''
           ]);
+          const maxStr = `Orale: /${sc.orale || 0} | Écrite: /${sc.ecrite || 0} | Pratique: /${sc.pratique || 0} | Savoir-être: /${sc.savoirEtre || 0}`;
+          row.getCell(1).note = maxStr;
+          row.getCell(4).note = `Max: /${sc.orale || 0}`;
+          row.getCell(5).note = `Max: /${sc.ecrite || 0}`;
+          row.getCell(6).note = `Max: /${sc.pratique || 0}`;
+          row.getCell(7).note = `Max: /${sc.savoirEtre || 0}`;
         }
-      }
-
-      // Petit rappel des max sur la 2e ligne (commentaire)
-      if (sheet.rowCount > 1) {
-        const infoRow = sheet.getRow(2);
-        infoRow.getCell(2).note = 'Code sous-compétence (ex: 1A, 2B)';
-        infoRow.getCell(3).note = 'UA1 à UA8';
       }
 
       sheet.columns = [

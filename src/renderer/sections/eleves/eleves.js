@@ -449,11 +449,8 @@ function getPoids(niveauV2, code) {
 }
 
 async function rafraichirProfil(eleveId, title, content) {
-  // Charger détail élève + heures d'absence en parallèle
-  const [detail, heures] = await Promise.all([
-    window.elimuAPI.getEleveDetail(eleveId),
-    window.elimuAPI.getHeuresAbsence(eleveId)
-  ]);
+  // Charger détail élève
+  const detail = await window.elimuAPI.getEleveDetail(eleveId);
 
   if (!detail?.eleve) {
     if (content) content.innerHTML = `<p style="color:var(--red-fifa);text-align:center;padding:20px;">${t('common.error')}</p>`;
@@ -462,9 +459,6 @@ async function rafraichirProfil(eleveId, title, content) {
 
   const { eleve, notes: toutesNotes } = detail;
   if (title) title.textContent = `${eleve.prenom} ${eleve.nom}`;
-
-  // ── Heures d'absence par trimestre (objet ou valeur par défaut) ─
-  const hAbs = (heures && !heures.error) ? heures : { 'Trimestre 1': 0, 'Trimestre 2': 0, 'Trimestre 3': 0 };
 
   // ── Calcul de la moyenne générale ───────────────────────────────
   const estQualitatifProfil = eleve.niveau_v2 === 'N1' || eleve.niveau_v2 === 'N2';
@@ -561,7 +555,7 @@ async function rafraichirProfil(eleveId, title, content) {
         </div>` : ''}
       </div>
 
-      <!-- Zone droite : Notes + Absences -->
+      <!-- Zone droite : Notes -->
       <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:16px;">
 
         <!-- Filtres notes -->
@@ -580,65 +574,6 @@ async function rafraichirProfil(eleveId, title, content) {
 
         <!-- Notes par matière -->
         <div id="profil-notes-section"></div>
-
-        <!-- ─── Absences par trimestre ─────────────────────── -->
-        <div style="border-top:1px solid var(--border-color);padding-top:14px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
-                        color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;">
-              ${t('eleves.profil_absences_title')}
-            </div>
-            <button type="button" class="btn btn-sm btn-secondary" id="btn-abs-save-all"
-                    style="font-size:11px;padding:4px 10px;">
-              ${t('eleves.profil_absences_save_all')}
-            </button>
-          </div>
-
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;">
-            ${PERIODES.map(p => {
-              const h = hAbs[p] || 0;
-              const col = h === 0 ? 'var(--green-fifa)' : h < 10 ? 'var(--yellow-fifa)' : 'var(--red-fifa)';
-              const bg  = h === 0 ? 'rgba(0,230,118,0.06)' : h < 10 ? 'rgba(255,183,77,0.06)' : 'rgba(255,82,82,0.06)';
-              const borderCol = h === 0 ? 'rgba(0,230,118,0.25)' : h < 10 ? 'rgba(255,183,77,0.3)' : 'rgba(255,82,82,0.3)';
-              return `
-                <div style="background:${bg};border:1px solid ${borderCol};
-                            border-radius:10px;padding:12px;">
-                  <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;
-                              letter-spacing:0.5px;margin-bottom:8px;font-weight:600;">${p}</div>
-                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-                    <input type="number"
-                           id="abs-h-${p.replace(/ /g, '-')}"
-                           class="input abs-input" min="0" max="9999" step="0.5"
-                           data-periode="${p}"
-                           value="${h}"
-                           style="flex:1;text-align:center;font-family:'Rajdhani',sans-serif;
-                                  font-size:22px;font-weight:700;color:${col};
-                                  padding:6px 4px;border-color:${col}44;background:${col}0d;">
-                    <span style="font-size:11px;color:var(--text-muted);flex-shrink:0;">${t('eleves.profil_absences_total_hours')}</span>
-                  </div>
-                  <div class="abs-sanction-label" id="abs-sanction-${p.replace(/ /g, '-')}"
-                       style="font-size:10px;color:var(--text-muted);min-height:14px;line-height:1.4;">
-                  </div>
-                  <button type="button"
-                          class="btn btn-sm btn-secondary abs-save-btn"
-                          data-periode="${p}"
-                          style="width:100%;margin-top:8px;font-size:11px;padding:5px;">
-                    ${t('eleves.profil_absences_save')}
-                  </button>
-                </div>`;
-            }).join('')}
-          </div>
-
-          <!-- Résumé total absences -->
-          <div id="abs-total-recap" style="padding:8px 12px;border-radius:8px;
-               background:var(--bg-secondary);border:1px solid var(--border-color);
-               font-size:12px;color:var(--text-muted);display:flex;gap:16px;flex-wrap:wrap;">
-          </div>
-
-          <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;">
-            ${t('eleves.profil_absences_hint')}
-          </div>
-        </div>
       </div>
     </div>`;
 
@@ -763,119 +698,6 @@ async function rafraichirProfil(eleveId, title, content) {
     document.getElementById('profil-sequence')?.addEventListener('change', renderNotes);
   }
   renderNotes();
-
-
-  // ── Charger le barème d'absences ────────────────────────────
-  let reglesAbsences = [];
-  try {
-    const reglesResult = await window.elimuAPI.getReglesAbsences?.();
-    reglesAbsences = Array.isArray(reglesResult) ? reglesResult : [];
-  } catch {}
-
-  // ── Fonction utilitaire : trouver la sanction selon les heures ──
-  const getSanction = (heures) => {
-    if (!reglesAbsences.length || heures === 0) return null;
-    const sorted = [...reglesAbsences].sort((a, b) => a.de - b.de);
-    return sorted.find(r => heures >= r.de && heures <= (r.a >= 999 ? Infinity : r.a)) || null;
-  };
-
-  const GRAVITE_COLORS = {
-    observation:   '#ffb74d',
-    avertissement: '#ff9800',
-    grave:         '#ff5252',
-    critique:      '#b71c1c'
-  };
-
-  // ── Mise à jour couleurs + sanction live à la saisie ─────────
-  const majCouleurInput = (inp) => {
-    const h   = parseFloat(inp.value) || 0;
-    const col = h === 0 ? 'var(--green-fifa)' : h < 10 ? 'var(--yellow-fifa)' : 'var(--red-fifa)';
-    inp.style.color       = col;
-    inp.style.borderColor = col + '44';
-    inp.style.background  = col + '0d';
-
-    // Mettre à jour la sanction suggérée
-    const periode    = inp.dataset.periode;
-    const labelId    = `abs-sanction-${periode.replace(/ /g, '-')}`;
-    const labelEl    = document.getElementById(labelId);
-    if (labelEl) {
-      const sanction = getSanction(h);
-      if (sanction) {
-        const gc = GRAVITE_COLORS[sanction.gravite] || '#ff9800';
-        labelEl.innerHTML = `<span style="color:${gc};font-weight:600;">${t('eleves.profil_absences_sanction').replace('{sanction}', esc(sanction.sanction))}</span>`;
-      } else {
-        labelEl.textContent = h === 0 ? t('eleves.profil_absences_no_sanction') : '';
-      }
-    }
-  };
-
-  content.querySelectorAll('.abs-input').forEach(inp => {
-    majCouleurInput(inp); // Initialisation
-    inp.addEventListener('input', () => majCouleurInput(inp));
-  });
-
-  // ── Récap total ──────────────────────────────────────────────
-  const majRecap = () => {
-    const recap = document.getElementById('abs-total-recap');
-    if (!recap) return;
-    let total = 0;
-    PERIODES.forEach(p => {
-      const v = parseFloat(document.getElementById(`abs-h-${p.replace(/ /g, '-')}`)?.value) || 0;
-      total += v;
-    });
-    const col = total === 0 ? 'var(--green-fifa)' : total < 20 ? 'var(--yellow-fifa)' : 'var(--red-fifa)';
-    recap.innerHTML = `
-      <span>${t('eleves.profil_absences_total_annual')}</span>
-      <strong style="color:${col};">${total}${t('eleves.profil_absences_total_hours')}</strong>
-    `;
-  };
-  content.querySelectorAll('.abs-input').forEach(inp =>
-    inp.addEventListener('input', majRecap)
-  );
-  majRecap();
-
-  // ── Bouton "Tout enregistrer" ────────────────────────────────
-  document.getElementById('btn-abs-save-all')?.addEventListener('click', async () => {
-    const btn = document.getElementById('btn-abs-save-all');
-    btn.disabled = true; btn.textContent = '⏳...';
-    let ok = 0, erreur = 0;
-    for (const periode of PERIODES) {
-      const inputId = `abs-h-${periode.replace(/ /g, '-')}`;
-      const heures  = parseFloat(document.getElementById(inputId)?.value) || 0;
-      const result  = await window.elimuAPI.saveHeuresAbsence({ eleve_id: eleveId, periode, heures });
-      if (result?.error) erreur++; else ok++;
-    }
-    btn.disabled = false; btn.textContent = t('eleves.profil_absences_save_all');
-    if (erreur === 0) showToast(t('eleves.profil_absences_all_saved').replace('{ok}', ok), 'success');
-    else showToast(t('eleves.profil_absences_all_error').replace('{erreur}', erreur), 'error');
-  });
-
-  // ── Boutons "Enregistrer" individuels ────────────────────────
-  content.querySelectorAll('.abs-save-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const periode = btn.dataset.periode;
-      const inputId = `abs-h-${periode.replace(/ /g, '-')}`;
-      const heures  = parseFloat(document.getElementById(inputId)?.value) || 0;
-
-      btn.disabled    = true;
-      btn.textContent = '⏳';
-
-      const result = await window.elimuAPI.saveHeuresAbsence({
-        eleve_id: eleveId,
-        periode,
-        heures
-      });
-
-      btn.disabled    = false;
-      btn.textContent = t('eleves.profil_absences_save');
-
-      if (result?.error) {
-        showToast(t('common.error') + ' : ' + result.error, 'error');
-      } else {
-        showToast(t('eleves.profil_absences_saved').replace('{periode}', periode).replace('{heures}', heures), 'success');
-      }
-    });
-  });
 }
 
 function fermerProfil() {
