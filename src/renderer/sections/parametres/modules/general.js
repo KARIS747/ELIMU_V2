@@ -7,6 +7,7 @@ export async function init(state) {
   remplirFormulaireGeneral();
   attacherEvenementsGeneral();
   initLicenceInfo();
+  initCloudSyncInfo();
 }
 
 async function initLicenceInfo() {
@@ -51,6 +52,100 @@ async function initLicenceInfo() {
   }
 }
 
+async function initCloudSyncInfo() {
+  const statusText = document.getElementById('cloud-sync-status');
+  const lastSyncText = document.getElementById('cloud-last-sync');
+  const btnSyncNow = document.getElementById('btn-sync-cloud-now');
+
+  const url = parametres.portail_url;
+  const apiKey = parametres.portail_api_key;
+  const lastSync = parametres.derniere_synchro_portail;
+
+  if (lastSyncText) {
+    if (lastSync) {
+      try {
+        const date = new Date(lastSync);
+        if (!isNaN(date.getTime())) {
+          lastSyncText.textContent = date.toLocaleString(getCurrentLocale());
+        } else {
+          lastSyncText.textContent = lastSync;
+        }
+      } catch {
+        lastSyncText.textContent = lastSync;
+      }
+    } else {
+      lastSyncText.textContent = '—';
+    }
+  }
+
+  if (!url || !apiKey) {
+    if (statusText) {
+      statusText.textContent = t('parents.sync_error_config') || 'Non configuré (Portail non lié)';
+      statusText.style.color = 'var(--yellow-fifa)';
+    }
+    if (btnSyncNow) btnSyncNow.disabled = true;
+    return;
+  }
+
+  if (statusText) {
+    statusText.textContent = t('params.general.cloud_checking') || 'Vérification...';
+    statusText.style.color = 'var(--text-muted)';
+  }
+
+  try {
+    const check = await window.elimuAPI.testPortalConnection(url, apiKey);
+    if (statusText) {
+      if (check?.success) {
+        statusText.textContent = t('params.general.cloud_connected') || 'Connecté (PostgreSQL Neon)';
+        statusText.style.color = 'var(--green-fifa)';
+        if (btnSyncNow) btnSyncNow.disabled = false;
+      } else {
+        statusText.textContent = t('params.general.cloud_disconnected') || 'Erreur de connexion';
+        statusText.style.color = 'var(--red-fifa)';
+        if (btnSyncNow) btnSyncNow.disabled = true;
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    if (statusText) {
+      statusText.textContent = t('params.general.cloud_disconnected') || 'Erreur de connexion';
+      statusText.style.color = 'var(--red-fifa)';
+    }
+    if (btnSyncNow) btnSyncNow.disabled = true;
+  }
+
+  if (btnSyncNow) {
+    // Eviter les écouteurs en doublon
+    const newBtn = btnSyncNow.cloneNode(true);
+    btnSyncNow.parentNode.replaceChild(newBtn, btnSyncNow);
+
+    newBtn.addEventListener('click', async () => {
+      newBtn.disabled = true;
+      newBtn.textContent = t('params.general.cloud_sync_in_progress') || 'Synchronisation...';
+      if (statusText) {
+        statusText.textContent = t('params.general.cloud_sync_in_progress') || 'Synchronisation...';
+        statusText.style.color = 'var(--text-muted)';
+      }
+
+      try {
+        const syncResult = await window.elimuAPI.exportToPortal(url, apiKey);
+        if (syncResult?.success) {
+          showToast(t('params.general.cloud_sync_success') || 'Synchronisation cloud réussie !', 'success');
+          await chargerParametresDepuisBD();
+          initCloudSyncInfo();
+        } else {
+          showToast((t('params.general.cloud_sync_error') || 'Échec de la synchronisation') + ': ' + (syncResult?.error || ''), 'error');
+          initCloudSyncInfo();
+        }
+      } catch (err) {
+        console.error(err);
+        showToast((t('params.general.cloud_sync_error') || 'Échec de la synchronisation') + ': ' + err.message, 'error');
+        initCloudSyncInfo();
+      }
+    });
+  }
+}
+
 async function chargerParametresDepuisBD() {
   try {
     const result = await window.elimuAPI.getParametres();
@@ -83,6 +178,8 @@ function attacherEvenementsGeneral() {
     if (result?.success) {
       parametres = { ...parametres, ...data };
       showToast(t('params.toast_save_success'), 'success');
+      // Mettre à jour l'info de synchro si le paramètre a changé
+      initCloudSyncInfo();
     } else {
       showToast(result?.error || t('common.error'), 'error');
     }

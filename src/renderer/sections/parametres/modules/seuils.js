@@ -44,11 +44,13 @@ function remplirFormulairesSeuils() {
   const seuilAlerte    = document.getElementById('seuil-alerte');
   const seuilExcellent = document.getElementById('seuil-excellent');
   const periodeActive  = document.getElementById('periode-active');
+  const uaActive       = document.getElementById('ua-active');
 
   if (noteMax)        noteMax.value        = parametres.note_max        || 20;
   if (seuilAlerte)    seuilAlerte.value    = parametres.seuil_alerte    || 10;
   if (seuilExcellent) seuilExcellent.value = parametres.seuil_excellent || 14;
   if (periodeActive)  periodeActive.value  = parametres.periode_active  || 'Trimestre 1';
+  if (uaActive)       uaActive.value       = parametres.ua_active       || 'UA1';
 
   // Afficher suggestions si différences
   verifierDifferences();
@@ -88,6 +90,7 @@ function attacherEvenementsSeuils() {
       seuil_alerte:    parseFloat(document.getElementById('seuil-alerte')?.value)    || 10,
       seuil_excellent: parseFloat(document.getElementById('seuil-excellent')?.value) || 14,
       periode_active:  document.getElementById('periode-active')?.value || 'Trimestre 1',
+      ua_active:       document.getElementById('ua-active')?.value || 'UA1',
     };
     const result = await window.elimuAPI.saveParametres(data);
     if (result?.success) {

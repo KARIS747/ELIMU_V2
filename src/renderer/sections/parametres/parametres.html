@@ -127,6 +127,39 @@
         </div>
       </div>
 
+      <!-- Bloc Cloud Sync (Nouveau V2) -->
+      <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color);">
+        <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;"
+             data-i18n="params.general.cloud_title">
+          Passerelle Cloud (Synchronisation Neon)
+        </div>
+        
+        <div style="background:var(--bg-secondary); border-radius:10px; padding:16px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;"
+                   data-i18n="params.general.cloud_status">Statut Connexion</div>
+              <div id="cloud-sync-status" style="font-weight:700; font-size:14px; color:var(--text-muted);" data-i18n="params.general.cloud_checking">Vérification...</div>
+            </div>
+            <button class="btn btn-sm btn-secondary" id="btn-sync-cloud-now" data-i18n="params.general.cloud_sync_now">Synchroniser maintenant</button>
+          </div>
+          
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; padding-top:8px; border-top:1px solid var(--border-color);">
+            <div>
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;"
+                   data-i18n="params.general.cloud_last_sync">Dernière Sync</div>
+              <div id="cloud-last-sync" style="font-size:12px; font-weight:600; color:var(--text-primary);">—</div>
+            </div>
+            <div>
+              <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;"
+                   data-i18n="params.general.cloud_flow_active">Flux de notes V2</div>
+              <div style="font-size:12px; font-weight:600; color:var(--blue-fifa);"
+                   data-i18n="params.general.cloud_flow_desc">Actif (PWA ↔ Cloud ↔ Desktop)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex; justify-content:flex-end; margin-top:20px;
                   padding-top:16px; border-top:1px solid var(--border-color);">
         <button class="btn btn-primary" id="btn-save-general" data-i18n="params.general.save">Enregistrer</button>
@@ -142,7 +175,7 @@
       <div class="card-header">
         <div class="card-title" data-i18n="params.seuils.title">Seuils d'évaluation</div>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
         <div class="input-group" style="margin:0;">
           <label data-i18n="params.seuils.note_max">Note maximale</label>
           <input type="number" id="note-max" class="input" value="20" min="10" max="100" step="1">
@@ -165,6 +198,20 @@
             <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
             <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
           </select>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label data-i18n="params.seuils.ua_active">Unité d'Apprentissage (UA) active (N1/N2)</label>
+          <select id="ua-active" class="input">
+            <option value="UA1">UA 1</option>
+            <option value="UA2">UA 2</option>
+            <option value="UA3">UA 3</option>
+            <option value="UA4">UA 4</option>
+            <option value="UA5">UA 5</option>
+            <option value="UA6">UA 6</option>
+            <option value="UA7">UA 7</option>
+            <option value="UA8">UA 8</option>
+          </select>
+          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.ua_active_tip">UA active pour la saisie PWA et les imports N1/N2</span>
         </div>
       </div>
       <div style="margin-top:20px; padding:14px; background:var(--bg-secondary);
@@ -398,9 +445,12 @@
 
       <!-- BLOC 3 : Notation & Moyennes -->
       <div class="card" style="margin-bottom:0; padding:12px;">
-        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; display:flex; align-items:center; gap:8px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"></path></svg>
           <span data-i18n="params.bulletin.notation_title">Notation & Poids</span>
+        </div>
+        <div style="font-size:10px; color:var(--yellow-fifa); margin-bottom:8px; font-weight:600;" data-i18n="params.bulletin.warning_n3_only">
+          ⚠️ Concerne uniquement le Niveau 3 (CM1/CM2)
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
@@ -431,9 +481,12 @@
 
       <!-- BLOC 4 : Colonnes à afficher -->
       <div class="card" style="margin-bottom:0; padding:12px;">
-        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:4px; display:flex; align-items:center; gap:8px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3zM3 9h18M9 3v18"></path></svg>
           <span data-i18n="params.bulletin.columns_title">Colonnes du tableau</span>
+        </div>
+        <div style="font-size:10px; color:var(--yellow-fifa); margin-bottom:8px; font-weight:600;" data-i18n="params.bulletin.warning_n3_only">
+          ⚠️ Concerne uniquement le Niveau 3 (CM1/CM2)
         </div>
 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
