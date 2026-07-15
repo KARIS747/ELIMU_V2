@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "references": {
+    "curriculum": {
+      "path": "..",
+      "description": "Documents curriculum MINEDUB (ELIMU_CURRICULUM_N1_N2.md, ELIMU_CURRICULUM_N3.md), vision projet (ELIMU_V2_VISION.md, ELIMU_V2_ARCHITECTURE.md)"
+    },
+    "gemini": {
+      "path": "gemini",
+      "description": "Rapports de sessions précédentes, règles de code (GEMINI.md), état V2"
+    },
+    "docs": {
+      "path": "docs",
+      "description": "Documentation technique (formules de calcul des notes N1/N2)"
+    }
+  },
+  "command": {
+    "seed": { "description": "Nettoie la DB et regénère les données de test", "template": "node scripts/seed_test_data.js clean" },
+    "start": { "description": "Lance l'application Electron", "template": "npx electron ." },
+    "commit": { "description": "Commit et push toutes les modifications", "template": "git add -A && git commit -m \"$ARGUMENTS\" && git push" }
+  },
+  "agent": {
+    "curriculum": {
+      "description": "Spécialiste du curriculum MINEDUB. Vérifie et corrige les templates, poids, formules de calcul N1/N2/N3.",
+      "mode": "subagent",
+      "model": "deepseek/deepseek-v4-flash-free",
+      "permission": { "edit": "allow", "bash": "allow" },
+      "prompt": "Tu es un expert du système éducatif camerounais MINEDUB. Tu connais parfaitement les curriculums N1 (SIL/CP), N2 (CE1/CE2) et N3 (CM1/CM2). Tu travailles sur l'application ELIMU V2. Avant chaque modification : 1) Vérifie les fichiers curriculum dans les références 2) Vérifie que la formule sum(val×poids)/sum(poids) est utilisée 3) Vérifie que les codes sous-compétences sont sans préfixe 4) Vérifie que les notes sont stockées sur /20. Consulte toujours AGENTS.md avant d'agir."
+    }
+  }
+}
