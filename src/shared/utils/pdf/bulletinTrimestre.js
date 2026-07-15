@@ -6,7 +6,7 @@
 const PDFDocument = require('pdfkit');
 const fs          = require('fs');
 const { run, get, all } = require('../../database/db');
-const { getNoteToCode, getUAsForPeriode, SOUS_TYPES } = require('../../constants/curriculum');
+const { getNoteToCode, getUAsForPeriode, SOUS_TYPES, CURRICULUM_TEMPLATES } = require('../../constants/curriculum');
 const {
   loadConfig,
   loadReglesAbsences,
@@ -64,8 +64,31 @@ function prepareBulletinTrimestreData(eleveId, periode, lang = 'fr', anneeId = n
       return { ua, subRows };
     });
 
+    // Calculer les moyennes et rangs de la classe pour N1/N2
+    const elevesClasse = all(`SELECT id FROM eleves WHERE classe_id = ?`, [eleve.classe_id]);
+    const nbElevesClasse = elevesClasse.length;
+    
+    const listMoyennes = [];
+    elevesClasse.forEach(el => {
+      const rowMoy = get(`
+        SELECT AVG(note) AS avg_note
+        FROM notes
+        WHERE eleve_id = ? AND ua IN (${lesUA.map(u => `'${u}'`).join(',')}) AND annee_scolaire_id = ? AND sous_type IS NULL
+      `, [el.id, eid]);
+      
+      const mVal = rowMoy ? rowMoy.avg_note : null;
+      listMoyennes.push({ id: el.id, moy: mVal !== null ? mVal : -1 });
+    });
+    
+    listMoyennes.sort((a, b) => b.moy - a.moy);
+    const pos = listMoyennes.findIndex(item => item.id === eleveId);
+    const rangGeneral = (pos >= 0 && listMoyennes[pos].moy >= 0) ? pos + 1 : null;
+
+    const absRow = get(`SELECT heures FROM heures_absence WHERE eleve_id = ? AND periode = ?`, [eleveId, periode]);
+    const heuresAbsence = absRow?.heures || 0;
+
     return {
-      eleve, notesAgg, notesSub, cfg, periode, lang
+      eleve, notesAgg, notesSub, cfg, periode, lang, rangGeneral, nbElevesClasse, heuresAbsence
     };
   }
 
@@ -203,100 +226,678 @@ function prepareBulletinTrimestreData(eleveId, periode, lang = 'fr', anneeId = n
 }
 
 /**
- * Dessine un bulletin qualitatif (N1/N2)
+ * Construit un index des sous-compétences avec leur compétence parente et poids
  */
-function drawBulletinQualitatif(doc, data) {
-  const { eleve, notesAgg, notesSub, cfg, periode, lang } = data;
+function buildSubCompIndex(lvl) {
+  const tmpls = Object.values(CURRICULUM_TEMPLATES);
+  const idx = {};
+  for (const tmpl of tmpls) {
+    for (const [compCode, comp] of Object.entries(tmpl.competences || {})) {
+      for (const [scCode, sc] of Object.entries(comp.sousCompetences || {})) {
+        idx[scCode] = {
+          competenceCode: compCode,
+          competenceNom: comp.nom || compCode,
+          nom: sc.nom || scCode,
+          total: sc.total || 0,
+          weights: { orale: sc.orale||0, ecrite: sc.ecrite||0, pratique: sc.pratique||0, savoirEtre: sc.savoirEtre||0 }
+        };
+      }
+    }
+  }
+  return idx;
+}
+
+/**
+ * Dessine un bulletin qualitatif (N1/N2) — format référence 2 pages
+ * UA1-3 en colonnes horizontales · sous-compétences en lignes
+ */
+function drawBulletinQualitatif(doc, data, lang = 'fr') {
+  const { eleve, notesAgg, notesSub, cfg, periode, rangGeneral, nbElevesClasse } = data;
   const t = getDocTranslator(lang);
-  const coulPrimaire = cfg.couleur_primaire || '#1a3c6e';
-  const pageW = 595 - 60;
-  const LEFT = 30;
-  let y = 28;
+  const coulPrimaire = cfg.couleur_primaire || '#26337A';
+  const lvl = eleve.niveau_v2;
 
-  // En-tête standard
-  y = drawAdminHeader(doc, cfg, y, lang, false);
+  const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const LEFT = doc.page.margins.left;
+  let y = doc.page.margins.top;
 
-  doc.font('Helvetica-Bold').fontSize(11).fillColor('#111').text(`${t('bulletin_title')} ${periode.replace(/[^0-9]/g, '') || '1'}`, LEFT, y, { width: pageW, align: 'center' });
-  y += 18;
-  doc.font('Helvetica-Bold').fontSize(9.5).fillColor(coulPrimaire).text(`${t('school_year')} : ${cfg.annee_scolaire || '2025/2026'}`, LEFT, y, { width: pageW, align: 'center' });
-  y += 20;
+  const lesUA = getUAsForPeriode(periode);
+  const uaCount = lesUA.length;
 
-  // Carte élève
-  doc.rect(LEFT, y, pageW, 40).stroke('#333').lineWidth(0.5);
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#666').text('NOM & PRÉNOM :', LEFT + 5, y + 5);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(`${eleve.nom.toUpperCase()} ${eleve.prenom.toUpperCase()}`, LEFT + 80, y + 5);
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#666').text('CLASSE :', LEFT + 5, y + 18);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(eleve.nom_classe || '—', LEFT + 80, y + 18);
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#666').text('PÉRIODE :', LEFT + 5, y + 30);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#111').text(periode, LEFT + 80, y + 30);
-  y += 50;
+  // --- CALCUL DYNAMIQUE DES LARGEURS DE COLONNES ---
+  const totalParts = 28 + 28 + 20 + uaCount * 18 + 30; // 28 Comp, 28 SousComp, 20 Eval, 18 par UA, 30 totaux
+  const scale = pageW / totalParts;
+  const colComp = Math.floor(28 * scale);
+  const colSousComp = Math.floor(28 * scale);
+  const colEval = Math.floor(20 * scale);
+  const noteW = Math.floor(9 * scale);
+  const coteW = Math.floor(9 * scale);
+  const colTot = Math.floor(10 * scale);
+  const colMoy20 = Math.floor(10 * scale);
+  const colCoteFinale = pageW - (colComp + colSousComp + colEval + (noteW + coteW) * uaCount + colTot + colMoy20);
 
-  // En-tête tableau
-  const colCode = pageW * 0.25;
-  const colNom = pageW * 0.35;
-  const colRes = pageW * 0.4;
-  const headH = 22;
+  const colWidths = [colComp, colSousComp, colEval];
+  for (let i = 0; i < uaCount; i++) {
+    colWidths.push(noteW, coteW);
+  }
+  colWidths.push(colTot, colMoy20, colCoteFinale);
 
-  doc.rect(LEFT, y, pageW, headH).fill(coulPrimaire);
-  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5);
-  doc.text('Code', LEFT + 5, y + 7, { width: colCode });
-  doc.text('Sous-compétence', LEFT + colCode + 5, y + 7, { width: colNom });
-  doc.text('Résultat', LEFT + colCode + colNom, y + 7, { width: colRes, align: 'center' });
-  y += headH;
+  // --- CONSTRUIRE LA STRUCTURE DE DONNÉES DU CURRICULUM ---
+  const tmpl = CURRICULUM_TEMPLATES[lvl];
+  if (!tmpl) return;
 
-  // Lignes par UA
-  const codeLabel = { 'orale': 'Orale', 'ecrite': 'Écrite', 'pratique': 'Pratique', 'savoirEtre': 'Savoir-Être' };
+  const dataTree = [];
+  let totalGeneralObtained = 0;
+  let totalGeneralMax = 0;
 
-  notesAgg.forEach(({ ua, aggRows }) => {
-    // Bande UA
-    doc.rect(LEFT, y, pageW, 15).fill('#f0f4ff');
-    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(8).text(ua, LEFT + 5, y + 4);
-    y += 15;
+  const uaGeneralObtained = {};
+  const uaGeneralMax = {};
+  lesUA.forEach(ua => {
+    uaGeneralObtained[ua] = 0;
+    uaGeneralMax[ua] = 0;
+  });
 
-    aggRows.forEach((row, idx) => {
-      const code = getNoteToCode(row.note);
-      const col = code === 'A+' || code === 'A' ? '#00a854' : code === 'ECA' ? '#faad14' : '#f5222d';
-      const bg = idx % 2 === 0 ? '#fff' : '#f9fbff';
-      
-      doc.rect(LEFT, y, pageW, 16).fill(bg).stroke('#eee').lineWidth(0.2);
-      doc.fillColor('#333').font('Helvetica-Bold').fontSize(7.5).text(row.sous_competence_code || '—', LEFT + 5, y + 5, { width: colCode - 5 });
-      
-      // Résultat : code qualitatif
-      doc.fillColor(col).font('Helvetica-Bold').fontSize(8);
-      doc.text(`${code} (${row.note.toFixed(1)})`, LEFT + colCode + colNom, y + 5, { width: colRes, align: 'center' });
-      y += 16;
+  for (const [compCode, comp] of Object.entries(tmpl.competences)) {
+    const compNode = {
+      code: compCode,
+      nom: comp.nom,
+      totalWeight: comp.total,
+      subCompetences: [],
+      uaObtained: {},
+      uaMax: {},
+      totalObtained: 0,
+      totalMax: 0
+    };
+    lesUA.forEach(ua => {
+      compNode.uaObtained[ua] = 0;
+      compNode.uaMax[ua] = 0;
     });
 
-    // Afficher les sous-types pour ce UA (en petit)
-    const subForUA = notesSub.find(s => s.ua === ua);
-    if (subForUA && subForUA.subRows.length > 0) {
-      doc.fontSize(6.5).fillColor('#888');
-      let subLine = '';
-      let lastCode = '';
-      subForUA.subRows.forEach(s => {
-        if (s.sous_competence_code !== lastCode) {
-          if (subLine) {
-            doc.fillColor('#888').font('Helvetica').fontSize(6).text(subLine, LEFT + 10, y + 1, { width: pageW - 20 });
-            y += 9;
-          }
-          subLine = `${s.sous_competence_code}: `;
-          lastCode = s.sous_competence_code;
-        }
-        const sc = getNoteToCode(s.note);
-        const sCol = sc === 'A+' || sc === 'A' ? '#00a854' : sc === 'ECA' ? '#faad14' : '#f5222d';
-        subLine += `${codeLabel[s.sous_type] || s.sous_type}=${s.note.toFixed(1)}(${sc})  `;
+    for (const [scCode, sc] of Object.entries(comp.sousCompetences)) {
+      const scNode = {
+        code: scCode,
+        nom: sc.nom,
+        totalWeight: sc.total,
+        evaluations: [],
+        uaObtained: {},
+        uaMax: {},
+        totalObtained: 0,
+        totalMax: 0
+      };
+      lesUA.forEach(ua => {
+        scNode.uaObtained[ua] = 0;
+        scNode.uaMax[ua] = 0;
       });
-      if (subLine) {
-        doc.fillColor('#888').font('Helvetica').fontSize(6).text(subLine, LEFT + 10, y + 1, { width: pageW - 20 });
-        y += 11;
+
+      const activeTypes = ['orale', 'ecrite', 'pratique', 'savoirEtre'].filter(type => sc[type] > 0);
+
+      activeTypes.forEach(type => {
+        const maxPt = sc[type];
+        const evalNode = {
+          type,
+          label: type === 'savoirEtre' ? 'Savoir-être' : type.charAt(0).toUpperCase() + type.slice(1),
+          maxPt,
+          uas: {},
+          totalObtained: 0,
+          totalMax: 0
+        };
+
+        lesUA.forEach(ua => {
+          const uaSub = notesSub.find(u => u.ua === ua);
+          const row = uaSub?.subRows?.find(r => r.sous_competence_code === scCode && r.sous_type === type);
+          const rawNote = row ? row.note : null;
+
+          if (rawNote !== null && rawNote !== undefined) {
+            const obtained = (rawNote / 20) * maxPt;
+            evalNode.uas[ua] = {
+              note: Math.round(obtained * 10) / 10,
+              cote: getNoteToCode(rawNote)
+            };
+            evalNode.totalObtained += obtained;
+            evalNode.totalMax += maxPt;
+
+            scNode.uaObtained[ua] += obtained;
+            scNode.uaMax[ua] += maxPt;
+          } else {
+            evalNode.uas[ua] = null;
+          }
+        });
+
+        scNode.totalObtained += evalNode.totalObtained;
+        scNode.totalMax += evalNode.totalMax;
+
+        scNode.evaluations.push(evalNode);
+      });
+
+      lesUA.forEach(ua => {
+        compNode.uaObtained[ua] += scNode.uaObtained[ua];
+        compNode.uaMax[ua] += scNode.uaMax[ua];
+      });
+      compNode.totalObtained += scNode.totalObtained;
+      compNode.totalMax += scNode.totalMax;
+
+      compNode.subCompetences.push(scNode);
+    }
+
+    lesUA.forEach(ua => {
+      uaGeneralObtained[ua] += compNode.uaObtained[ua];
+      uaGeneralMax[ua] += compNode.uaMax[ua];
+    });
+    totalGeneralObtained += compNode.totalObtained;
+    totalGeneralMax += compNode.totalMax;
+
+    dataTree.push(compNode);
+  }
+
+  // Calcul des moyennes générales
+  let totalGeneral = 0;
+  let totalGeneralMaxScale = 0;
+  dataTree.forEach(comp => {
+    let compObtained = 0;
+    let compMax = 0;
+    comp.subCompetences.forEach(sc => {
+      if (sc.totalMax > 0) {
+        const scAvgOn20 = (sc.totalObtained / sc.totalMax) * 20;
+        const scScore = (scAvgOn20 / 20) * sc.totalWeight;
+        compObtained += scScore;
+        compMax += sc.totalWeight;
       }
+    });
+    comp.totalObtained = compObtained;
+    comp.totalMax = compMax;
+
+    totalGeneral += compObtained;
+    totalGeneralMaxScale += compMax;
+  });
+  const moy20General = totalGeneralMaxScale > 0 ? (totalGeneral / totalGeneralMaxScale) * 20 : null;
+
+  // --- DESSIN DU BULLETIN ---
+
+  // 1. Mini en-tête
+  const etabName = (cfg.etab_nom || 'ÉTABLISSEMENT').toUpperCase();
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(coulPrimaire)
+    .text(`${etabName}  |  Niveau : ${lvl.replace('N', '')}  |  Classe : ${eleve.nom_classe || '—'}`, LEFT, y);
+  y += 10;
+  doc.moveTo(LEFT, y).lineTo(LEFT + pageW, y).strokeColor('#ccc').lineWidth(0.4).stroke();
+  y += 4;
+
+  // 2. En-tête officiel
+  y = drawAdminHeader(doc, cfg, y, lang, true); // isMinimal = true
+
+  // 3. Titre
+  const numT = periode.replace(/[^0-9]/g, '') || '1';
+  const titreText = `BULLETIN DE NOTES — ${numT}${numT === '1' ? 'er' : 'ème'} TRIMESTRE  |  ANNÉE SCOLAIRE : ${cfg.annee_scolaire || '—'}`;
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor('#111')
+    .text(titreText, LEFT, y, { width: pageW, align: 'center' });
+  y += 12;
+
+  // 4. Infos élève (tableau 4 colonnes, hauteur fixe)
+  const profName = get(
+    `SELECT nom, prenom FROM professeurs p JOIN classes c ON c.professeur_principal_id = p.id WHERE c.id = ?`,
+    [eleve.classe_id]
+  ) || { nom: '—', prenom: '' };
+
+  const carteH = 18;
+  doc.rect(LEFT, y, pageW, carteH).fill('#f2f2f2');
+  doc.rect(LEFT, y, pageW, carteH).stroke('#ccc').lineWidth(0.4);
+  const colW1 = pageW * 0.32;
+  const colW2 = pageW * 0.18;
+  const colW3 = pageW * 0.22;
+  const colW4 = pageW * 0.28;
+
+  doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#666').text('NOM ET PRÉNOM', LEFT + 4, y + 2);
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#111').text(`${eleve.nom.toUpperCase()} ${eleve.prenom}`, LEFT + 4, y + 8, { width: colW1 - 8, ellipsis: true });
+
+  doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#666').text('NÉ(E) LE', LEFT + colW1 + 4, y + 2);
+  doc.font('Helvetica').fontSize(7).fillColor('#111').text(eleve.date_naissance ? new Date(eleve.date_naissance).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR') : '—', LEFT + colW1 + 4, y + 8);
+
+  doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#666').text('CLASSE + NIVEAU', LEFT + colW1 + colW2 + 4, y + 2);
+  doc.font('Helvetica-Bold').fontSize(7).fillColor('#111').text(`${eleve.nom_classe || '—'} | Niveau ${lvl}`, LEFT + colW1 + colW2 + 4, y + 8);
+
+  doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#666').text('EFFECTIF + TITULAIRE', LEFT + colW1 + colW2 + colW3 + 4, y + 2);
+  doc.font('Helvetica').fontSize(7).fillColor('#111').text(`Eff: ${nbElevesClasse} | M. ${profName.nom.toUpperCase()}`, LEFT + colW1 + colW2 + colW3 + 4, y + 8, { width: colW4 - 8, ellipsis: true });
+  y += carteH + 6;
+
+  // 5. Tableau principal des compétences
+  const headerH = 14;
+  const evalRowH = 7.2;
+  const totRowH = 8.2;
+  const grandTotRowH = 10;
+
+  // Couleurs de fond par compétence
+  const COMP_COLORS = {
+    'C1': '#DCE9FF',
+    'C2': '#DCFFDC',
+    'C3': '#FFF8D0',
+    'C4': '#FFE0E0',
+    'C5': '#F0DFFF',
+    'C6': '#FFEbD0'
+  };
+
+  const SUB_COMP_COLORS = {
+    'C1': '#C6D8FF',
+    'C2': '#C6FFC6',
+    'C3': '#FFF0B5',
+    'C4': '#FFC2C2',
+    'C5': '#E0C4FF',
+    'C6': '#FFDFB5'
+  };
+
+  // Dessin de l'en-tête du tableau
+  doc.rect(LEFT, y, pageW, headerH).fill('#26337A');
+  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(5.5);
+  let cx = LEFT;
+  
+  doc.text('COMPÉTENCE', cx + 2, y + 5, { width: colComp - 4, align: 'center' });
+  cx += colComp;
+  
+  doc.text('SOUS-COMPÉTENCE', cx + 2, y + 5, { width: colSousComp - 4, align: 'center' });
+  cx += colSousComp;
+  
+  doc.text('ÉVALUATION', cx + 2, y + 5, { width: colEval - 4, align: 'center' });
+  cx += colEval;
+  
+  lesUA.forEach(ua => {
+    doc.fontSize(5).text(ua, cx + 2, y + 1.5, { width: noteW + coteW - 4, align: 'center' });
+    doc.fontSize(5.5).text('Note', cx + 2, y + 8, { width: noteW - 4, align: 'center' });
+    cx += noteW;
+    doc.text('Cote', cx + 2, y + 8, { width: coteW - 4, align: 'center' });
+    cx += coteW;
+  });
+  
+  doc.fontSize(5.5).text('TOTAL', cx + 2, y + 5, { width: colTot - 4, align: 'center' });
+  cx += colTot;
+  
+  doc.text('MOY./20', cx + 2, y + 5, { width: colMoy20 - 4, align: 'center' });
+  cx += colMoy20;
+  
+  doc.text('COTE', cx + 2, y + 5, { width: colCoteFinale - 4, align: 'center' });
+
+  // Tracer les bordures de l'en-tête
+  doc.rect(LEFT, y, pageW, headerH).stroke('#d0d8e4').lineWidth(0.15);
+  let tcx = LEFT;
+  colWidths.forEach(w => {
+    doc.moveTo(tcx, y).lineTo(tcx, y + headerH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    tcx += w;
+  });
+  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + headerH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+  y += headerH;
+
+  // Parcourir les compétences
+  dataTree.forEach(comp => {
+    const compYStart = y;
+    const bgComp = COMP_COLORS[comp.code] || '#ffffff';
+    const bgSubComp = SUB_COMP_COLORS[comp.code] || '#ffffff';
+
+    comp.subCompetences.forEach(sc => {
+      const scYStart = y;
+      const evalsCount = sc.evaluations.length;
+
+      sc.evaluations.forEach((ev, ei) => {
+        // Colorer les colonnes
+        let rowX = LEFT;
+        colWidths.forEach((w, i) => {
+          let bg = '#ffffff';
+          if (i === 0) bg = bgComp;
+          doc.rect(rowX, y, w, evalRowH).fill(bg);
+          rowX += w;
+        });
+
+        // Contenu de la ligne d'évaluation (Col 3 à N)
+        let cellX = LEFT + colComp + colSousComp;
+        
+        // Col 3: Evaluation
+        doc.fillColor('#333').font('Helvetica').fontSize(5.2)
+           .text(`${ev.label} /${ev.maxPt}`, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+        cellX += colEval;
+
+        // UAs Note & Cote
+        lesUA.forEach(ua => {
+          const uaData = ev.uas[ua];
+          if (uaData) {
+            doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+               .text(String(uaData.note), cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            cellX += noteW;
+            doc.fillColor('#333').font('Helvetica').fontSize(5.2)
+               .text(uaData.cote, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            cellX += coteW;
+          } else {
+            doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
+               .text('—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            cellX += noteW;
+            doc.text('—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            cellX += coteW;
+          }
+        });
+
+        // Column TOTAL
+        const totStr = ev.totalMax > 0 ? `${Math.round(ev.totalObtained * 10) / 10}/${ev.totalMax}` : '—';
+        doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+           .text(totStr, cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+        cellX += colTot;
+
+        // Column MOY./20
+        const moy20Val = ev.totalMax > 0 ? (ev.totalObtained / ev.totalMax) * 20 : null;
+        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+        cellX += colMoy20;
+
+        // Column COTE
+        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (evalRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+
+        // Tracer les bordures de la ligne
+        doc.moveTo(LEFT + colComp + colSousComp, y + evalRowH).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        let borderX = LEFT;
+        colWidths.forEach(w => {
+          doc.moveTo(borderX, y).lineTo(borderX, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+          borderX += w;
+        });
+        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + evalRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+        y += evalRowH;
+      });
+
+      // Ligne TOTAL sous-compétence (si plus de 1 évaluation)
+      if (evalsCount > 1) {
+        let rowX = LEFT;
+        colWidths.forEach((w, i) => {
+          let bg = bgSubComp;
+          if (i === 0) bg = bgComp;
+          doc.rect(rowX, y, w, totRowH).fill(bg);
+          rowX += w;
+        });
+
+        let cellX = LEFT + colComp;
+        
+        // Col 2: TOTAL sous-compétence
+        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
+           .text(`TOTAL ${sc.code}`, cellX + 3, y + (totRowH - 5.2) / 2 - 0.5, { width: colSousComp - 6, align: 'left' });
+        cellX += colSousComp;
+
+        // Col 3: TOTAL weight
+        doc.text(`TOTAL /${sc.totalWeight}`, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+        cellX += colEval;
+
+        // UAs Note & Cote
+        lesUA.forEach(ua => {
+          if (sc.uaMax[ua] > 0) {
+            const scUAAverage = (sc.uaObtained[ua] / sc.uaMax[ua]) * 20;
+            doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+               .text(String(Math.round(sc.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            cellX += noteW;
+            doc.fillColor(coulPrimaire).text(getNoteToCode(scUAAverage), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            cellX += coteW;
+          } else {
+            doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
+               .text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+            cellX += noteW;
+            doc.text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+            cellX += coteW;
+          }
+        });
+
+        // Column TOTAL
+        const totStr = sc.totalMax > 0 ? `${Math.round(sc.totalObtained * 10) / 10}/${sc.totalMax}` : '—';
+        doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
+           .text(totStr, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+        cellX += colTot;
+
+        // Column MOY./20
+        const moy20Val = sc.totalMax > 0 ? (sc.totalObtained / sc.totalMax) * 20 : null;
+        doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+        cellX += colMoy20;
+
+        // Column COTE
+        doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+
+        // Tracer les bordures de la ligne
+        doc.moveTo(LEFT + colComp, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+        let borderX = LEFT;
+        colWidths.forEach(w => {
+          doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+          borderX += w;
+        });
+        doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+        y += totRowH;
+      }
+
+      // Tracer la ligne de séparation sous-compétence Col 2
+      doc.moveTo(LEFT + colComp, y).lineTo(LEFT + colComp + colSousComp, y).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+      
+      // Dessiner le texte sous-compétence centré
+      const evalRowsH = evalsCount * evalRowH;
+      const scText = `${sc.code} - ${sc.nom} (${sc.totalWeight} pts)`;
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+         .text(scText, LEFT + colComp + 3, scYStart + (evalRowsH - 5.2) / 2 - 0.5, {
+           width: colSousComp - 6,
+           align: 'left',
+           ellipsis: true
+         });
+    });
+
+    // Ligne TOTAL COMPÉTENCE
+    let rowX = LEFT;
+    colWidths.forEach(w => {
+      doc.rect(rowX, y, w, totRowH).fill(bgComp);
+      rowX += w;
+    });
+
+    let cellX = LEFT;
+    // Col 1: TOTAL compétence
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
+       .text(`TOTAL ${comp.code}`, cellX + 3, y + (totRowH - 5.5) / 2 - 0.5, { width: colComp - 6, align: 'left' });
+    cellX += colComp;
+
+    // Col 2: Nom compétence
+    doc.fillColor('#333').font('Helvetica-Bold').fontSize(5.2)
+       .text(comp.nom, cellX + 3, y + (totRowH - 5.2) / 2 - 0.5, { width: colSousComp - 6, align: 'left', ellipsis: true });
+    cellX += colSousComp;
+
+    // Col 3: TOTAL weight
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
+       .text(`TOTAL /${comp.totalWeight}`, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+    cellX += colEval;
+
+    // UAs Note & Cote
+    lesUA.forEach(ua => {
+      if (comp.uaMax[ua] > 0) {
+        const compUAAverage = (comp.uaObtained[ua] / comp.uaMax[ua]) * 20;
+        doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+           .text(String(Math.round(comp.uaObtained[ua] * 10) / 10), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+        cellX += noteW;
+        doc.fillColor(coulPrimaire).text(getNoteToCode(compUAAverage), cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+        cellX += coteW;
+      } else {
+        doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
+           .text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+        cellX += noteW;
+        doc.text('—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+        cellX += coteW;
+      }
+    });
+
+    // Column TOTAL
+    const totStr = comp.totalMax > 0 ? `${Math.round(comp.totalObtained * 10) / 10}/${comp.totalMax}` : '—';
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.2)
+       .text(totStr, cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+    cellX += colTot;
+
+    // Column MOY./20
+    const moy20Val = comp.totalMax > 0 ? (comp.totalObtained / comp.totalMax) * 20 : null;
+    doc.text(moy20Val !== null ? moy20Val.toFixed(1) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+    cellX += colMoy20;
+
+    // Column COTE
+    doc.text(moy20Val !== null ? getNoteToCode(moy20Val) : '—', cellX + 2, y + (totRowH - 5.2) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+
+    // Tracer les bordures de la ligne
+    doc.moveTo(LEFT, y + totRowH).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    let borderX = LEFT;
+    colWidths.forEach(w => {
+      doc.moveTo(borderX, y).lineTo(borderX, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+      borderX += w;
+    });
+    doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + totRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+    y += totRowH;
+
+    // Tracer la ligne de séparation sous-compétence Col 1
+    doc.moveTo(LEFT, y).lineTo(LEFT + colComp, y).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+    // Dessiner le texte compétence centré dans Col 1
+    const compSpanH = y - compYStart - totRowH;
+    const compText = `${comp.code}\n${comp.nom}`;
+    doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
+       .text(compText, LEFT + 3, compYStart + (compSpanH - 18) / 2 - 0.5, {
+         width: colComp - 6,
+         align: 'center',
+         ellipsis: true
+       });
+  });
+
+  // --- LIGNE TOTAL GÉNÉRAL ---
+  let rowX = LEFT;
+  colWidths.forEach(w => {
+    doc.rect(rowX, y, w, grandTotRowH).fill('#C0D0F0');
+    rowX += w;
+  });
+
+  let cellX = LEFT;
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(6)
+     .text('TOTAL GÉNÉRAL', cellX + 3, y + (grandTotRowH - 6) / 2 - 0.5, { width: colComp - 6, align: 'left' });
+  cellX += colComp;
+  cellX += colSousComp; // laisser vide Col 2
+
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
+     .text('TOTAL /320', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colEval - 4, align: 'center' });
+  cellX += colEval;
+
+  lesUA.forEach(ua => {
+    if (uaGeneralMax[ua] > 0) {
+      const uaAverage = (uaGeneralObtained[ua] / uaGeneralMax[ua]) * 20;
+      doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+         .text(String(Math.round(uaGeneralObtained[ua] * 10) / 10), cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+      cellX += noteW;
+      doc.fillColor(coulPrimaire).text(getNoteToCode(uaAverage), cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+      cellX += coteW;
+    } else {
+      doc.fillColor('#bbb').font('Helvetica').fontSize(5.2)
+         .text('—', cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: noteW - 4, align: 'center' });
+      cellX += noteW;
+      doc.text('—', cellX + 2, y + (grandTotRowH - 5.2) / 2 - 0.5, { width: coteW - 4, align: 'center' });
+      cellX += coteW;
     }
   });
 
-  // Signature
-  y = Math.max(y, 650);
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#555').text('Signature du Directeur', LEFT + (pageW / 2) - 50, y, { width: 100, align: 'center' });
-  doc.font('Helvetica').fontSize(7).fillColor('#999').text('(Cachet et Signature)', LEFT + (pageW / 2) - 50, y + 12, { width: 100, align: 'center' });
+  // Column TOTAL
+  const totGeneralStr = totalGeneralMax > 0 ? `${Math.round(totalGeneralObtained * 10) / 10}/${totalGeneralMax}` : '—';
+  doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(5.5)
+     .text(totGeneralStr, cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colTot - 4, align: 'center' });
+  cellX += colTot;
+
+  // Column MOY./20
+  doc.text(moy20General !== null ? moy20General.toFixed(1) : '—', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colMoy20 - 4, align: 'center' });
+  cellX += colMoy20;
+
+  // Column COTE
+  doc.text(moy20General !== null ? getNoteToCode(moy20General) : '—', cellX + 2, y + (grandTotRowH - 5.5) / 2 - 0.5, { width: colCoteFinale - 4, align: 'center' });
+
+  // Tracer les bordures de la ligne
+  doc.moveTo(LEFT, y + grandTotRowH).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+  let borderX = LEFT;
+  colWidths.forEach(w => {
+    doc.moveTo(borderX, y).lineTo(borderX, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+    borderX += w;
+  });
+  doc.moveTo(LEFT + pageW, y).lineTo(LEFT + pageW, y + grandTotRowH).strokeColor('#d0d8e4').lineWidth(0.15).stroke();
+
+  y += grandTotRowH + 6;
+
+  // 6. RANG ET MOYENNE (Bandeau bleu marine)
+  const bandeauH = 13;
+  doc.rect(LEFT, y, pageW, bandeauH).fill('#26337A');
+  const moyText = `MOYENNE GÉNÉRALE : ${moy20General !== null ? moy20General.toFixed(2) : '—'} / 20`;
+  const rangText = `RANG : ${rangGeneral ? ordinalLang(rangGeneral, lang) : '—'} / ${nbElevesClasse}`;
+  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5);
+  doc.text(moyText, LEFT + 8, y + (bandeauH - 7.5) / 2 - 0.5);
+  doc.text(rangText, LEFT + pageW - 158, y + (bandeauH - 7.5) / 2 - 0.5, { width: 150, align: 'right' });
+  y += bandeauH + 6;
+
+  // 7. LÉGENDE COTATION (Tableau 4 colonnes)
+  const legH = 9;
+  const legW = pageW / 4;
+  const drawLegItem = (label, desc, bg, x) => {
+    doc.rect(x, y, legW, legH).fill(bg);
+    doc.rect(x, y, legW, legH).stroke('#d0d8e4').lineWidth(0.2);
+    doc.fillColor('#111').font('Helvetica-Bold').fontSize(5.2)
+       .text(`${label} = ${desc}`, x + 2, y + (legH - 5.2) / 2 - 0.5, { width: legW - 4, align: 'center' });
+  };
+  drawLegItem('NA', 'Non Acquis (0-10)', '#FFCCCC', LEFT);
+  drawLegItem('ECA', "En Cours d'Acquisition (11-14)", '#FFF5C0', LEFT + legW);
+  drawLegItem('A', 'Acquis (15-17)', '#D4FCD4', LEFT + legW * 2);
+  drawLegItem('A+', 'Expert (18-20)', '#D0E4FF', LEFT + legW * 3);
+  
+  // Tracer les bordures de la légende
+  let legBorderX = LEFT;
+  for (let i = 0; i <= 4; i++) {
+    doc.moveTo(legBorderX, y).lineTo(legBorderX, y + legH).strokeColor('#d0d8e4').lineWidth(0.2).stroke();
+    legBorderX += legW;
+  }
+  doc.moveTo(LEFT, y + legH).lineTo(LEFT + pageW, y + legH).strokeColor('#d0d8e4').lineWidth(0.2).stroke();
+  
+  y += legH + 6;
+
+  // 8. OBSERVATIONS ET SIGNATURES (Tableau 4 colonnes, hauteur fixe)
+  const sigH = 34; // hauteur fixe compacte
+  const colSigW = pageW / 4;
+  const nomDir = cfg.directeur_nom || 'Le Directeur';
+  const titreDir = cfg.directeur_titre || (lang === 'en' ? 'The Principal' : 'Le Directeur');
+
+  // Appreciation auto
+  let appAuto = '';
+  if (cfg.appreciation_auto !== '0' && moy20General !== null) {
+    appAuto = moy20General >= 18
+      ? (lang === 'en' ? 'Excellent results. Congratulations!' : 'Résultats excellents. Félicitations !')
+      : moy20General >= 15
+      ? (lang === 'en' ? 'Very good results.' : 'Très bons résultats.')
+      : moy20General >= 12
+      ? (lang === 'en' ? 'Good results. Keep it up.' : 'Bons résultats. Continuez ainsi.')
+      : moy20General >= 10
+      ? (lang === 'en' ? 'Acceptable results.' : 'Résultats acceptables.')
+      : (lang === 'en' ? 'Insufficient results.' : 'Résultats insuffisants.');
+  }
+
+  const drawSigBox = (title, content, x) => {
+    doc.rect(x, y, colSigW, sigH).stroke('#ccc').lineWidth(0.4);
+    doc.fillColor('#444').font('Helvetica-Bold').fontSize(5.5).text(title, x + 3, y + 3, { width: colSigW - 6, align: 'center' });
+    if (content) {
+      doc.fillColor('#111').font('Helvetica-Oblique').fontSize(6).text(content, x + 4, y + 11, { width: colSigW - 8 });
+    }
+    doc.fillColor('#bbb').font('Helvetica').fontSize(5).text(title === titreDir ? '(Signature et cachet)' : '(Signature)', x + 2, y + sigH - 7, { width: colSigW - 4, align: 'center' });
+  };
+
+  const profFull = profName.nom !== '—' ? `${profName.nom.toUpperCase()} ${profName.prenom}` : '—';
+  drawSigBox("Observations de l'enseignant", appAuto, LEFT);
+  drawSigBox(lang === 'en' ? 'The Class Teacher' : 'Le Professeur Principal', profFull, LEFT + colSigW);
+  drawSigBox(titreDir, nomDir, LEFT + colSigW * 2);
+  drawSigBox(t('parent_signature') || 'Le Parent', '', LEFT + colSigW * 3);
+  
+  // Tracer les bordures de signatures
+  let sigBorderX = LEFT;
+  for (let i = 0; i <= 4; i++) {
+    doc.moveTo(sigBorderX, y).lineTo(sigBorderX, y + sigH).strokeColor('#ccc').lineWidth(0.4).stroke();
+    sigBorderX += colSigW;
+  }
+  doc.moveTo(LEFT, y + sigH).lineTo(LEFT + pageW, y + sigH).strokeColor('#ccc').lineWidth(0.4).stroke();
+  
+  y += sigH + 5;
+
+  // 9. Pied de page
+  const localeDate = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR');
+  const footText = `Fait à _____________, le _____________          Généré par Elimu — ${localeDate}`;
+  doc.fillColor('#999').font('Helvetica').fontSize(5.5)
+    .text(footText, LEFT, y, { width: pageW, align: 'right' });
 }
 
 /**
@@ -304,14 +905,13 @@ function drawBulletinQualitatif(doc, data) {
  */
 function drawBulletinTrimestre(doc, data, lang = 'fr') {
   if (data.eleve.niveau_v2 === 'N1' || data.eleve.niveau_v2 === 'N2') {
-    return drawBulletinQualitatif(doc, data);
+    return drawBulletinQualitatif(doc, data, lang);
   }
 
   const { eleve, matieres, moyGenerale, groupesRendu, moyClasseMap, rangGeneral, nbElevesClasse, heuresAbsence, cfg, periode } = data;
   const t = getDocTranslator(lang);
   
   const style = cfg.style_modele || 'officiel';
-// ... (rest of the existing logic for N3)
 
   const isModern = style === 'moderne';
   const isMinimal = style === 'minimal';
@@ -565,7 +1165,8 @@ function exportBulletinTrimestre(eleveId, periode, outputPath, onProgress, annee
     try {
     const data = prepareBulletinTrimestreData(eleveId, periode, lang, anneeId);
     if (!data) return resolve({ success: false, error: 'Données élève non trouvées' });
-      const doc = new PDFDocument({ margin: 30, size: 'A4' });
+      const isQual = (data.eleve.niveau_v2 === 'N1' || data.eleve.niveau_v2 === 'N2');
+      const doc = new PDFDocument({ margin: isQual ? 23 : 30, size: 'A4' });
       const stream = fs.createWriteStream(outputPath);
       doc.pipe(stream);
       drawBulletinTrimestre(doc, data, lang);
@@ -592,14 +1193,21 @@ function exportBulletinClassePDF(elevesIds, periode, outputPath, anneeId, lang =
 
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 30, size: 'A4' });
+      let isQual = false;
+      if (ids.length > 0) {
+        const firstEl = get('SELECT niveau_v2 FROM eleves WHERE id = ?', [ids[0]]);
+        if (firstEl && (firstEl.niveau_v2 === 'N1' || firstEl.niveau_v2 === 'N2')) {
+          isQual = true;
+        }
+      }
+      const doc = new PDFDocument({ margin: isQual ? 23 : 30, size: 'A4' });
       const stream = fs.createWriteStream(outputPath);
       doc.pipe(stream);
       let count = 0;
       for (const id of ids) {
         const data = prepareBulletinTrimestreData(id, periode, lang, anneeId);
         if (data) {
-          if (count > 0) doc.addPage();
+          if (count > 0) doc.addPage({ margin: isQual ? 23 : 30 });
           drawBulletinTrimestre(doc, data, lang);
         }
         count++;
