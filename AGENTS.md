@@ -277,6 +277,7 @@ CREATE TABLE notes (
 6. **Migrations idempotentes** : `IF NOT EXISTS`.
 7. **Ne jamais modifier schema.sql sans script de migration séparé.**
 8. **Ne jamais supprimer/renommer des fichiers sans confirmation.**
+9. **Commiter après chaque modification :** `git add -A && git commit -m "description" && git push`. Toujours faire un commit après chaque changement significatif (correction, fonctionnalité, refactor).
 
 ---
 

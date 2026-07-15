@@ -18,7 +18,8 @@
   "command": {
     "seed": { "description": "Nettoie la DB et regénère les données de test", "template": "node scripts/seed_test_data.js clean" },
     "start": { "description": "Lance l'application Electron", "template": "npx electron ." },
-    "commit": { "description": "Commit et push toutes les modifications", "template": "git add -A && git commit -m \"$ARGUMENTS\" && git push" }
+    "commit": { "description": "Commit et push toutes les modifications", "template": "git add -A && git commit -m \"$ARGUMENTS\" && git push" },
+    "context": { "description": "Charge tout le contexte du projet (config, AGENTS, schéma, curriculum, docs)" }
   },
   "agent": {
     "curriculum": {
