@@ -54,12 +54,16 @@ function remplirSelects() {
   const exportEleveClasse = document.getElementById('export-eleve-classe');
   if (exportEleveClasse) {
     exportEleveClasse.addEventListener('change', () => {
-      const filtre = document.getElementById('search-eleve')?.value || '';
-      remplirSelectEleves(exportEleveClasse.value, filtre);
+      // Réinitialiser la sélection quand on change de classe
+      comboboxSelectedId = '';
+      const hiddenInput = document.getElementById('export-eleve');
+      const searchInput = document.getElementById('search-eleve');
+      if (hiddenInput) hiddenInput.value = '';
+      if (searchInput) searchInput.value = '';
+      remplirComboboxEleves(exportEleveClasse.value, '');
+      setComboboxOpen(true);
     });
   }
-
-  remplirSelectEleves('', '');
 
   const bordereauType = document.getElementById('bordereau-type');
   const groupMatiere = document.getElementById('group-matiere');
@@ -106,14 +110,49 @@ function remplirSelects() {
 }
 
 /**
- * Remplit le sélecteur d'élèves avec optimisation (DocumentFragment + rAF)
+ * Combobox : état interne
  */
-function remplirSelectEleves(classeId = '', filtre = '') {
-  const select = document.getElementById('export-eleve');
-  if (!select) return;
+let comboboxSelectedId = '';
+let comboboxHighlightIdx = -1;
+let comboboxFilteredList = [];
+let comboboxOpen = false;
+
+/**
+ * Ouvre / ferme la dropdown du combobox
+ */
+function setComboboxOpen(open) {
+  const dropdown = document.getElementById('eleve-dropdown-list');
+  const arrow = document.getElementById('combobox-arrow');
+  if (!dropdown) return;
+  comboboxOpen = open;
+  dropdown.style.display = open ? 'block' : 'none';
+  if (arrow) arrow.style.transform = open ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)';
+}
+
+/**
+ * Sélectionne un élève dans le combobox
+ */
+function comboboxSelectEleve(eleve) {
+  const searchInput = document.getElementById('search-eleve');
+  const hiddenInput = document.getElementById('export-eleve');
+  if (!searchInput || !hiddenInput) return;
+
+  comboboxSelectedId = String(eleve.id);
+  hiddenInput.value = eleve.id;
+  searchInput.value = `${eleve.prenom} ${eleve.nom} — ${eleve.nom_classe || '?'}`;
+  setComboboxOpen(false);
+  comboboxHighlightIdx = -1;
+}
+
+/**
+ * Remplit la dropdown du combobox avec les élèves filtrés
+ */
+function remplirComboboxEleves(classeId = '', filtre = '') {
+  const dropdown = document.getElementById('eleve-dropdown-list');
+  if (!dropdown) return;
 
   const cid = parseInt(classeId);
-  const filtreLower = filtre.toLowerCase().trim();
+  const filtreLower = filtre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
   // Filtrage
   let elevesFiltres = tousLesEleves;
@@ -121,43 +160,58 @@ function remplirSelectEleves(classeId = '', filtre = '') {
     elevesFiltres = elevesFiltres.filter(e => e.classe_id === cid);
   }
   if (filtreLower !== '') {
-    elevesFiltres = elevesFiltres.filter(e =>
-      `${e.prenom} ${e.nom}`.toLowerCase().includes(filtreLower)
-    );
+    elevesFiltres = elevesFiltres.filter(e => {
+      const fullName = `${e.prenom} ${e.nom}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return fullName.includes(filtreLower);
+    });
   }
 
-  // État du sélecteur
-  if (!cid && elevesFiltres.length > 100) {
-    // Trop d'élèves si aucune classe n'est choisie
-    select.innerHTML = `<option value="">— ${t('ie.select_class_first')} —</option>`;
-    select.disabled = true;
+  comboboxFilteredList = elevesFiltres;
+  comboboxHighlightIdx = -1;
+
+  // Pas de classe sélectionnée et trop de résultats
+  if (!cid && elevesFiltres.length > 100 && filtreLower === '') {
+    dropdown.innerHTML = `<div class="combobox-no-result">${t('ie.select_class_first')}</div>`;
     return;
   }
 
-  select.disabled = false;
-  const placeholder = cid 
-    ? `— ${t('ie.export_select_student_dash')} (${elevesFiltres.length}) —`
-    : `— ${t('ie.export_select_student_dash')} —`;
-  
-  select.innerHTML = `<option value="">${placeholder}</option>`;
+  // Aucun résultat
+  if (elevesFiltres.length === 0) {
+    dropdown.innerHTML = `<div class="combobox-no-result">Aucun élève trouvé</div>`;
+    return;
+  }
 
-  // Rendu optimisé
+  // Construction des items
   const fragment = document.createDocumentFragment();
-  
-  elevesFiltres.forEach(e => {
-    const opt = document.createElement('option');
-    opt.value = e.id;
-    opt.textContent = `${esc(e.prenom)} ${esc(e.nom)} — ${esc(e.nom_classe || '?')}`;
-    fragment.appendChild(opt);
+  elevesFiltres.forEach((e, idx) => {
+    const item = document.createElement('div');
+    item.className = 'combobox-item' + (String(e.id) === comboboxSelectedId ? ' selected' : '');
+    item.dataset.idx = idx;
+    item.dataset.id = e.id;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `${esc(e.prenom)} ${esc(e.nom)}`;
+
+    const classSpan = document.createElement('span');
+    classSpan.className = 'student-class';
+    classSpan.textContent = esc(e.nom_classe || '?');
+
+    item.appendChild(nameSpan);
+    item.appendChild(classSpan);
+
+    item.addEventListener('click', () => {
+      comboboxSelectEleve(e);
+    });
+
+    fragment.appendChild(item);
   });
 
+  dropdown.innerHTML = '';
   requestAnimationFrame(() => {
-    select.appendChild(fragment);
-    if (elevesFiltres.length === 1) {
-      select.value = elevesFiltres[0].id;
-    }
+    dropdown.appendChild(fragment);
   });
 }
+
 
 function updateMatieres(selectClasse, selectMatiere) {
   if (!selectMatiere) return;
@@ -747,22 +801,58 @@ function setupEvents() {
     );
   });
 
-  // ── Recherche d'élève ──────────────────────────────────────
-  document.getElementById('btn-search-eleve')?.addEventListener('click', () => {
-    const cid = document.getElementById('export-eleve-classe')?.value || '';
-    const filtre = document.getElementById('search-eleve')?.value || '';
-    remplirSelectEleves(cid, filtre);
-  });
+  // ── Combobox élève : recherche dynamique + clavier ──────────
   const searchInput = document.getElementById('search-eleve');
   if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
+    // Ouvre le dropdown au focus
+    searchInput.addEventListener('focus', () => {
       const cid = document.getElementById('export-eleve-classe')?.value || '';
-      remplirSelectEleves(cid, e.target.value);
+      remplirComboboxEleves(cid, searchInput.value);
+      setComboboxOpen(true);
     });
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        const cid = document.getElementById('export-eleve-classe')?.value || '';
-        remplirSelectEleves(cid, searchInput.value);
+
+    // Filtre en temps réel lors de la saisie
+    searchInput.addEventListener('input', (e) => {
+      // Réinitialiser la sélection si l'utilisateur retape
+      comboboxSelectedId = '';
+      document.getElementById('export-eleve').value = '';
+      const cid = document.getElementById('export-eleve-classe')?.value || '';
+      remplirComboboxEleves(cid, e.target.value);
+      setComboboxOpen(true);
+    });
+
+    // Navigation clavier (ArrowDown, ArrowUp, Enter, Escape)
+    searchInput.addEventListener('keydown', (e) => {
+      if (!comboboxOpen) return;
+      const dropdown = document.getElementById('eleve-dropdown-list');
+      const items = dropdown?.querySelectorAll('.combobox-item') || [];
+      if (items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        comboboxHighlightIdx = Math.min(comboboxHighlightIdx + 1, items.length - 1);
+        items.forEach((it, i) => it.style.background = i === comboboxHighlightIdx ? 'rgba(255,255,255,0.08)' : '');
+        items[comboboxHighlightIdx]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        comboboxHighlightIdx = Math.max(comboboxHighlightIdx - 1, 0);
+        items.forEach((it, i) => it.style.background = i === comboboxHighlightIdx ? 'rgba(255,255,255,0.08)' : '');
+        items[comboboxHighlightIdx]?.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (comboboxHighlightIdx >= 0 && comboboxHighlightIdx < comboboxFilteredList.length) {
+          comboboxSelectEleve(comboboxFilteredList[comboboxHighlightIdx]);
+        }
+      } else if (e.key === 'Escape') {
+        setComboboxOpen(false);
+      }
+    });
+
+    // Fermer le dropdown si on clique ailleurs
+    document.addEventListener('click', (e) => {
+      const wrapper = searchInput.closest('.combobox-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        setComboboxOpen(false);
       }
     });
   }

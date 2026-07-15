@@ -1,5 +1,39 @@
 <!-- import_export.html - Section Import/Export d'Elimu -->
 
+<style>
+  .combobox-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+  .combobox-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .combobox-item.selected {
+    background: var(--gradient-primary);
+    color: #fff;
+  }
+  .combobox-item .student-class {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .combobox-item.selected .student-class {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .combobox-no-result {
+    padding: 12px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+</style>
+
 <!-- Loader Global Import/Export (Design inspiré de Finance) -->
 <div id="ie-global-loader" class="modal-overlay" style="display: none; position: fixed; inset: 0; z-index: 9999; backdrop-filter: blur(15px); background: rgba(0,0,0,0.4); align-items: center; justify-content: center;">
   <div class="card" style="width: 400px; padding: 30px; text-align: center; background: var(--bg-glass); border: 1px solid var(--border-accent); box-shadow: 0 32px 80px rgba(0,0,0,0.6); position: relative;">
@@ -300,20 +334,22 @@
           </select>
         </div>
 
-        <!-- Champ de recherche (optionnel, filtre la classe choisie) -->
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-          <input type="text" id="search-eleve" class="input"
-                 data-i18n-placeholder="ie.search_student_placeholder"
-                 placeholder="Rechercher par nom..." style="flex:1;">
-          <button type="button" id="btn-search-eleve" class="btn btn-secondary"
-                  data-i18n="ie.btn_search">🔍 Filtrer</button>
-        </div>
-
-        <div class="input-group">
+        <!-- Élève avec Combobox intégrée -->
+        <div class="input-group" style="position: relative;">
           <label data-i18n="ie.student_label">Élève *</label>
-          <select id="export-eleve" class="input" disabled>
-            <option value="" data-i18n="ie.select_student_dash">— Choisir d'abord une classe —</option>
-          </select>
+          <div class="combobox-wrapper" style="position: relative;">
+            <input type="text" id="search-eleve" class="input" 
+                   data-i18n-placeholder="ie.search_student_placeholder"
+                   placeholder="Rechercher par nom..." 
+                   autocomplete="off" style="width: 100%; padding-right: 30px;">
+            <span id="combobox-arrow" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; opacity: 0.5; font-size: 10px; transition: transform 0.2s ease;">▼</span>
+            
+            <!-- Liste déroulante des résultats -->
+            <div id="eleve-dropdown-list" class="card" 
+                 style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; max-height: 220px; overflow-y: auto; margin-top: 4px; padding: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); background: var(--bg-glass); backdrop-filter: blur(15px); border: 1px solid var(--border-accent);">
+            </div>
+          </div>
+          <input type="hidden" id="export-eleve" value="">
         </div>
 
         <div class="input-group">
