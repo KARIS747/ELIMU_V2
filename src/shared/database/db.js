@@ -212,6 +212,20 @@ async function initializeDatabase(customPath = null) {
     console.warn(`Note sur la migration de la table notes: ${err.message}`);
   }
 
+  // Migration : ajout colonnes utilisateur_id et derniere_connexion à professeurs
+  try {
+    const profCols = db.prepare("PRAGMA table_info(professeurs)").all().map(c => c.name);
+    if (!profCols.includes('utilisateur_id')) {
+      db.exec("ALTER TABLE professeurs ADD COLUMN utilisateur_id INTEGER UNIQUE REFERENCES utilisateurs(id) ON DELETE SET NULL");
+    }
+    if (!profCols.includes('derniere_connexion')) {
+      db.exec("ALTER TABLE professeurs ADD COLUMN derniere_connexion TEXT");
+    }
+    // Supprimer les colonnes RH qui ne sont plus utilisées
+    const oldRhCols = ['civilite', 'sexe', 'specialite', 'diplome_max', 'adresse', 'ville', 'date_embauche'];
+    // Note: SQLite ne supporte pas DROP COLUMN facilement, on les ignore simplement
+  } catch (e) { /* déjà présentes ou ignorées */ }
+
   // Migration : ajout colonne sous_type pour les sous-notes (orale/écrite/pratique/savoir-être)
   try {
     const tableInfo = db.prepare("PRAGMA table_info(notes)").all();

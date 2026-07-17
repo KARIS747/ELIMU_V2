@@ -1,7 +1,6 @@
-<!-- professeurs.html — Section Professeurs d'Elimu -->
+<!-- professeurs.html — Comptes Enseignants PWA (V2) -->
 
 <style>
-  /* ── Grille de cartes professeurs ── */
   .profs-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -19,7 +18,11 @@
   }
   .prof-card:hover { transform: translateY(-4px) scale(1.01); border-color: var(--border-accent); box-shadow: var(--shadow-hover); }
 
-  .prof-card-band { height: 4px; width: 100%; border-radius: 16px 16px 0 0; }
+  .prof-card-band { height: 4px; width: 100%; }
+  .prof-card-band.active { background: var(--green-fifa); }
+  .prof-card-band.suspended { background: var(--yellow-fifa); }
+  .prof-card-band.inactive { background: var(--red-fifa); }
+
   .prof-card-inner { padding: 16px 18px 12px; }
 
   .prof-avatar {
@@ -29,11 +32,16 @@
     font-size: 20px; font-weight: 700; color: white; flex-shrink: 0;
     margin-bottom: 12px;
   }
+  .prof-avatar.suspended { background: linear-gradient(135deg, var(--yellow-fifa), var(--orange-fifa)); opacity: 0.7; }
 
   .prof-nom {
     font-family: 'Rajdhani', sans-serif;
     font-size: 20px; font-weight: 700;
     color: var(--text-primary); line-height: 1.2;
+  }
+  .prof-username {
+    font-size: 11px; color: var(--text-muted);
+    font-family: monospace;
   }
 
   .prof-matiere {
@@ -50,11 +58,22 @@
     padding: 3px 8px; border-radius: 6px; margin-top: 8px;
   }
 
-  .prof-badge-inactif {
+  .prof-badge-suspended {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.2);
+    color: var(--yellow-fifa); font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 6px; margin-top: 8px;
+  }
+
+  .prof-badge-inactive {
     display: inline-flex; align-items: center; gap: 4px;
     background: rgba(255,71,87,0.1); border: 1px solid rgba(255,71,87,0.2);
     color: var(--red-fifa); font-size: 11px; font-weight: 600;
     padding: 3px 8px; border-radius: 6px; margin-top: 8px;
+  }
+
+  .prof-last-login {
+    font-size: 11px; color: var(--text-muted); margin-top: 6px;
   }
 
   .prof-card-actions {
@@ -64,7 +83,6 @@
   }
   .prof-card-actions .btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px; }
 
-  /* ── Modale professeur ── */
   .prof-modal-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -80,35 +98,75 @@
   .classe-check-item:hover { border-color: rgba(0,230,118,0.3); background: rgba(0,230,118,0.04); }
   .classe-check-item.selected { border-color: var(--green-fifa); background: rgba(0,230,118,0.06); }
   .classe-check-item input { accent-color: var(--green-fifa); width: 15px; height: 15px; }
+
+  .detail-tabs {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;
+  }
+  .detail-tab {
+    padding: 10px 20px; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent; transition: var(--transition-fast);
+  }
+  .detail-tab:hover { color: var(--text-primary); }
+  .detail-tab.active { color: var(--green-fifa); border-bottom-color: var(--green-fifa); }
+
+  .detail-panel { display: none; }
+  .detail-panel.active { display: block; }
+
+  .pw-display-box {
+    background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.25);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 12px;
+  }
+  .pw-display-box .pw-value {
+    font-family: monospace; font-size: 22px; font-weight: 700;
+    color: var(--yellow-fifa); letter-spacing: 2px;
+    text-align: center; padding: 8px;
+  }
+
+  .history-table {
+    width: 100%; border-collapse: collapse;
+  }
+  .history-table th {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    text-align: left; padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .history-table td {
+    font-size: 13px; padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+  }
+  .history-table tr:hover td { background: rgba(255,255,255,0.02); }
 </style>
 
 <div id="professeurs-root">
 
-  <!-- En-tête -->
+  <!-- En-tete -->
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:10px;">
     <div>
       <div style="font-family:'Rajdhani',sans-serif; font-size:26px; font-weight:700;
                   color:var(--text-primary); text-transform:uppercase; letter-spacing:1px;"
            data-i18n="profs.title">
-         Professeurs
+         Comptes Enseignants
       </div>
       <div style="font-size:13px; color:var(--text-muted); margin-top:2px;"
            data-i18n="profs.subtitle">
-        Gestion du corps enseignant et liaison avec les classes
+        Creation, suspension et gestion des acces a la PWA
       </div>
     </div>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <button class="btn btn-secondary" id="btn-import-profs" type="button"
-              data-i18n="profs.btn_import"> Importer Excel</button>
+              data-i18n="profs.btn_import">Importer Excel</button>
       <button class="btn btn-primary"   id="btn-add-prof"     type="button"
-              data-i18n="profs.btn_add">Ajouter un professeur</button>
+              data-i18n="profs.btn_add">Creer un compte</button>
     </div>
   </div>
 
   <!-- KPIs -->
   <div id="profs-kpis" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px;"></div>
 
-  <!-- Barre de recherche -->
+  <!-- Barre de recherche et filtre -->
   <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
     <div style="position:relative; flex:1; min-width:200px; max-width:360px;">
       <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:15px; pointer-events:none; color:var(--text-muted);">
@@ -116,7 +174,7 @@
       </span>
       <input type="text" id="search-profs" class="input"
              data-i18n-placeholder="profs.search_placeholder"
-             placeholder="Rechercher un professeur..." style="padding-left:38px;">
+             placeholder="Rechercher par nom, prenom ou identifiant..." style="padding-left:38px;">
     </div>
     <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted); cursor:pointer;">
       <input type="checkbox" id="filter-actifs-only" checked style="accent-color:var(--green-fifa); width:15px; height:15px;">
@@ -124,7 +182,7 @@
     </label>
   </div>
 
-  <!-- Grille des professeurs -->
+  <!-- Grille des comptes -->
   <div class="profs-grid" id="profs-grid">
     <div style="grid-column:1/-1; display:flex; justify-content:center; padding:40px;">
       <div class="spinner"></div>
@@ -137,7 +195,7 @@
 </div>
 
 <!-- ===================================================
-     MODALE IMPORT PROFESSEURS (depuis Excel)
+     MODALE IMPORT PROFESSEURS (Excel)
      =================================================== -->
 <div id="modal-import-profs" style="display:none; position:fixed; inset:0;
      background:rgba(0,0,0,0.75); z-index:1001; align-items:center;
@@ -149,12 +207,12 @@
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <div style="font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700;
                   color:var(--text-primary); text-transform:uppercase;"
-           data-i18n="profs.import_title"> Importer des professeurs</div>
+           data-i18n="profs.import_title">Importer des enseignants</div>
       <button id="modal-import-profs-close" type="button"
               style="background:var(--bg-hover); border:1px solid var(--border-color);
                      color:var(--text-secondary); border-radius:6px; padding:6px 10px;
                      cursor:pointer; font-size:14px;"
-              data-i18n="common.close">✕</button>
+              data-i18n="common.close">X</button>
     </div>
 
     <!-- Info format -->
@@ -162,19 +220,15 @@
                 border-radius:10px; padding:12px 14px; margin-bottom:16px;">
       <div style="font-size:11px; font-weight:600; color:var(--blue-fifa);
                   text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;"
-           data-i18n="profs.format_title">
+           data-i18n="profs.import_format_title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         Format Excel attendu
       </div>
       <div style="font-size:12px; color:var(--text-secondary); line-height:1.9;">
-        <span data-i18n="profs.format_desc">La ligne 1 est ignorée (en-tête).</span><br>
-        <strong style="color:var(--text-primary);" data-i18n="profs.col_a">Col A — Nom</strong> <span style="color:var(--red-fifa);">*</span> | 
-        <strong style="color:var(--text-primary);" data-i18n="profs.col_b">Col B — Prénom</strong> <span style="color:var(--red-fifa);">*</span> | 
-        <strong style="color:var(--text-primary);" data-i18n="profs.col_c">Col C — Discipline</strong><br>
-        <span style="font-size:11px; opacity:0.8;">
-          Col D — Civilité (M., Mme...) | Col E — Sexe (M, F) | Col F — Tél | Col G — Email<br>
-          Col H — Spécialité | Col I — Diplôme | Col J — Ville
-        </span>
+        <span data-i18n="profs.import_format_desc">La ligne 1 est ignoree (en-tete).</span><br>
+        <strong style="color:var(--text-primary);" data-i18n="profs.import_col_a">Col A -- Nom</strong><span style="color:var(--red-fifa);">*</span> |
+        <strong style="color:var(--text-primary);" data-i18n="profs.import_col_b">Col B -- Prenom</strong><span style="color:var(--red-fifa);">*</span> |
+        <strong style="color:var(--text-primary);" data-i18n="profs.import_col_c">Col C -- Matiere</strong>
       </div>
     </div>
 
@@ -182,39 +236,37 @@
     <div style="display:flex; gap:10px; margin-bottom:16px;">
       <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;
                     padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); flex:1;">
-        <input type="radio" name="import-profs-mode" id="import-profs-mode-ajouter" value="ajouter" checked
+        <input type="radio" name="import-profs-mode" data-mode="ajouter" checked
                style="accent-color:var(--green-fifa); margin-top:2px; flex-shrink:0;">
         <div>
           <div style="font-size:13px; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:6px;"
                data-i18n="profs.mode_add">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             Ajouter seulement
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:2px;"
                data-i18n="profs.mode_add_desc">
-            Nouveaux professeurs ajoutés, doublons (nom+prénom) ignorés
+            Nouveaux enseignants ajoutes, doublons ignores
           </div>
         </div>
       </label>
       <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;
                     padding:10px 14px; border-radius:8px; border:1px solid var(--border-color); flex:1;">
-        <input type="radio" name="import-profs-mode" id="import-profs-mode-remplacer" value="remplacer"
+        <input type="radio" name="import-profs-mode" data-mode="remplacer"
                style="accent-color:var(--yellow-fifa); margin-top:2px; flex-shrink:0;">
         <div>
           <div style="font-size:13px; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:6px;"
                data-i18n="profs.mode_replace">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
             Remplacer la liste
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:2px;"
                data-i18n="profs.mode_replace_desc">
-            Tous les professeurs et leurs liaisons classes sont supprimés, puis remplacés
+            Tous les enseignants et leurs liaisons classes sont supprimes
           </div>
         </div>
       </label>
     </div>
 
-    <!-- Zone de dépôt du fichier -->
+    <!-- Dropzone -->
     <div id="import-profs-dropzone"
          style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
                 text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);"
@@ -239,12 +291,9 @@
                 color:var(--red-fifa); border-radius:8px; padding:10px 14px; font-size:12px;
                 margin-bottom:14px; line-height:1.6;"
          data-i18n-html="profs.warning_replace_html">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:text-bottom; margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-      <strong>Attention :</strong> En mode "Remplacer", <em>tous</em> les professeurs existants
-      et leurs associations avec les classes seront définitivement supprimés avant l'import.
     </div>
 
-    <!-- Résultat de l'import -->
+    <!-- Resultat -->
     <div id="import-profs-result"
          style="display:none; border-radius:8px; padding:10px 14px; font-size:13px;
                 margin-bottom:14px; line-height:1.8;"></div>
@@ -253,14 +302,12 @@
                 padding-top:14px; border-top:1px solid var(--border-color);">
       <button class="btn btn-secondary" id="btn-import-profs-template" type="button"
               style="margin-right:auto; display:flex; align-items:center; gap:6px;" data-i18n="profs.btn_gen_template">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-        Générer un modèle
+        Generer un modele
       </button>
       <button class="btn btn-secondary" id="btn-import-profs-cancel"
               data-i18n="common.cancel">Annuler</button>
       <button class="btn btn-primary"   id="btn-import-profs-ok" disabled
               style="display:flex; align-items:center; gap:6px;" data-i18n="profs.import_btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         Importer
       </button>
     </div>
@@ -269,239 +316,83 @@
 </div>
 
 <!-- ===================================================
-     MODALE FORMULAIRE PROFESSEUR
+     MODALE CREATION / EDITION COMPTE ENSEIGNANT
      =================================================== -->
-<!-- ===================================================
-     MODALE VUE DÉTAILLÉE (PROFIL PROFESSEUR)
-     =================================================== -->
-<div id="modal-prof-view" style="display:none; position:fixed; inset:0;
-     background:rgba(0,0,0,0.8); z-index:1000; align-items:center;
-     justify-content:center; backdrop-filter:blur(8px);">
-  <div class="animate-in" style="background:var(--bg-card); border:1px solid var(--border-accent);
-              border-radius:24px; width:90%; max-width:800px; max-height:90vh; overflow:hidden;
-              display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.8);">
-    
-    <!-- En-tête Profil -->
-    <div style="padding:30px; background:linear-gradient(135deg, rgba(61,142,248,0.1), rgba(168,85,247,0.1)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:25px; position:relative;">
-      <div id="view-prof-avatar" style="width:100px; height:100px; border-radius:50%; background:var(--gradient-primary); display:flex; align-items:center; justify-content:center; font-size:40px; font-weight:700; color:white; border:4px solid var(--bg-card); box-shadow:0 10px 20px rgba(0,0,0,0.2);">?</div>
-      <div style="flex:1;">
-        <div style="display:flex; align-items:center; gap:10px;">
-           <span id="view-prof-civilite" style="font-size:14px; font-weight:700; color:var(--purple-fifa); text-transform:uppercase;">M.</span>
-           <span id="view-prof-status" class="prof-badge-classes" style="margin-top:0;">ACTIF</span>
-        </div>
-        <h2 id="view-prof-nom-complet" style="font-family:'Rajdhani',sans-serif; font-size:32px; font-weight:700; color:var(--text-primary); margin:5px 0;">Nom Prénom</h2>
-        <div id="view-prof-matiere" style="font-size:16px; color:var(--blue-fifa); font-weight:600;">Mathématiques</div>
-      </div>
-      <button id="modal-prof-view-close" style="position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:24px;">✕</button>
-    </div>
-
-    <!-- Contenu Profil -->
-    <div style="flex:1; overflow-y:auto; padding:30px; display:grid; grid-template-columns: 280px 1fr; gap:30px;">
-      
-      <!-- Colonne Gauche : Infos & Stats -->
-      <div>
-        <div style="margin-bottom:25px;">
-           <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px;" data-i18n="profs.contact_info">Contact</div>
-           <div style="display:flex; flex-direction:column; gap:12px;">
-              <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue-fifa);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                <span id="view-prof-phone">Non renseigné</span>
-              </div>
-              <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--purple-fifa);"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                <span id="view-prof-email">Non renseigné</span>
-              </div>
-              <div style="font-size:14px; display:flex; align-items:center; gap:10px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--green-fifa);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                <span id="view-prof-adresse">Non renseigné</span>
-              </div>
-           </div>
-        </div>
-
-        <div style="background:rgba(0,0,0,0.2); border-radius:16px; padding:20px; border:1px solid var(--border-color);">
-           <div style="font-size:11px; font-weight:700; color:var(--green-fifa); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; text-align:center;" data-i18n="profs.kpi_impact">Impact</div>
-           <div style="text-align:center;">
-              <div id="view-prof-total-eleves" style="font-family:'Rajdhani',sans-serif; font-size:48px; font-weight:700; color:var(--text-primary);">0</div>
-              <div style="font-size:12px; color:var(--text-muted);" data-i18n="profs.impact_desc">élèves impactés</div>
-           </div>
-        </div>
-      </div>
-
-      <!-- Colonne Droite : Parcours & Classes -->
-      <div>
-        <div style="margin-bottom:30px; display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-           <div>
-              <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Spécialité</div>
-              <div id="view-prof-specialite" style="font-size:15px; font-weight:600; color:var(--text-primary);">Non définie</div>
-           </div>
-           <div>
-              <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Diplôme</div>
-              <div id="view-prof-diplome" style="font-size:15px; font-weight:600; color:var(--text-primary);">Non renseigné</div>
-           </div>
-           <div>
-              <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">Ancienneté</div>
-              <div id="view-prof-anciennete" style="font-size:15px; font-weight:600; color:var(--text-primary);">Nouvel arrivant</div>
-           </div>
-        </div>
-
-        <div>
-           <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px;">Classes & Groupes assignés</div>
-           <div id="view-prof-classes-list" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-              <!-- Liste des classes injectée ici -->
-           </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Pied de modale -->
-    <div style="padding:20px 30px; background:rgba(0,0,0,0.1); border-top:1px solid var(--border-color); display:flex; justify-content:flex-end; gap:15px;">
-       <button class="btn btn-secondary" id="btn-view-prof-edit" style="display:flex; align-items:center; gap:8px;">
-         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-         Modifier le profil
-       </button>
-       <button class="btn btn-primary" id="btn-view-prof-close" data-i18n="common.close">Fermer</button>
-    </div>
-
-  </div>
-</div>
-
 <div id="modal-prof" style="display:none; position:fixed; inset:0;
      background:rgba(0,0,0,0.75); z-index:1000; align-items:center;
      justify-content:center; backdrop-filter:blur(4px);">
   <div style="background:var(--bg-card); border:1px solid var(--border-color);
-              border-radius:20px; padding:28px; width:90%; max-width:680px;
+              border-radius:20px; padding:28px; width:90%; max-width:600px;
               max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6);">
 
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
       <div id="modal-prof-title"
            style="font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700;
                   color:var(--text-primary); text-transform:uppercase;"
-           data-i18n="profs.modal_add">Nouveau professeur</div>
+           data-i18n="profs.modal_add">Nouveau compte enseignant</div>
       <button id="modal-prof-close" type="button"
               style="background:var(--bg-hover); border:1px solid var(--border-color);
                      color:var(--text-secondary); border-radius:6px; padding:6px 10px;
                      cursor:pointer; font-size:14px;"
-              data-i18n="common.close">✕</button>
+              data-i18n="common.close">X</button>
     </div>
 
     <form id="form-prof">
-      <!-- Section 1 : État Civil -->
+      <!-- Bloc mot de passe genere (creation) -->
+      <div id="password-generated-block" class="pw-display-box" style="display:none;">
+        <div style="font-size:12px; font-weight:600; color:var(--yellow-fifa); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span data-i18n="profs.password_generated">Mot de passe genere automatiquement</span>
+        </div>
+        <div class="pw-value" id="generated-password">**********</div>
+        <div style="font-size:11px; color:var(--text-muted); text-align:center; font-style:italic;"
+             data-i18n="profs.password_single_view">Notez-le : il ne sera plus affiche apres fermeture.</div>
+      </div>
+
+      <!-- Identite -->
       <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
         <div style="font-size:11px; font-weight:700; color:var(--purple-fifa); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
           <span style="width:8px; height:8px; background:var(--purple-fifa); border-radius:50%;"></span>
-          <span data-i18n="profs.info">Informations personnelles</span>
+          Identite
         </div>
-        
+
         <div class="prof-modal-grid">
-          <div class="input-group">
-            <label data-i18n="profs.label_civilite">Civilité</label>
-            <select id="pf-civilite" class="input">
-              <option value="M.">M.</option>
-              <option value="Mme">Mme</option>
-              <option value="Mlle">Mlle</option>
-              <option value="Dr">Dr</option>
-              <option value="Pr">Pr</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label data-i18n="profs.label_sexe">Sexe</label>
-            <select id="pf-sexe" class="input">
-              <option value="M" data-i18n="common.male">Masculin</option>
-              <option value="F" data-i18n="common.female">Féminin</option>
-            </select>
-          </div>
           <div class="input-group">
             <label data-i18n="profs.label_lastname">Nom *</label>
             <input type="text" id="pf-nom" class="input" placeholder="Nom">
           </div>
           <div class="input-group">
-            <label data-i18n="profs.label_firstname">Prénom *</label>
-            <input type="text" id="pf-prenom" class="input" placeholder="Prénom">
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 2 : Professionnel -->
-      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
-        <div style="font-size:11px; font-weight:700; color:var(--blue-fifa); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
-          <span style="width:8px; height:8px; background:var(--blue-fifa); border-radius:50%;"></span>
-          <span data-i18n="profs.pro_info">Parcours professionnel</span>
-        </div>
-        
-        <div class="prof-modal-grid">
-          <div class="input-group">
-            <label data-i18n="profs.label_main_subject">Discipline</label>
-            <input type="text" id="pf-matiere" class="input" placeholder="Ex: Mathématiques">
+            <label data-i18n="profs.label_firstname">Prenom *</label>
+            <input type="text" id="pf-prenom" class="input" placeholder="Prenom">
           </div>
           <div class="input-group">
-            <label data-i18n="profs.label_specialite">Spécialité</label>
-            <input type="text" id="pf-specialite" class="input" placeholder="Ex: Algèbre">
-          </div>
-          <div class="input-group">
-            <label data-i18n="profs.label_diplome">Diplôme le plus élevé</label>
-            <select id="pf-diplome" class="input">
-              <option value="BAC">BAC</option>
-              <option value="Licence">Licence</option>
-              <option value="Master">Master</option>
-              <option value="Doctorat">Doctorat</option>
-              <option value="Autre">Autre</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label data-i18n="profs.label_hire_date">Date d'embauche</label>
-            <input type="date" id="pf-date-embauche" class="input">
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 3 : Contact & Adresse -->
-      <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
-        <div style="font-size:11px; font-weight:700; color:var(--green-fifa); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
-          <span style="width:8px; height:8px; background:var(--green-fifa); border-radius:50%;"></span>
-          <span data-i18n="profs.contact_info">Contact & Adresse</span>
-        </div>
-        
-        <div class="prof-modal-grid">
-          <div class="input-group">
-            <label data-i18n="profs.label_phone">Téléphone</label>
+            <label data-i18n="profs.label_phone">Telephone</label>
             <input type="text" id="pf-telephone" class="input" placeholder="+237 6XX XXX XXX">
           </div>
           <div class="input-group">
             <label data-i18n="profs.label_email">Email</label>
             <input type="email" id="pf-email" class="input" placeholder="email@ecole.com">
           </div>
-          <div class="input-group">
-            <label data-i18n="profs.label_address">Adresse</label>
-            <input type="text" id="pf-adresse" class="input" placeholder="Rue, Quartier">
-          </div>
-          <div class="input-group">
-            <label data-i18n="profs.label_city">Ville</label>
-            <input type="text" id="pf-ville" class="input" placeholder="Ville">
-          </div>
         </div>
       </div>
 
-      <!-- Classes enseignées -->
+      <!-- Matiere principale -->
+      <div class="input-group" style="margin-bottom:20px;">
+        <label data-i18n="profs.label_main_subject">Matiere principale</label>
+        <input type="text" id="pf-matiere" class="input" placeholder="Ex: Mathematiques">
+      </div>
+
+      <!-- Classes enseignees -->
       <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;" data-i18n="profs.label_classes">Classes enseignées</div>
-        <div style="font-size:10px; color:var(--green-fifa); font-weight:700;" id="pf-classes-count">0 class(es)</div>
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;" data-i18n="profs.label_classes">Classes enseignees</div>
+        <div style="font-size:10px; color:var(--green-fifa); font-weight:700;" id="pf-classes-count">0 classe(s)</div>
       </div>
       <div id="pf-classes-list"
            style="max-height:160px; overflow-y:auto; border:1px solid var(--border-color);
                   border-radius:10px; padding:8px; margin-bottom:20px; background:rgba(0,0,0,0.1); display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-        <div style="color:var(--text-muted); font-size:13px; text-align:center; padding:16px; grid-column:1/-1;"
-             data-i18n="profs.loading_classes">
+        <div style="color:var(--text-muted); font-size:13px; text-align:center; padding:16px; grid-column:1/-1;">
           Chargement des classes...
         </div>
-      </div>
-
-      <div class="input-group" style="margin-bottom:20px;">
-        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; background:rgba(0,230,118,0.05); padding:10px; border-radius:8px; border:1px solid rgba(0,230,118,0.1);">
-          <input type="checkbox" id="pf-actif" checked
-                 style="accent-color:var(--green-fifa); width:18px; height:18px;">
-          <span style="font-weight:700; color:var(--green-fifa); font-size:13px;" data-i18n="profs.label_active">Professeur en activité</span>
-        </label>
       </div>
 
       <div id="pf-error" style="display:none; background:rgba(255,71,87,0.08);
@@ -511,10 +402,134 @@
       <div style="display:flex; gap:12px; justify-content:flex-end; padding-top:20px; border-top:1px solid var(--border-color);">
         <button class="btn btn-secondary" id="btn-prof-cancel" type="button" data-i18n="common.cancel">Annuler</button>
         <button class="btn btn-primary"   id="btn-prof-save"   type="button" style="padding:10px 24px; display:flex; align-items:center; gap:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
           Enregistrer
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ===================================================
+     MODALE VUE DETAILLEE (Compte + Journal)
+     =================================================== -->
+<div id="modal-prof-view" style="display:none; position:fixed; inset:0;
+     background:rgba(0,0,0,0.8); z-index:1000; align-items:center;
+     justify-content:center; backdrop-filter:blur(8px);">
+  <div class="animate-in" style="background:var(--bg-card); border:1px solid var(--border-accent);
+              border-radius:24px; width:90%; max-width:800px; max-height:90vh; overflow:hidden;
+              display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.8);">
+
+    <!-- En-tete -->
+    <div style="padding:24px 30px; background:linear-gradient(135deg, rgba(61,142,248,0.1), rgba(168,85,247,0.1)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:20px; position:relative;">
+      <div id="view-prof-avatar" style="width:72px; height:72px; border-radius:50%; background:var(--gradient-primary); display:flex; align-items:center; justify-content:center; font-size:28px; font-weight:700; color:white; border:3px solid var(--bg-card); box-shadow:0 6px 12px rgba(0,0,0,0.2);">?</div>
+      <div style="flex:1;">
+        <h2 id="view-prof-nom-complet" style="font-family:'Rajdhani',sans-serif; font-size:28px; font-weight:700; color:var(--text-primary); margin:0;">Nom Prenom</h2>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+          <span id="view-prof-username" style="font-family:monospace; font-size:13px; color:var(--text-muted);"></span>
+          <span id="view-prof-status-badge" style="font-size:11px; font-weight:600; padding:2px 10px; border-radius:20px;"></span>
+        </div>
+        <div id="view-prof-matiere" style="font-size:14px; color:var(--blue-fifa); font-weight:600; margin-top:4px;"></div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-secondary" id="btn-view-prof-suspend" type="button" style="font-size:12px; padding:6px 12px; display:none;" data-i18n="profs.btn_suspend">Suspendre</button>
+        <button class="btn btn-secondary" id="btn-view-prof-reactivate" type="button" style="font-size:12px; padding:6px 12px; display:none;" data-i18n="profs.btn_reactivate">Reactivier</button>
+        <button id="modal-prof-view-close" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:24px; padding:0 4px;">X</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="detail-tabs" style="padding:0 30px;">
+      <div class="detail-tab active" data-tab="account" data-i18n="profs.detail_tab_account">Compte</div>
+      <div class="detail-tab" data-tab="history" data-i18n="profs.detail_tab_history">Journal</div>
+    </div>
+
+    <!-- Contenu -->
+    <div style="flex:1; overflow-y:auto; padding:0 30px 24px;">
+
+      <!-- Panel Compte -->
+      <div class="detail-panel active" id="detail-panel-account">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+          <!-- Infos enseignant -->
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Coordonnees</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="font-size:13px; display:flex; align-items:center; gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue-fifa);flex-shrink:0;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                <span id="view-prof-phone">Non renseigne</span>
+              </div>
+              <div style="font-size:13px; display:flex; align-items:center; gap:8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--purple-fifa);flex-shrink:0;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                <span id="view-prof-email">Non renseigne</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Infos compte PWA -->
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px;">
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Compte PWA</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="font-size:13px;">
+                <span style="color:var(--text-muted);" data-i18n="profs.label_username">Identifiant</span> :
+                <strong id="view-prof-username-detail" style="color:var(--text-primary); font-family:monospace;">--</strong>
+              </div>
+              <div style="font-size:13px;">
+                <span style="color:var(--text-muted);" data-i18n="profs.last_login">Derniere connexion</span> :
+                <strong id="view-prof-last-login" style="color:var(--text-primary);">--</strong>
+              </div>
+              <div style="font-size:13px;">
+                <span style="color:var(--text-muted);" data-i18n="profs.account_created">Compte cree le</span> :
+                <strong id="view-prof-created-at" style="color:var(--text-primary);">--</strong>
+              </div>
+              <div style="font-size:13px;">
+                <span style="color:var(--text-muted);" data-i18n="profs.impact_label">Eleves impactes</span> :
+                <strong id="view-prof-impact" style="color:var(--text-primary);">0</strong>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Classes assignees -->
+        <div style="margin-top:20px;">
+          <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;" data-i18n="profs.label_classes">Classes enseignees</div>
+          <div id="view-prof-classes-list" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+            <!-- injectees par JS -->
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-color); display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="btn-view-prof-print" type="button" style="display:flex; align-items:center; gap:6px;" data-i18n="profs.btn_print_card">
+            Imprimer la fiche d'acces
+          </button>
+          <button class="btn btn-secondary" id="btn-view-prof-reset-pw" type="button" style="display:flex; align-items:center; gap:6px;" data-i18n="profs.btn_reset_password">
+            Reinitialiser le mot de passe
+          </button>
+          <button class="btn btn-secondary" id="btn-view-prof-edit" type="button" style="display:flex; align-items:center; gap:6px; margin-left:auto;" data-i18n="profs.modal_edit">
+            Modifier
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel Journal -->
+      <div class="detail-panel" id="detail-panel-history">
+        <div style="overflow-x:auto;">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th data-i18n="profs.login_date">Date</th>
+                <th data-i18n="profs.login_details">Details</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <tr><td colspan="2" style="text-align:center; color:var(--text-muted); padding:40px;" data-i18n="profs.no_login_history">Aucune connexion enregistree</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
   </div>
 </div>

@@ -296,6 +296,20 @@ CREATE TABLE notes (
 - [x] `seed_test_data.js` générait `rand(4,19)` hors plage autorisée pour certains types
 - [x] Formule `(totalPts/totalMax)*20` dans `eleves.js` saturait à 20 pour N2
 
+### Transformation section Professeurs → Comptes Enseignants PWA (Juillet 2026)
+
+| Changement | Fichier |
+|-----------|---------|
+| Colonnes `utilisateur_id` + `derniere_connexion` ajoutees à `professeurs` | `schema.sql`, `db.js` |
+| Backend reecrit : 6 nouveaux handlers (createTeacherAccount, suspend, reactivate, resetPassword, getTeacherLoginHistory, printTeacherAccessCard), JOIN utilisateurs, refactor requêtes existantes | `handlers/professeurs.js` |
+| 6 nouvelles APIs exposées dans preload | `preload.js` |
+| Frontend HTML reecrit : liste cartes centree comptes, modale creation avec affichage MDP unique, modale detail avec onglets Compte/Journal, statut actif/suspendu | `professeurs.html` |
+| Frontend JS reecrit : state management V2, suspendre/reactiver/reinitialiser MDP/imprimer fiche acces, historique connexions | `professeurs.js` |
+| Locales mises à jour (fr + en) pour toutes les nouvelles cles | `locales/fr.js`, `locales/en.js` |
+| Import Excel auto-genere comptes (utilisateur + professeur) avec mot de passe securise | `utils/importExcel.js` |
+
+**Notes** : La modale edition ne permet PAS de modifier le mot de passe (seulement via Reinitialiser). Le MDP genéré à la creation est affiché UNE SEULE fois avec bloc jaune d'avertissement. Les champs RH (civilite, sexe, specialite, diplome, adresse, ville, date_embauche) sont supprimes de l'UI et des imports.
+
 ---
 
 ## 10. N3 (CM1/CM2) — VÉRIFICATION
@@ -352,4 +366,4 @@ Pas de framework de tests unitaires automatisés. La vérification se fait :
 
 ---
 
-*Document généré le 15 Juillet 2026 — à mettre à jour après chaque modification significative.*
+*Document généré le 17 Juillet 2026 — à mettre à jour après chaque modification significative.*

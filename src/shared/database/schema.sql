@@ -35,8 +35,9 @@ CREATE TABLE IF NOT EXISTS professeurs (
     telephone          TEXT,
     email              TEXT,
     matiere_principale TEXT,
-    date_embauche      TEXT,
     actif              INTEGER DEFAULT 1,
+    utilisateur_id     INTEGER UNIQUE REFERENCES utilisateurs(id) ON DELETE SET NULL,
+    derniere_connexion TEXT,
     created_at         TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_professeurs_actif ON professeurs(actif);

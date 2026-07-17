@@ -606,18 +606,40 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
 }
 
 /**
- * Importe une liste de professeurs
+ * Importe une liste de professeurs et cree automatiquement leurs comptes PWA
  */
 async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId = null) {
   const resultat = {
-    success:  false,
-    nbAjoutes: 0,
-    nbIgnores: 0,
-    nbErreurs: 0,
-    erreurs:   []
+    success:    false,
+    nbAjoutes:  0,
+    nbIgnores:  0,
+    nbErreurs:  0,
+    erreurs:    [],
+    comptes:    []
   };
 
+  const crypto = require('crypto');
+  const bcrypt = require('bcryptjs');
   const fs = require('fs');
+
+  function generateUsername(nom, prenom) {
+    const base = ((prenom || '') + '.' + (nom || '')).toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9.]/g, '');
+    const suffix = Math.random().toString(36).substring(2, 5);
+    return (base + '.' + suffix).substring(0, 30);
+  }
+
+  function generateSecurePassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$%&';
+    let pw = '';
+    const bytes = crypto.randomBytes(10);
+    for (let i = 0; i < 10; i++) {
+      pw += chars[bytes[i] % chars.length];
+    }
+    return pw;
+  }
+
   const stats = fs.statSync(filePath);
   if (stats.size > 10 * 1024 * 1024) {
     return { ...resultat, error: 'Fichier trop volumineux (max 10 MB)' };
@@ -634,28 +656,19 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
   const lignes = [];
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
-    const nom        = String(row.getCell(1).value || '').trim();
-    const prenom     = String(row.getCell(2).value || '').trim();
-    const matiere    = String(row.getCell(3).value || '').trim() || null;
-    const civilite   = String(row.getCell(4).value || '').trim() || null;
-    const sexe       = String(row.getCell(5).value || '').trim().toUpperCase() || null;
-    const tel        = String(row.getCell(6).value || '').trim() || null;
-    const email      = String(row.getCell(7).value || '').trim() || null;
-    const specialite = String(row.getCell(8).value || '').trim() || null;
-    const diplome    = String(row.getCell(9).value || '').trim() || null;
-    const ville      = String(row.getCell(10).value || '').trim() || null;
+    const nom     = String(row.getCell(1).value || '').trim();
+    const prenom  = String(row.getCell(2).value || '').trim();
+    const matiere = String(row.getCell(3).value || '').trim() || null;
+    const tel     = String(row.getCell(4).value || '').trim() || null;
+    const email   = String(row.getCell(5).value || '').trim() || null;
 
     if (nom || prenom) {
-      lignes.push({ 
-        nom, prenom, matiere, civilite, sexe, 
-        tel, email, specialite, diplome, ville,
-        rowNumber 
-      });
+      lignes.push({ nom, prenom, matiere, tel, email, rowNumber });
     }
   });
 
   if (!lignes.length) {
-    return { ...resultat, error: 'Aucune ligne de données trouvée dans le fichier' };
+    return { ...resultat, error: 'Aucune ligne de donnees trouvee dans le fichier' };
   }
 
   run('BEGIN');
@@ -663,6 +676,8 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
     if (mode === 'remplacer') {
       run(`DELETE FROM professeurs_classes`);
       run(`UPDATE classes SET professeur_principal_id = NULL`);
+      run(`UPDATE professeurs SET utilisateur_id = NULL`);
+      run(`DELETE FROM utilisateurs WHERE role = 'enseignant'`);
       run(`DELETE FROM professeurs`);
     }
 
@@ -672,15 +687,15 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
       (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
     for (const rowData of lignes) {
-      const { nom, prenom, matiere, civilite, sexe, tel, email, specialite, diplome, ville, rowNumber } = rowData;
+      const { nom, prenom, matiere, tel, email, rowNumber } = rowData;
       try {
         if (!nom) {
-          resultat.erreurs.push(`Ligne ${rowNumber} : nom manquant, ignorée`);
+          resultat.erreurs.push(`Ligne ${rowNumber} : nom manquant, ignoree`);
           resultat.nbErreurs++;
           continue;
         }
         if (!prenom) {
-          resultat.erreurs.push(`Ligne ${rowNumber} : prénom manquant pour "${nom}", ignorée`);
+          resultat.erreurs.push(`Ligne ${rowNumber} : prenom manquant pour "${nom}", ignoree`);
           resultat.nbErreurs++;
           continue;
         }
@@ -696,15 +711,27 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
           }
         }
 
+        // Generer le compte utilisateur enseignant
+        const username = generateUsername(nom, prenom);
+        const rawPassword = generateSecurePassword();
+        const hash = bcrypt.hashSync(rawPassword, 10);
+
+        const userResult = run(
+          `INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, role, nom_complet, actif)
+           VALUES (?, ?, 'enseignant', ?, 1)`,
+          [username, hash, (prenom + ' ' + nom).trim()]
+        );
+
         const r = run(
           `INSERT INTO professeurs (
-            nom, prenom, matiere_principale, civilite, sexe, 
-            telephone, email, specialite, diplome_max, ville, actif
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-          [nom, prenom, matiere, civilite, sexe, tel, email, specialite, diplome, ville]
+            nom, prenom, matiere_principale, telephone, email, actif, utilisateur_id
+          ) VALUES (?, ?, ?, ?, ?, 1, ?)`,
+          [nom, prenom, matiere, tel, email, userResult.lastID]
         );
+
         profsActuels.push({ id: r.lastID, nom, prenom });
         resultat.nbAjoutes++;
+        resultat.comptes.push({ nom, prenom, username, password: rawPassword });
 
       } catch (rowErr) {
         resultat.erreurs.push(`Ligne ${rowNumber} : ${rowErr.message}`);

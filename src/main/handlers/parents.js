@@ -10,6 +10,7 @@ const { dialog } = require('electron');
 const { Worker } = require('worker_threads');
 const path = require('path');
 const crypto = require('crypto');
+const { CURRICULUM_TEMPLATES, getPeriodeForUA } = require('../../shared/constants/curriculum');
 
 /**
  * @param {Electron.IpcMain} ipcMain
@@ -31,6 +32,24 @@ function register(ipcMain, deps) {
         resolve(`$scrypt$n=8192,r=8,p=1$${saltB64}$${hashB64}`);
       });
     });
+  }
+
+  /**
+   * Construit un nom lisible pour le portail a partir d'un code sous-competence N1/N2.
+   * Ex: "1A" -> "Communiquer en Français, Anglais et langue nationale — Communiquer en Français"
+   */
+  function _buildPortalNoteName(sousCode) {
+    for (const lvl of ['N1', 'N2']) {
+      const templ = CURRICULUM_TEMPLATES[lvl];
+      if (!templ) continue;
+      for (const compKey of Object.keys(templ.competences)) {
+        const comp = templ.competences[compKey];
+        if (comp.sousCompetences && comp.sousCompetences[sousCode]) {
+          return comp.nom + ' — ' + comp.sousCompetences[sousCode].nom;
+        }
+      }
+    }
+    return null;
   }
 
   // ── Helper pour laisser respirer l'event loop ──────────────────────────────
@@ -412,11 +431,32 @@ function register(ipcMain, deps) {
           LEFT JOIN classes c ON e.classe_id = c.id
         `),
         classes: all('SELECT id, nom_classe, niveau FROM classes'),
-        notes: all(`
-          SELECT n.*, m.nom_matiere as matiere_nom 
-          FROM notes n
-          LEFT JOIN matieres m ON n.matiere_id = m.id
-        `),
+        notes: (() => {
+          const rawNotes = all(`
+            SELECT n.*, m.nom_matiere as matiere_nom 
+            FROM notes n
+            LEFT JOIN matieres m ON n.matiere_id = m.id
+          `);
+          return rawNotes.map(n => {
+            // N3 classique: garder tel quel
+            if (n.matiere_id != null) {
+              return { eleve_id: n.eleve_id, matiere_nom: n.matiere_nom || '', note: n.note, periode: n.periode || '', sequence: n.sequence || 1 };
+            }
+            // N1/N2: garder uniquement les agregats (sous_type NULL)
+            if (n.sous_competence_code && !n.type_eval) {
+              const compName = _buildPortalNoteName(n.sous_competence_code);
+              const periode = getPeriodeForUA(n.ua);
+              return {
+                eleve_id: n.eleve_id,
+                matiere_nom: compName || 'Competence ' + n.sous_competence_code,
+                note: n.note,
+                periode: periode || n.periode || '',
+                sequence: 1
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        })(),
         absences: all(`
           SELECT eleve_id, periode, heures 
           FROM heures_absence

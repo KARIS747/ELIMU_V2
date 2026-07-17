@@ -178,17 +178,22 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   },
 
   // ==========================================
-  // PROFESSEURS
+  // PROFESSEURS (V2 - Comptes Enseignants PWA)
   // ==========================================
 
-  getProfesseurs:          (filtres)          => ipcRenderer.invoke('db:getProfesseurs',          filtres),
-  getProfesseursList:      (classeId)         => ipcRenderer.invoke('db:getProfesseursList',      classeId),
-  getProfesseurDetail:     (id)               => ipcRenderer.invoke('db:getProfesseurDetail',     id),
-  addProfesseur:           (data)             => ipcRenderer.invoke('db:addProfesseur',           data),
-  updateProfesseur:        (id, data)         => ipcRenderer.invoke('db:updateProfesseur',        id, data),
-  deleteProfesseur:        (id)               => ipcRenderer.invoke('db:deleteProfesseur',        id),
-  updateClassesEnseignees: (profId, classeIds)=> ipcRenderer.invoke('db:updateClassesEnseignees', profId, classeIds),
-  getClassesByProfesseur:  (profId)           => ipcRenderer.invoke('db:getClassesByProfesseur',  profId),
+  getProfesseurs:            (filtres)               => ipcRenderer.invoke('db:getProfesseurs',            filtres),
+  getProfesseursList:        (classeId)              => ipcRenderer.invoke('db:getProfesseursList',        classeId),
+  getProfesseurDetail:       (id)                    => ipcRenderer.invoke('db:getProfesseurDetail',       id),
+  createTeacherAccount:      (data)                  => ipcRenderer.invoke('db:createTeacherAccount',      data),
+  updateProfesseur:          (id, data)              => ipcRenderer.invoke('db:updateProfesseur',          id, data),
+  suspendTeacherAccount:     (id)                    => ipcRenderer.invoke('db:suspendTeacherAccount',     id),
+  reactivateTeacherAccount:  (id)                    => ipcRenderer.invoke('db:reactivateTeacherAccount',  id),
+  resetTeacherPassword:      (id)                    => ipcRenderer.invoke('db:resetTeacherPassword',      id),
+  getTeacherLoginHistory:    (id)                    => ipcRenderer.invoke('db:getTeacherLoginHistory',    id),
+  printTeacherAccessCard:    (id, lang, pwdOverride) => ipcRenderer.invoke('db:printTeacherAccessCard',    id, lang, pwdOverride),
+  deleteProfesseur:          (id)                    => ipcRenderer.invoke('db:deleteProfesseur',          id),
+  updateClassesEnseignees:   (profId, classeIds)     => ipcRenderer.invoke('db:updateClassesEnseignees',   profId, classeIds),
+  getClassesByProfesseur:    (profId)                => ipcRenderer.invoke('db:getClassesByProfesseur',    profId),
 
   // ==========================================
   // PARENTS
