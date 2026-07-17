@@ -20,11 +20,11 @@ const NOTE_MAPPING = {
  * @returns {string} 'NA' | 'ECA' | 'A' | 'A+'
  */
 function getNoteToCode(note) {
-  if (note >= 0  && note <= 10) return 'NA';
-  if (note >= 11 && note <= 14) return 'ECA';
-  if (note >= 15 && note <= 17) return 'A';
-  if (note >= 18 && note <= 20) return 'A+';
-  return 'NA'; // Fallback
+  if (note === null || note === undefined || isNaN(note)) return null;
+  if (note >= 18) return 'A+';
+  if (note >= 15) return 'A';
+  if (note >= 11) return 'ECA';
+  return 'NA';
 }
 
 /**

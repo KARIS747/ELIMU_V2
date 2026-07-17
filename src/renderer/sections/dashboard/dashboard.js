@@ -51,7 +51,7 @@ async function reloadDashboard() {
       seqSelect.disabled = true;
       seqSelect.style.opacity = "0.5";
       seqSelect.style.cursor = "not-allowed";
-      seqSelect.setAttribute('title', "Les évaluations N1/N2 se font par Unité d'Apprentissage (UA), les séquences ne s'appliquent pas.");
+      seqSelect.setAttribute('title', window.t('dashboard.seq_title_n1n2'));
     } else {
       seqSelect.disabled = false;
       seqSelect.style.opacity = "1";
@@ -89,7 +89,7 @@ async function loadDashboard(classeId, periode, sequence) {
     ]);
 
     if (stats.error) {
-      showToast('Erreur de chargement des statistiques', 'error');
+      showToast(window.t('dashboard.stats_error'), 'error');
       return;
     }
 
@@ -103,14 +103,14 @@ async function loadDashboard(classeId, periode, sequence) {
 
     const classeSelect = document.getElementById('dash-classe-select');
     const label = classeId
-      ? classeSelect?.options[classeSelect.selectedIndex]?.text || 'Classe'
+      ? classeSelect?.options[classeSelect.selectedIndex]?.text || window.t('dashboard.class_fallback')
       : (window.t('dashboard.establishment') || 'Établissement');
     const niveauLabel = document.getElementById('dash-niveau-label');
     if (niveauLabel) niveauLabel.textContent = label;
 
   } catch (error) {
     console.error('Erreur loadDashboard:', error);
-    showToast('Erreur lors du chargement du dashboard', 'error');
+    showToast(window.t('dashboard.load_error'), 'error');
   }
 }
 
@@ -131,7 +131,7 @@ function updateKPIs(stats) {
   // Moyenne : code qualitatif (N1/N2) ou note /20 (N3)
   if (stats.moyenne) {
     if (estQualitatif) {
-      const code = getQualitativeCode(stats.moyenne);
+      const code = window.curriculum.getNoteToCode(stats.moyenne);
       setEl('kpi-moyenne', code);
       setColor('kpi-moyenne', couleurQual(code));
     } else {
@@ -170,7 +170,7 @@ function renderGauge(moyenne) {
   // Couleurs adaptées au mode d'évaluation
   let color;
   if (estQualitatif) {
-    const code = getQualitativeCode(moyenne);
+    const code = window.curriculum.getNoteToCode(moyenne);
     color = (code === 'A+' || code === 'A') ? '#00ff91' : code === 'ECA' ? '#ffdc00' : '#ff2e63';
   } else {
     color = moyenne >= 14 ? '#00ff91' : moyenne >= 10 ? '#ffdc00' : '#ff2e63';
@@ -182,7 +182,7 @@ function renderGauge(moyenne) {
   if (gaugeValue) {
     gaugeValue.style.color = color;
     if (estQualitatif) {
-      gaugeValue.textContent = getQualitativeCode(moyenne) || '—';
+      gaugeValue.textContent = window.curriculum.getNoteToCode(moyenne) || '—';
       gaugeValue.style.fontSize = '36px';
     } else {
       gaugeValue.style.fontSize = '48px';
@@ -193,19 +193,19 @@ function renderGauge(moyenne) {
   // Label d'échelle dynamique
   const scaleLabel = document.getElementById('gauge-scale-label');
   if (scaleLabel) {
-    scaleLabel.textContent = estQualitatif ? 'Niveau' : '/20';
+    scaleLabel.textContent = estQualitatif ? window.t('dashboard.gauge_label_qual') : '/20';
   }
 
   // Mention sous la jauge
   const gaugeMention = document.getElementById('gauge-mention');
   if (gaugeMention) {
     if (estQualitatif) {
-      const code = getQualitativeCode(moyenne);
-      const mentions = { 'A+': 'Expert', 'A': 'Acquis', 'ECA': 'En Cours d\'Acquisition', 'NA': 'Non Acquis' };
+      const code = window.curriculum.getNoteToCode(moyenne);
+      const mentions = { 'A+': window.t('dashboard.qual_expert'), 'A': window.t('dashboard.qual_acquis'), 'ECA': window.t('dashboard.qual_eca'), 'NA': window.t('dashboard.qual_na') };
       gaugeMention.textContent = mentions[code] || '';
       gaugeMention.style.color = color;
     } else {
-      const mention = moyenne >= 16 ? 'Très Bien' : moyenne >= 14 ? 'Bien' : moyenne >= 12 ? 'Assez Bien' : moyenne >= 10 ? 'Passable' : moyenne > 0 ? 'Insuffisant' : '';
+      const mention = moyenne >= 16 ? window.t('dashboard.mention_excellent') : moyenne >= 14 ? window.t('dashboard.mention_good') : moyenne >= 12 ? window.t('dashboard.mention_fair') : moyenne >= 10 ? window.t('dashboard.mention_passable') : moyenne > 0 ? window.t('dashboard.mention_poor') : '';
       gaugeMention.textContent = mention;
     }
   }
@@ -293,7 +293,7 @@ function renderRadar(parMatiere) {
   const sorted = [...parMatiere].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0));
   
   const labels = sorted.map(m => {
-    let nom = m.nom_matiere || 'Matière';
+    let nom = m.nom_matiere || window.t('dashboard.subject_fallback');
     if (nom.length > 25) nom = nom.substring(0, 22) + '…';
     return nom;
   });
@@ -382,7 +382,7 @@ function renderRadar(parMatiere) {
           callbacks: {
             label: (ctx) => {
               const estQ = currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2';
-              return estQ ? ` ${getQualitativeCode(ctx.raw)} (${ctx.raw.toFixed(1)})` : ` ${ctx.raw.toFixed(1)} / 20`;
+              return estQ ? ` ${window.curriculum.getNoteToCode(ctx.raw)} (${ctx.raw.toFixed(1)})` : ` ${ctx.raw.toFixed(1)} / 20`;
             }
           }
         },
@@ -423,7 +423,7 @@ function renderTop5(top5) {
   const container = document.getElementById('top5-container');
   if (!container) return;
   if (!top5.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h3>Aucune donnée</h3><p>Importez des notes pour voir le classement</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h3>${window.t('dashboard.top5_empty')}</h3><p>${window.t('dashboard.top5_empty_desc')}</p></div>`;
     return;
   }
   
@@ -468,7 +468,7 @@ function renderAlertes(alertes) {
   if (!container) return;
   if (countEl) countEl.textContent = alertes.length;
   if (!alertes.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon" style="color:var(--green-fifa);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div><h3 style="color:var(--green-fifa);">Excellent !</h3><p>Aucun élève en difficulté détecté</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon" style="color:var(--green-fifa);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div><h3 style="color:var(--green-fifa);">${window.t('dashboard.alerts_empty')}</h3><p>${window.t('dashboard.alerts_empty_desc')}</p></div>`;
     return;
   }
 
@@ -483,7 +483,7 @@ function renderAlertes(alertes) {
       </span>
       <div style="flex:1;">
         <div style="font-weight:600; color:var(--text-primary); font-size:13.5px;">${esc(eleve.prenom)} ${esc(eleve.nom)}</div>
-        <div style="font-size:11px; color:var(--text-muted);">Nécessite un suivi</div>
+        <div style="font-size:11px; color:var(--text-muted);">${window.t('dashboard.needs_monitoring')}</div>
       </div>
       <div class="score-circle red">${esc(formatScore(eleve.moyenne, currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2'))}</div>
     `;
@@ -502,7 +502,7 @@ function renderAbsences(data) {
 
   if (topContainer) {
     if (!data.top?.length) {
-      topContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h3>RAS</h3><p>Aucune absence enregistrée</p></div>`;
+      topContainer.innerHTML = `<div class="empty-state"><div class="empty-icon"></div><h3>${window.t('dashboard.absences_empty')}</h3><p>${window.t('dashboard.absences_empty_desc')}</p></div>`;
     } else {
       const fragment = document.createDocumentFragment();
       data.top.forEach(eleve => {
@@ -610,7 +610,7 @@ function renderEvolution(data) {
     data: {
       labels,
       datasets: [{
-        label: 'Moyenne pondérée',
+        label: window.t('dashboard.evolution_label'),
         data: valeurs,
         borderColor: '#00ff91',
         backgroundColor: 'rgba(0, 255, 145, 0.1)',
@@ -635,7 +635,7 @@ function renderEvolution(data) {
       animation: { duration: 800, easing: 'easeOutCubic' },
       scales: {
         y: { min: 0, max: 20, ticks: { color: tickColor, font: { size: 11 }, callback: v => {
-          if (currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2') return `${v} · ${getQualitativeCode(v)}`;
+          if (currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2') return `${v} · ${window.curriculum.getNoteToCode(v)}`;
           return `${v}/20`;
         } }, grid: { color: gridColor } },
         x: { ticks: { color: labelColor, font: { size: 11 } }, grid: { color: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(45,54,80,0.3)' } }
@@ -650,7 +650,7 @@ function renderEvolution(data) {
           borderWidth: 1, 
           callbacks: { label: ctx => {
           const estQ = currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2';
-          return estQ ? ` ${getQualitativeCode(ctx.raw)} (${ctx.raw})` : ` ${ctx.raw}/20`;
+          return estQ ? ` ${window.curriculum.getNoteToCode(ctx.raw)} (${ctx.raw})` : ` ${ctx.raw}/20`;
         } } 
         }
       }
@@ -673,7 +673,7 @@ function populateClassSelect(classes) {
   (classes || []).forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = `${esc(c.nom_classe)} (${esc(c.nb_eleves || 0)} élèves)`;
+    opt.textContent = `${esc(c.nom_classe)} (${esc(c.nb_eleves || 0)} ${window.t('dashboard.students_unit')})`;
     fragment.appendChild(opt);
   });
 
@@ -718,14 +718,6 @@ async function loadChartJS() {
  * Convertit une note numérique (0-20) en code qualitatif (N1/N2)
  * NA (0-10), ECA (11-14), A (15-17), A+ (18-20)
  */
-function getQualitativeCode(note) {
-  if (note === null || note === undefined || isNaN(note)) return null;
-  if (note >= 18) return 'A+';
-  if (note >= 15) return 'A';
-  if (note >= 11) return 'ECA';
-  return 'NA';
-}
-
 /** Couleur CSS pour un code qualitatif */
 function couleurQual(code) {
   switch(code) {
@@ -740,7 +732,7 @@ function couleurQual(code) {
 function getNoteColor(moyenne, estQualitatif) {
   if (moyenne === null || moyenne === undefined) return '';
   if (estQualitatif) {
-    const code = getQualitativeCode(moyenne);
+    const code = window.curriculum.getNoteToCode(moyenne);
     if (code === 'A+' || code === 'A') return 'green';
     if (code === 'ECA') return 'yellow';
     return 'red';
@@ -755,7 +747,7 @@ function getStars(moyenne, estQualitatif) {
   if (moyenne === null || moyenne === undefined) return '';
   let count;
   if (estQualitatif) {
-    const code = getQualitativeCode(moyenne);
+    const code = window.curriculum.getNoteToCode(moyenne);
     count = code === 'A+' ? 5 : code === 'A' ? 4 : code === 'ECA' ? 3 : 1;
   } else {
     count = moyenne >= 18 ? 5 : moyenne >= 15 ? 4 : moyenne >= 12 ? 3 : moyenne >= 9 ? 2 : 1;
@@ -768,6 +760,6 @@ function getStars(moyenne, estQualitatif) {
 /** Formate le score pour affichage : code qualitatif ou note numérique */
 function formatScore(moyenne, estQualitatif) {
   if (moyenne === null || moyenne === undefined) return '—';
-  if (estQualitatif) return getQualitativeCode(moyenne) || '—';
+  if (estQualitatif) return window.curriculum.getNoteToCode(moyenne) || '—';
   return typeof moyenne === 'number' ? moyenne.toFixed(1) : String(moyenne);
 }

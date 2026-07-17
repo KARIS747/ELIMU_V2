@@ -307,3 +307,16 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   /** Demande un redémarrage complet de l'application (utile après restauration) */
   relaunchApp: () => ipcRenderer.send('app:relaunch')
 });
+
+// ═══════════════════════════════════════════════════════════
+// API CURRICULUM (constantes et fonctions de notation)
+// ═══════════════════════════════════════════════════════════
+const { getNoteToCode, getWeightsForSousCompetence, getPeriodeForUA, UA_TRIMESTRE_MAP, CURRICULUM_TEMPLATES } = require('../shared/constants/curriculum');
+
+contextBridge.exposeInMainWorld('curriculum', {
+  getNoteToCode,
+  getWeightsForSousCompetence,
+  getPeriodeForUA,
+  UA_TRIMESTRE_MAP,
+  CURRICULUM_TEMPLATES
+});

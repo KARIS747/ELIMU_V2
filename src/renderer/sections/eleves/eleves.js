@@ -152,7 +152,7 @@ function afficherEleves(eleves) {
     let scoreHTML, couleurScore, etoiles;
     if (estQualitatif) {
       // N1 / N2 : Affichage du code qualitatif le plus représentatif
-      const code = moy !== null ? getQualitativeCode(moy) : null;
+      const code = moy !== null ? window.curriculum.getNoteToCode(moy) : null;
       couleurScore = code ? couleurQual(code) : 'var(--text-muted)';
       scoreHTML = code
         ? `<span style="font-size:13px;font-weight:800;letter-spacing:1px;">${code}</span>`
@@ -388,21 +388,6 @@ async function ouvrirProfil(eleveId) {
 }
 
 /**
- * Convertit une note numérique en code qualitatif MINEDUB.
- * ATTENTION : ne s'applique QU'AUX niveaux N1 (SIL/CP) et N2 (CE1/CE2).
- * Seuils officiels (curriculum.js) :
- *   A+  ≥ 18
- *   A   ≥ 15
- *   ECA ≥ 11
- *   NA  ≤ 10
- */
-function getQualitativeCode(note) {
-  if (note >= 18) return 'A+';
-  if (note >= 15) return 'A';
-  if (note >= 11) return 'ECA';
-  return 'NA';
-}
-
 /** Retourne la couleur CSS associée à un code qualitatif */
 function couleurQual(code) {
   switch (code) {
@@ -411,41 +396,6 @@ function couleurQual(code) {
     case 'ECA': return 'var(--yellow-fifa)';
     default:    return 'var(--red-fifa)';
   }
-}
-
-const CURRICULUM_POIDS = {
-  'N1': {
-    '1A':  { orale: 20, ecrite: 15, pratique: 0,  savoirEtre: 5 },
-    '1B':  { orale: 20, ecrite: 15, pratique: 0,  savoirEtre: 5 },
-    '1C':  { orale: 10, ecrite: 5,  pratique: 3,  savoirEtre: 2 },
-    '2A':  { orale: 5,  ecrite: 20, pratique: 0,  savoirEtre: 5 },
-    '2B':  { orale: 5,  ecrite: 15, pratique: 5,  savoirEtre: 5 },
-    '3A':  { orale: 3,  ecrite: 3,  pratique: 10, savoirEtre: 4 },
-    '3B':  { orale: 5,  ecrite: 5,  pratique: 8,  savoirEtre: 2 },
-    '4':   { orale: 5,  ecrite: 3,  pratique: 10, savoirEtre: 2 },
-    '5':   { orale: 4,  ecrite: 10, pratique: 20, savoirEtre: 6 },
-    '6A1': { orale: 2,  ecrite: 2,  pratique: 12, savoirEtre: 4 },
-    '6A2': { orale: 3,  ecrite: 15, pratique: 0,  savoirEtre: 2 },
-    '6B':  { orale: 2,  ecrite: 4,  pratique: 12, savoirEtre: 2 },
-  },
-  'N2': {
-    '1A':  { orale: 12, ecrite: 15, pratique: 0,  savoirEtre: 3 },
-    '1B':  { orale: 12, ecrite: 15, pratique: 0,  savoirEtre: 3 },
-    '1C':  { orale: 10, ecrite: 8,  pratique: 2,  savoirEtre: 0 },
-    '2A':  { orale: 8,  ecrite: 28, pratique: 0,  savoirEtre: 4 },
-    '2B':  { orale: 6,  ecrite: 7,  pratique: 20, savoirEtre: 7 },
-    '3A':  { orale: 3,  ecrite: 8,  pratique: 5,  savoirEtre: 4 },
-    '3B':  { orale: 3,  ecrite: 9,  pratique: 5,  savoirEtre: 3 },
-    '4':   { orale: 5,  ecrite: 2,  pratique: 11, savoirEtre: 2 },
-    '5':   { orale: 4,  ecrite: 10, pratique: 20, savoirEtre: 6 },
-    '6A1': { orale: 2,  ecrite: 2,  pratique: 12, savoirEtre: 4 },
-    '6A2': { orale: 3,  ecrite: 15, pratique: 0,  savoirEtre: 2 },
-    '6B':  { orale: 2,  ecrite: 4,  pratique: 12, savoirEtre: 2 },
-  }
-};
-
-function getPoids(niveauV2, code) {
-  return CURRICULUM_POIDS[niveauV2]?.[code] || null;
 }
 
 async function rafraichirProfil(eleveId, title, content) {
@@ -478,7 +428,7 @@ async function rafraichirProfil(eleveId, title, content) {
           }
         });
         const aggs = Object.values(parCode).map(item => {
-          const poids = getPoids(eleve.niveau_v2, item.code);
+          const poids = window.curriculum.getWeightsForSousCompetence(eleve.niveau_v2, item.code);
           if (!poids) return null;
           let total = 0, totalPoids = 0;
           for (const t of ['orale', 'ecrite', 'pratique', 'savoirEtre']) {
@@ -506,7 +456,7 @@ async function rafraichirProfil(eleveId, title, content) {
 
   let couleurScore, scoreAffiche, etoiles;
   if (estQualitatifProfil) {
-    const code = moy !== null ? getQualitativeCode(moy) : null;
+    const code = moy !== null ? window.curriculum.getNoteToCode(moy) : null;
     couleurScore = code ? couleurQual(code) : 'var(--text-muted)';
     scoreAffiche = code || '—';
     etoiles = genererEtoilesQual(code);
@@ -649,16 +599,16 @@ async function rafraichirProfil(eleveId, title, content) {
               ${Object.keys(comps).sort().map(code => {
                 const { agg, subs } = comps[code];
                 const aggNote = agg ? agg.note : null;
-                const aggQual = aggNote !== null ? getQualitativeCode(aggNote) : '—';
+                const aggQual = aggNote !== null ? window.curriculum.getNoteToCode(aggNote) : '—';
                 const aggCol = aggQual === 'A+' ? 'var(--green-fifa)' : aggQual === 'A' ? '#69f0ae' : aggQual === 'ECA' ? 'var(--yellow-fifa)' : aggQual === 'NA' ? 'var(--red-fifa)' : 'var(--text-muted)';
 
                 const niveauV2 = eleve.niveau_v2;
                 const subsHtml = subs.map(s => {
-                  const poids = getPoids(niveauV2, code);
+                  const poids = window.curriculum.getWeightsForSousCompetence(niveauV2, code);
                   const maxPts = poids ? (poids[s.sous_type] || 0) : 20;
                   if (maxPts === 0) return '';
                   const noteReelle = (s.note / 20) * maxPts;
-                  const sq = getQualitativeCode(s.note);
+                  const sq = window.curriculum.getNoteToCode(s.note);
                   const sc = sq === 'A+' ? '#00e676' : sq === 'A' ? '#69f0ae' : sq === 'ECA' ? '#f0b429' : '#ff4757';
                   return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
                     ${labels[s.sous_type] || s.sous_type}:

@@ -321,7 +321,7 @@ function afficherClasses(classes) {
     // Pour N1/N2, notation qualitative — ne pas afficher la moyenne /20
     const isQualitative = niveauV2 === 'N1' || niveauV2 === 'N2';
     const moyAffiche = isQualitative
-      ? `<span style="font-size:11px;">${t('classes.stats_qualitative') || 'Qual.'}</span>`
+      ? `<span style="font-size:11px;">${t('classes.stats_qualitative')}</span>`
       : (moy ? moy.toFixed(1) : '—');
     const couleurMoyAffiche = isQualitative ? 'var(--yellow-fifa)' : couleurMoy;
     const pctAffiche = isQualitative ? 0 : pct;
@@ -480,9 +480,9 @@ function afficherConfigMatieres() {
   const tipEl = document.getElementById('config-tip');
   if (tipEl) {
     if (isPreset) {
-      tipEl.textContent = "Les matières, coefficients et groupes sont fixes pour ce curriculum officiel. Vous pouvez uniquement affecter les enseignants aux matières.";
+      tipEl.textContent = t('classes.config_tip_preset');
     } else {
-      tipEl.textContent = "Cochez les matières enseignées dans cette classe. Le coefficient et l'enseignant sont propres à chaque classe et n'affectent pas les autres.";
+      tipEl.textContent = t('classes.config_tip_custom');
     }
   }
 
@@ -587,7 +587,7 @@ function afficherConfigGroupes() {
       <span style="font-size:16px;">🗂️</span>
       <div style="flex:1; font-size:13px; font-weight:600; color:var(--text-primary);">${esc(g.nom)}</div>
       <span style="font-size:11px; color:var(--text-muted);">
-        ${configMatieres.filter(m => m.actif && m.groupe === g.nom).length} mat.
+        ${configMatieres.filter(m => m.actif && m.groupe === g.nom).length} ${t('classes.subjects_short')}
       </span>
     </div>
   `).join('');
@@ -625,7 +625,7 @@ function ouvrirEditeurGroupeConfig(index) {
 
 function attacherEvenementsConfigGroupes() {
   document.getElementById('btn-add-groupe-config')?.addEventListener('click', () => {
-    const nom = `Groupe ${configGroupes.length + 1}`;
+    const nom = `${t('classes.group_default')} ${configGroupes.length + 1}`;
     configGroupes.push({ nom });
     afficherConfigGroupes();
     ouvrirEditeurGroupeConfig(configGroupes.length - 1);
@@ -979,7 +979,7 @@ async function remplirCheckboxesMatieres(selectionnees = []) {
     html += `<div style="grid-column:1/-1; font-size:11px; font-weight:700; color:var(--purple-fifa); 
                          text-transform:uppercase; margin-top:10px; border-bottom:1px solid rgba(168,85,247,0.2); 
                          padding-bottom:4px; margin-bottom:4px;">
-                Matières personnalisées
+                ${t('classes.custom_subjects')}
              </div>`;
     matieresPersonnalisees.forEach(m => {
       html += renderMatiereCheckbox(m, selectionnees.includes(m), true);
@@ -1144,7 +1144,7 @@ async function sauvegarderClasse() {
   if (result?.error) { afficherErreur('cf-error', result.error); return; }
 
   showToast(t('classes.save_success'), 'success');
-  window.elimuAPI.logAudit(classeEnCoursId ? 'UPDATE_CLASSE' : 'ADD_CLASSE', `Classe ${nom} ${classeEnCoursId ? 'modifiée' : 'ajoutée'}`, _state?.user?.id);
+  window.elimuAPI.logAudit(classeEnCoursId ? 'UPDATE_CLASSE' : 'ADD_CLASSE', t(classeEnCoursId ? 'classes.audit_updated' : 'classes.audit_added', { nom }), _state?.user?.id);
   fermerFormulaire();
   await chargerClasses();
 }
@@ -1378,7 +1378,7 @@ function attacherEvenements() {
         remplirCheckboxesMatieres(selectionnees);
         input.value = '';
       } else {
-        showToast('Matière déjà présente', 'warn');
+        showToast(t('classes.duplicate_subject'), 'warn');
       }
     }
   });
@@ -1514,28 +1514,24 @@ function toggleMatieresSection(niveauV2) {
       infoCompetences.style.borderColor = 'rgba(0,230,118,0.2)';
       if (infoTitle) {
         infoTitle.style.color = 'var(--green-fifa)';
-        infoTitle.textContent = '📚 Curriculum officiel MINEDUB';
+        infoTitle.textContent = t('classes.curriculum_title');
       }
       if (infoBody) {
-        infoBody.innerHTML = `
-          Cette classe utilise le système de <strong>compétences qualitatives</strong> (NA / ECA / A / A+).<br>
-          Les matières et sous-compétences sont définies automatiquement selon le programme officiel.<br>
-          <span id="cf-competences-detail" style="color:var(--text-muted);">${niveauV2 === 'N1' ? '6 domaines de compétences · 320 points · SIL & CP' : '6 domaines de compétences · 320 points · CE1 & CE2'}</span>
-        `;
+        infoBody.innerHTML = t('classes.curriculum_body_qualitative') +
+          '<br><span id="cf-competences-detail" style="color:var(--text-muted);">' +
+          (niveauV2 === 'N1' ? t('classes.curriculum_detail_n1') : t('classes.curriculum_detail_n2')) +
+          '</span>';
       }
     } else if (niveauV2 === 'N3') {
       infoCompetences.style.background = 'rgba(168,85,247,0.06)';
       infoCompetences.style.borderColor = 'rgba(168,85,247,0.2)';
       if (infoTitle) {
         infoTitle.style.color = 'var(--purple-fifa)';
-        infoTitle.textContent = '📚 Curriculum officiel MINEDUB (Niveau 3)';
+        infoTitle.textContent = t('classes.curriculum_title_n3');
       }
       if (infoBody) {
-        infoBody.innerHTML = `
-          Cette classe utilise le système de <strong>notation quantitative classique</strong> (notes sur 20 par matière).<br>
-          Les matières fixes sont définies automatiquement selon le programme officiel (CM1 & CM2).<br>
-          <span style="color:var(--text-muted);">22 matières · 3 Trimestres · 6 Séquences</span>
-        `;
+        infoBody.innerHTML = t('classes.curriculum_body_quantitative') +
+          '<br><span style="color:var(--text-muted);">' + t('classes.curriculum_detail_n3') + '</span>';
       }
     }
   }
