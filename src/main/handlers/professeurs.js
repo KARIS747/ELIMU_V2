@@ -42,7 +42,7 @@ function generateUsername(nom, prenom) {
  * @param {{ logger: object, getCurrentUserId: function, getMainWindow: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getMainWindow } = deps;
+  const { logger, getCurrentUserId, getMainWindow, getCurrentEcoleId } = deps;
 
   const checkAccess = async (roles = ['admin']) => {
     const userId = getCurrentUserId();
@@ -55,9 +55,10 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:getProfesseurs', async (event, filtres = {}) => {
     if (!getCurrentUserId()) return { professeurs: [], total: 0 };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const { recherche = '', actifSeulement = false, page = 1, limit = 50 } = filtres;
-      const params = [];
-      let where = 'WHERE 1=1';
+      const params = [ecoleId];
+      let where = 'WHERE p.ecole_id = ?';
 
       if (actifSeulement) {
         where += ' AND p.actif = 1';
@@ -93,8 +94,8 @@ function register(ipcMain, deps) {
         LIMIT ? OFFSET ?
       `, [...params, lNum, offset]);
 
-      const nbActifs = get("SELECT COUNT(*) as count FROM professeurs WHERE actif = 1")?.count || 0;
-      const totalCount = get("SELECT COUNT(*) as count FROM professeurs")?.count || 0;
+      const nbActifs = get("SELECT COUNT(*) as count FROM professeurs WHERE actif = 1 AND ecole_id = ?", [ecoleId])?.count || 0;
+      const totalCount = get("SELECT COUNT(*) as count FROM professeurs WHERE ecole_id = ?", [ecoleId])?.count || 0;
       const nbSuspendus = totalCount - nbActifs;
 
       return {
@@ -115,8 +116,9 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:getProfesseursList', async (event, classeId) => {
     if (!getCurrentUserId()) return [];
     try {
-      let sql = 'SELECT p.id, p.nom, p.prenom, p.matiere_principale FROM professeurs p WHERE p.actif = 1';
-      const params = [];
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      let sql = 'SELECT p.id, p.nom, p.prenom, p.matiere_principale FROM professeurs p WHERE p.actif = 1 AND p.ecole_id = ?';
+      const params = [ecoleId];
       const cid = parseInt(classeId);
       if (!isNaN(cid) && cid > 0) {
         sql += ' AND EXISTS (SELECT 1 FROM professeurs_classes pc WHERE pc.professeur_id = p.id AND pc.classe_id = ?)';
@@ -135,6 +137,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:getProfesseurDetail', async (event, id) => {
     if (!getCurrentUserId()) return { error: 'Non authentifie' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { error: 'ID invalide' };
 
@@ -142,18 +145,18 @@ function register(ipcMain, deps) {
         SELECT p.*, u.nom_utilisateur, u.actif AS compte_actif, u.date_creation AS compte_cree_le
         FROM professeurs p
         LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
-        WHERE p.id = ?
-      `, [pid]);
+        WHERE p.id = ? AND p.ecole_id = ?
+      `, [pid, ecoleId]);
       if (!prof) return { error: 'Professeur introuvable' };
 
       const classes = all(`
         SELECT c.id, c.nom_classe, c.niveau,
-               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id) as nb_eleves
+               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ?) as nb_eleves
         FROM classes c
         JOIN professeurs_classes pc ON pc.classe_id = c.id
-        WHERE pc.professeur_id = ?
+        WHERE pc.professeur_id = ? AND c.ecole_id = ?
         ORDER BY c.nom_classe
-      `, [pid]);
+      `, [ecoleId, pid, ecoleId]);
 
       const totalEleves = classes.reduce((acc, c) => acc + (c.nb_eleves || 0), 0);
 
@@ -180,6 +183,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:createTeacherAccount', async (event, data) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const { nom, prenom, telephone, email, matiere_principale, classeIds } = data;
 
       if (!nom || !prenom) return { success: false, error: 'Nom et prenom requis' };
@@ -191,15 +195,15 @@ function register(ipcMain, deps) {
       const result = run('BEGIN TRANSACTION');
       try {
         const userResult = run(
-          `INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, role, nom_complet, classes_ids, actif)
-           VALUES (?, ?, 'enseignant', ?, ?, 1)`,
-          [username, hash, (prenom + ' ' + nom).trim(), JSON.stringify(classeIds || [])]
+          `INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, role, nom_complet, classes_ids, actif, ecole_id)
+           VALUES (?, ?, 'enseignant', ?, ?, 1, ?)`,
+          [username, hash, (prenom + ' ' + nom).trim(), JSON.stringify(classeIds || []), ecoleId]
         );
 
         const profResult = run(
-          `INSERT INTO professeurs (nom, prenom, telephone, email, matiere_principale, actif, utilisateur_id)
-           VALUES (?, ?, ?, ?, ?, 1, ?)`,
-          [nom.trim(), prenom.trim(), telephone || null, email || null, matiere_principale || null, userResult.lastID]
+          `INSERT INTO professeurs (nom, prenom, telephone, email, matiere_principale, actif, utilisateur_id, ecole_id)
+           VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+          [nom.trim(), prenom.trim(), telephone || null, email || null, matiere_principale || null, userResult.lastID, ecoleId]
         );
 
         const profId = profResult.lastID;
@@ -217,6 +221,29 @@ function register(ipcMain, deps) {
 
         await logAudit(getCurrentUserId(), 'CREATE_TEACHER_ACCOUNT',
           'Compte enseignant cree: ' + username + ' (' + prenom + ' ' + nom + ')');
+
+        // Auto-sync vers PWA (fire-and-forget)
+        try {
+          const syncUrl = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_url'")?.valeur;
+          const apiKey = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_api_key'")?.valeur;
+          if (syncUrl && apiKey) {
+            makeRequest(
+              syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
+              'POST',
+              {
+                teachers: [{ username, password_hash: hash, nom_complet: (prenom + ' ' + nom).trim(), actif: 1, ecole_id: ecoleId, classes_ids: classeIds || [], telephone: telephone || '' }],
+                classes: [],
+                students: [],
+              },
+              { 'x-api-key': apiKey }
+            ).then((r) => {
+              if (r.status === 200) logger.info('Auto-sync PWA reussi pour ' + username);
+              else logger.warn('Auto-sync PWA: status ' + r.status);
+            }).catch((e) => logger.warn('Auto-sync PWA non disponible:', e.message));
+          }
+        } catch (syncErr) {
+          logger.warn('Auto-sync PWA ignoré (non configure):', syncErr.message);
+        }
 
         return { success: true, id: profId, username, password: rawPassword };
 
@@ -238,18 +265,19 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:updateProfesseur', async (event, id, data) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
       const { nom, prenom, telephone, email, matiere_principale, classeIds } = data;
 
       run(
-        'UPDATE professeurs SET nom=?, prenom=?, telephone=?, email=?, matiere_principale=? WHERE id=?',
-        [nom.trim(), prenom.trim(), telephone || null, email || null, matiere_principale || null, pid]
+        'UPDATE professeurs SET nom=?, prenom=?, telephone=?, email=?, matiere_principale=? WHERE id=? AND ecole_id=?',
+        [nom.trim(), prenom.trim(), telephone || null, email || null, matiere_principale || null, pid, ecoleId]
       );
 
       // Mise à jour du nom dans utilisateurs
-      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ?', [pid]);
+      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (prof?.utilisateur_id) {
         run('UPDATE utilisateurs SET nom_complet = ? WHERE id = ?',
           [(prenom.trim() + ' ' + nom.trim()), prof.utilisateur_id]);
@@ -284,18 +312,19 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:suspendTeacherAccount', async (event, id) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
-      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ?', [pid]);
+      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (!prof) return { success: false, error: 'Professeur introuvable' };
 
-      run('UPDATE professeurs SET actif = 0 WHERE id = ?', [pid]);
+      run('UPDATE professeurs SET actif = 0 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 0 WHERE id = ?', [prof.utilisateur_id]);
       }
 
-      const nom = get('SELECT nom, prenom FROM professeurs WHERE id = ?', [pid]);
+      const nom = get('SELECT nom, prenom FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       await logAudit(getCurrentUserId(), 'SUSPEND_TEACHER',
         'Compte enseignant suspendu: ' + (nom?.prenom || '') + ' ' + (nom?.nom || ''));
       return { success: true };
@@ -310,18 +339,19 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:reactivateTeacherAccount', async (event, id) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
-      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ?', [pid]);
+      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (!prof) return { success: false, error: 'Professeur introuvable' };
 
-      run('UPDATE professeurs SET actif = 1 WHERE id = ?', [pid]);
+      run('UPDATE professeurs SET actif = 1 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 1 WHERE id = ?', [prof.utilisateur_id]);
       }
 
-      const nom = get('SELECT nom, prenom FROM professeurs WHERE id = ?', [pid]);
+      const nom = get('SELECT nom, prenom FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       await logAudit(getCurrentUserId(), 'REACTIVATE_TEACHER',
         'Compte enseignant reactive: ' + (nom?.prenom || '') + ' ' + (nom?.nom || ''));
       return { success: true };
@@ -336,6 +366,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:resetTeacherPassword', async (event, id) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
@@ -343,8 +374,8 @@ function register(ipcMain, deps) {
         SELECT p.id, p.nom, p.prenom, p.utilisateur_id, u.nom_utilisateur
         FROM professeurs p
         LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
-        WHERE p.id = ?
-      `, [pid]);
+        WHERE p.id = ? AND p.ecole_id = ?
+      `, [pid, ecoleId]);
 
       if (!prof) return { success: false, error: 'Professeur introuvable' };
       if (!prof.utilisateur_id) return { success: false, error: 'Aucun compte lie' };
@@ -368,10 +399,11 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:getTeacherLoginHistory', async (event, id) => {
     if (!getCurrentUserId()) return [];
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return [];
 
-      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ?', [pid]);
+      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (!prof?.utilisateur_id) return [];
 
       return all(`
@@ -392,6 +424,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:printTeacherAccessCard', async (event, id, lang = 'fr', passwordOverride = null) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
@@ -401,8 +434,8 @@ function register(ipcMain, deps) {
                u.nom_utilisateur
         FROM professeurs p
         LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
-        WHERE p.id = ?
-      `, [pid]);
+        WHERE p.id = ? AND p.ecole_id = ?
+      `, [pid, ecoleId]);
 
       if (!prof) return { success: false, error: 'Professeur introuvable' };
 
@@ -410,9 +443,9 @@ function register(ipcMain, deps) {
         SELECT c.nom_classe
         FROM classes c
         JOIN professeurs_classes pc ON pc.classe_id = c.id
-        WHERE pc.professeur_id = ?
+        WHERE pc.professeur_id = ? AND c.ecole_id = ?
         ORDER BY c.nom_classe
-      `, [pid]);
+      `, [pid, ecoleId]);
 
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
         defaultPath: 'fiche_acces_' + (prof.nom_utilisateur || 'enseignant') + '.pdf',
@@ -484,10 +517,11 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:deleteProfesseur', async (event, id) => {
     if (!(await checkAccess(['admin']))) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
-      run('UPDATE professeurs SET actif = 0 WHERE id = ?', [pid]);
-      run('UPDATE classes SET professeur_principal_id = NULL WHERE professeur_principal_id = ?', [pid]);
+      run('UPDATE professeurs SET actif = 0 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
+      run('UPDATE classes SET professeur_principal_id = NULL WHERE professeur_principal_id = ? AND ecole_id = ?', [pid, ecoleId]);
       await logAudit(getCurrentUserId(), 'DELETE_PROFESSEUR', 'Professeur ID ' + pid + ' desactive');
       return { success: true };
     } catch (e) {
@@ -501,6 +535,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:updateClassesEnseignees', async (event, professeurId, classeIds) => {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(professeurId);
       if (isNaN(pid)) return { success: false, error: 'ID professeur invalide' };
 
@@ -522,19 +557,165 @@ function register(ipcMain, deps) {
   ipcMain.handle('db:getClassesByProfesseur', async (event, professeurId) => {
     if (!getCurrentUserId()) return [];
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(professeurId);
       if (isNaN(pid)) return [];
       return all(`
         SELECT c.id, c.nom_classe, c.niveau
         FROM classes c
         JOIN professeurs_classes pc ON pc.classe_id = c.id
-        WHERE pc.professeur_id = ?
+        WHERE pc.professeur_id = ? AND c.ecole_id = ?
         ORDER BY c.nom_classe
-      `, [pid]);
+      `, [pid, ecoleId]);
     } catch (e) {
       logger.error('Erreur getClassesByProfesseur:', e);
       return [];
     }
+  });
+
+  // ── Sync PWA ──────────────────────────────────────────────────────────
+  // Pont Desktop → PWA : pousse les donnees (enseignants, classes, eleves)
+  // vers le serveur PWA via POST /api/sync/push-from-desktop
+
+  ipcMain.handle('db:syncToPwa', async () => {
+    try {
+      const syncUrl = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_url'")?.valeur;
+      const apiKey = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_api_key'")?.valeur;
+
+      if (!syncUrl || !apiKey) {
+        return { success: false, error: 'Configuration PWA manquante. Configurez pwa_sync_url et pwa_sync_api_key dans Parametres.' };
+      }
+
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+
+      const teachers = all(`
+        SELECT u.nom_utilisateur AS username, u.mot_de_passe_hash AS password_hash,
+               u.nom_complet, u.actif, u.classes_ids,
+               p.telephone
+        FROM utilisateurs u
+        LEFT JOIN professeurs p ON p.utilisateur_id = u.id
+        WHERE u.role = 'enseignant' AND u.ecole_id = ?
+      `, [ecoleId]).map((t) => ({
+        username: t.username,
+        password_hash: t.password_hash,
+        nom_complet: t.nom_complet || '',
+        actif: t.actif,
+        ecole_id: ecoleId,
+        classes_ids: JSON.parse(t.classes_ids || '[]'),
+        telephone: t.telephone || '',
+      }));
+
+      const classes = all(`
+        SELECT c.nom_classe, c.niveau_v2,
+               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ?) AS eleves_count,
+               u.nom_utilisateur AS teacher_username
+        FROM classes c
+        LEFT JOIN professeurs_classes pc ON pc.classe_id = c.id
+        LEFT JOIN professeurs p ON p.id = pc.professeur_id
+        LEFT JOIN utilisateurs u ON u.id = p.utilisateur_id
+        WHERE c.ecole_id = ?
+      `, [ecoleId, ecoleId]).map((c) => ({
+        classe_nom: c.nom_classe,
+        niveau_v2: c.niveau_v2 || 'N1',
+        eleves_count: c.eleves_count || 0,
+        teacher_username: c.teacher_username || '',
+        ecole_id: ecoleId,
+      }));
+
+      const students = all(`
+        SELECT e.id, e.nom, e.prenom, c.nom_classe
+        FROM eleves e
+        JOIN classes c ON c.id = e.classe_id
+        WHERE e.ecole_id = ?
+      `, [ecoleId]).map((s) => ({
+        external_id: s.id,
+        nom: s.nom,
+        prenom: s.prenom,
+        classe_nom: s.nom_classe,
+        ecole_id: ecoleId,
+      }));
+
+      const result = await makeRequest(
+        syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
+        'POST',
+        { teachers, classes, students },
+        { 'x-api-key': apiKey }
+      );
+
+      logger.info('Sync PWA termine:', result.status, JSON.stringify(result.data));
+      await logAudit(getCurrentUserId(), 'SYNC_TO_PWA',
+        'Synchronisation vers PWA: ' + result.data?.teachers + ' enseignants, ' +
+        result.data?.classes + ' classes, ' + result.data?.students + ' eleves');
+
+      return result.data || { success: true, status: result.status };
+    } catch (e) {
+      logger.error('Erreur sync PWA:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('db:getPwaSyncConfig', async () => {
+    try {
+      return {
+        url: get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_url'")?.valeur || '',
+        apiKey: get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_api_key'")?.valeur || '',
+      };
+    } catch (e) {
+      logger.error('Erreur getPwaSyncConfig:', e);
+      return { url: '', apiKey: '' };
+    }
+  });
+
+  ipcMain.handle('db:savePwaSyncConfig', async (event, data) => {
+    try {
+      if (data.url !== undefined) run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('pwa_sync_url', ?)", [data.url || '']);
+      if (data.apiKey !== undefined) run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('pwa_sync_api_key', ?)", [data.apiKey || '']);
+      await logAudit(getCurrentUserId(), 'UPDATE_PWA_SYNC_CONFIG', 'Configuration synchro PWA mise a jour');
+      return { success: true };
+    } catch (e) {
+      logger.error('Erreur savePwaSyncConfig:', e);
+      return { success: false, error: e.message };
+    }
+  });
+}
+
+// ── Sync PWA ────────────────────────────────────────────────────────────
+// Pont Desktop → PWA : pousse les donnees (enseignants, classes, eleves)
+// vers le serveur PWA via POST /api/sync/push-from-desktop
+
+const http = require('http');
+const https = require('https');
+
+function makeRequest(url, method, body, headers) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const client = urlObj.protocol === 'https:' ? https : http;
+    const data = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port,
+      path: urlObj.pathname + (urlObj.search || ''),
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}),
+      },
+    };
+    const req = client.request(options, (res) => {
+      let responseData = '';
+      res.on('data', (chunk) => (responseData += chunk));
+      res.on('end', () => {
+        try {
+          resolve({ status: res.statusCode, data: JSON.parse(responseData) });
+        } catch {
+          resolve({ status: res.statusCode, data: responseData });
+        }
+      });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
   });
 }
 

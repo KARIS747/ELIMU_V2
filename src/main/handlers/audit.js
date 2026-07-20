@@ -7,7 +7,7 @@ const { logAudit } = require('../../shared/security/audit');
 const { hasRole } = require('../../shared/security/access');
 
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId } = deps;
+  const { logger, getCurrentUserId, getCurrentEcoleId } = deps;
 
   ipcMain.handle('audit:log', async (event, action, details, utilisateurId) => {
     // Sécurité : On utilise l'ID de session si disponible, sinon celui passé (cas limites)
@@ -20,14 +20,16 @@ function register(ipcMain, deps) {
     const userId = getCurrentUserId();
     if (!userId || !(await hasRole(userId, 'admin'))) return [];
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const nLimit = parseInt(limit) || 50;
       return all(`
         SELECT a.*, u.nom_utilisateur 
         FROM audit_log a
         LEFT JOIN utilisateurs u ON u.id = a.utilisateur_id
+        WHERE a.ecole_id = ?
         ORDER BY a.timestamp DESC
         LIMIT ?
-      `, [nLimit]);
+      `, [ecoleId, nLimit]);
     } catch (err) {
       logger.error('Erreur audit:getLogs:', err);
       return [];

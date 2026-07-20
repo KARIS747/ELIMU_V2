@@ -27,7 +27,7 @@ const {
  * @param {{ logger: object, getCurrentUserId: function, getMainWindow: function, getCurrentAnneeId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getMainWindow, getCurrentAnneeId } = deps;
+  const { logger, getCurrentUserId, getMainWindow, getCurrentAnneeId, getCurrentEcoleId } = deps;
 
   // Helper pour vérifier l'accès
   const checkAccess = async (roles = ['admin', 'secretaire', 'enseignant', 'comptable']) => {
@@ -56,7 +56,8 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const uid = parseInt(utilisateurId) || getCurrentUserId();
       const parsedMatiereId = (matiereId !== null && matiereId !== undefined) ? parseInt(matiereId) : null;
-      const result = await importExcel(filePath, parseInt(classeId), parsedMatiereId, periode, sequence, uid, anneeId);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await importExcel(filePath, parseInt(classeId), parsedMatiereId, periode, sequence, uid, anneeId, ecoleId);
       await logAudit(uid, 'IMPORT_EXCEL', `${result.nbImportes} notes importées`);
       return result;
     } catch (error) {

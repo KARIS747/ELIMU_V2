@@ -7,6 +7,12 @@
 
 import { t } from '../../locales/index.js';
 
+function _formatPhone(indicatif, numero) {
+  const clean = String(numero || '').replace(/\D/g, '');
+  if (!clean) return null;
+  return `${indicatif} ${clean}`;
+}
+
 let _profPage = 1;
 let _profLimit = 20;
 let _profTotal = 0;
@@ -425,6 +431,7 @@ async function ouvrirModaleProfesseur(profId = null) {
   document.getElementById('pf-nom').value = '';
   document.getElementById('pf-prenom').value = '';
   document.getElementById('pf-telephone').value = '';
+  document.getElementById('pf-indicatif').value = '+237';
   document.getElementById('pf-email').value = '';
   document.getElementById('pf-matiere').value = '';
   if (document.getElementById('pf-classes-count')) document.getElementById('pf-classes-count').textContent = '0 classe(s)';
@@ -442,7 +449,20 @@ async function ouvrirModaleProfesseur(profId = null) {
         const p = detail.professeur;
         document.getElementById('pf-nom').value = p.nom || '';
         document.getElementById('pf-prenom').value = p.prenom || '';
-        document.getElementById('pf-telephone').value = p.telephone || '';
+
+        // Charger telephone avec parsing indicatif
+        const telComplet = p.telephone || '';
+        const telMatch = telComplet.match(/^(\+\d+)\s*(\d+)$/);
+        if (telMatch) {
+          document.getElementById('pf-indicatif').value = telMatch[1];
+          document.getElementById('pf-telephone').value = telMatch[2];
+        } else if (telComplet.startsWith('+')) {
+          document.getElementById('pf-indicatif').value = '+237';
+          document.getElementById('pf-telephone').value = telComplet.replace(/^\+237\s*/, '');
+        } else {
+          document.getElementById('pf-telephone').value = telComplet;
+        }
+
         document.getElementById('pf-email').value = p.email || '';
         document.getElementById('pf-matiere').value = p.matiere_principale || '';
 
@@ -548,7 +568,7 @@ async function sauvegarderProfesseur() {
       const data = {
         nom,
         prenom,
-        telephone: document.getElementById('pf-telephone')?.value?.trim() || null,
+        telephone: _formatPhone(document.getElementById('pf-indicatif')?.value || '+237', document.getElementById('pf-telephone')?.value),
         email: document.getElementById('pf-email')?.value?.trim() || null,
         matiere_principale: document.getElementById('pf-matiere')?.value?.trim() || null
       };
@@ -564,7 +584,7 @@ async function sauvegarderProfesseur() {
       const data = {
         nom,
         prenom,
-        telephone: document.getElementById('pf-telephone')?.value?.trim() || null,
+        telephone: _formatPhone(document.getElementById('pf-indicatif')?.value || '+237', document.getElementById('pf-telephone')?.value),
         email: document.getElementById('pf-email')?.value?.trim() || null,
         matiere_principale: document.getElementById('pf-matiere')?.value?.trim() || null
       };

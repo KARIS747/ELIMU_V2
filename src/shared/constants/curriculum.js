@@ -227,11 +227,11 @@ function calcAggregateFromSubNotes(subNotes, weights) {
     const val = subNotes[type];
     const poids = weights[type];
     if (val != null && poids > 0) {
-      total += val * poids;
+      total += val;
       totalPoids += poids;
     }
   }
-  return totalPoids > 0 ? total / totalPoids : null;
+  return totalPoids > 0 ? (total / totalPoids) * 20 : null;
 }
 
 module.exports = {

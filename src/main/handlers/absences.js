@@ -13,7 +13,7 @@ const PERIODES_OK = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
  * @param {{ logger: object, getCurrentUserId: function, getCurrentAnneeId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getCurrentAnneeId } = deps;
+  const { logger, getCurrentUserId, getCurrentAnneeId, getCurrentEcoleId } = deps;
 
   // Helper pour vérifier l'accès
   const checkAccess = async (roles = ['admin', 'enseignant', 'secretaire']) => {
@@ -29,9 +29,10 @@ function register(ipcMain, deps) {
     try {
       if (!data.eleve_id || !data.date) return { success: false, error: 'Données manquantes' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = run(
-        'INSERT INTO absences (eleve_id, date, justifie, motif, annee_scolaire_id) VALUES (?, ?, ?, ?, ?)',
-        [parseInt(data.eleve_id), data.date, data.justifie ? 1 : 0, data.motif || '', anneeId]
+        'INSERT INTO absences (eleve_id, date, justifie, motif, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [parseInt(data.eleve_id), data.date, data.justifie ? 1 : 0, data.motif || '', anneeId, ecoleId]
       );
       return { success: true, id: result.lastID };
     } catch (error) {
@@ -45,9 +46,10 @@ function register(ipcMain, deps) {
     try {
       if (!data.eleve_id || !data.type || !data.date) return { success: false, error: 'Données manquantes' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = run(
-        'INSERT INTO sanctions (eleve_id, type, date, description, annee_scolaire_id) VALUES (?, ?, ?, ?, ?)',
-        [parseInt(data.eleve_id), data.type, data.date, data.description || '', anneeId]
+        'INSERT INTO sanctions (eleve_id, type, date, description, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [parseInt(data.eleve_id), data.type, data.date, data.description || '', anneeId, ecoleId]
       );
       return { success: true, id: result.lastID };
     } catch (error) {
@@ -64,9 +66,10 @@ function register(ipcMain, deps) {
       const id = parseInt(eleveId);
       if (isNaN(id) || id < 1) return { error: 'ID élève invalide' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const rows = all(
-        `SELECT periode, heures FROM heures_absence WHERE eleve_id = ? AND annee_scolaire_id = ? ORDER BY periode`,
-        [id, anneeId]
+        `SELECT periode, heures FROM heures_absence WHERE eleve_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY periode`,
+        [id, anneeId, ecoleId]
       );
       const result = { 'Trimestre 1': 0, 'Trimestre 2': 0, 'Trimestre 3': 0 };
       rows.forEach(r => { result[r.periode] = r.heures; });
@@ -86,10 +89,11 @@ function register(ipcMain, deps) {
       const h = parseFloat(heures);
       if (isNaN(h) || h < 0 || h > 9999) return { error: 'Heures invalides (0–9999)' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       run(
-        `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id) VALUES (?, ?, ?, ?)
+        `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(eleve_id, periode, annee_scolaire_id) DO UPDATE SET heures = excluded.heures`,
-        [eid, periode, h, anneeId]
+        [eid, periode, h, anneeId, ecoleId]
       );
       await logAudit(
         getCurrentUserId(),
@@ -113,9 +117,10 @@ function register(ipcMain, deps) {
       if (!csvContent || typeof csvContent !== 'string') return { error: 'Contenu CSV vide ou invalide' };
 
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const elevesClasse = all(
-        `SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?`,
-        [cid, anneeId]
+        `SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+        [cid, anneeId, ecoleId]
       );
       if (!elevesClasse.length) return { error: 'Aucun élève dans cette classe' };
 
@@ -139,9 +144,9 @@ function register(ipcMain, deps) {
         const h = parseFloat(heures);
         if (isNaN(h) || h < 0) return false;
         run(
-          `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id) VALUES (?, ?, ?, ?)
+          `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(eleve_id, periode, annee_scolaire_id) DO UPDATE SET heures = excluded.heures`,
-          [eleveId, periode, h, anneeId]
+          [eleveId, periode, h, anneeId, ecoleId]
         );
         return true;
       };
@@ -207,8 +212,9 @@ function register(ipcMain, deps) {
       const cid = parseInt(classeId);
       const anneeId = getCurrentAnneeId();
       const uid = getCurrentUserId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       
-      const result = await importAbsencesExcel(filePath, cid, uid, anneeId, periode);
+      const result = await importAbsencesExcel(filePath, cid, uid, anneeId, periode, ecoleId);
       
       if (result.success) {
         await logAudit(

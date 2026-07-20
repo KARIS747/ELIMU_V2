@@ -16,7 +16,7 @@ const { majStatutsTransches } = require('../financeUtils');
  * @returns {Promise<Object>} Résultat de l'opération
  */
 async function exportImpayesPDF(outputPath, options) {
-  const { classeId, anneeId, fraisTypeId, numeroTranche, lang = 'fr' } = options;
+  const { classeId, anneeId, fraisTypeId, numeroTranche, ecoleId = '', lang = 'fr' } = options;
   const cfg = loadConfig();
   const t = getDocTranslator(lang);
 
@@ -31,9 +31,9 @@ async function exportImpayesPDF(outputPath, options) {
         JOIN frais_types ft ON ft.id = t.frais_type_id
         JOIN eleves e ON e.id = t.eleve_id
         LEFT JOIN classes c ON c.id = e.classe_id
-        WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ?
+        WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ? AND t.ecole_id = ?
       `;
-      const params = [anneeId];
+      const params = [anneeId, ecoleId];
       if (classeId) { sql += ' AND e.classe_id = ?'; params.push(classeId); }
       if (fraisTypeId) { sql += ' AND t.frais_type_id = ?'; params.push(fraisTypeId); }
       if (numeroTranche) { sql += ' AND t.numero_tranche = ?'; params.push(numeroTranche); }

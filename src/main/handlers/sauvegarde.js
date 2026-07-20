@@ -17,7 +17,7 @@ const { getLocalDateString, getLocalTimestampForFile } = require('../../shared/u
  * @param {{ logger: object, getCurrentUserId: function, getMainWindow: function, getBackupDir: function, getDbPath: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getMainWindow, getBackupDir, getDbPath } = deps;
+  const { logger, getCurrentUserId, getMainWindow, getBackupDir, getDbPath, getCurrentEcoleId } = deps;
 
   // Helper pour vérifier l'accès admin
   const checkAdmin = async () => {
@@ -148,11 +148,12 @@ function register(ipcMain, deps) {
       fs.copyFileSync(getDbPath(), backupPath);
       logger.info(`✅ Backup fin d'année : ${backupPath}`);
 
-      run('DELETE FROM heures_absence');
-      run('DELETE FROM absences');
-      run('DELETE FROM sanctions');
-      run('DELETE FROM notes');
-      run('DELETE FROM eleves');
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      run('DELETE FROM heures_absence WHERE ecole_id = ?', [ecoleId]);
+      run('DELETE FROM absences WHERE ecole_id = ?', [ecoleId]);
+      run('DELETE FROM sanctions WHERE ecole_id = ?', [ecoleId]);
+      run('DELETE FROM notes WHERE ecole_id = ?', [ecoleId]);
+      run('DELETE FROM eleves WHERE ecole_id = ?', [ecoleId]);
       run(
         "DELETE FROM sqlite_sequence WHERE name IN ('eleves','notes','absences','sanctions','heures_absence')"
       );

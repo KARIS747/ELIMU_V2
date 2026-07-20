@@ -1,14 +1,27 @@
 -- ============================================================
 -- schema.sql - Schéma de la base de données Elimu
--- v3 : Ajout de la gestion des professeurs
+-- v4 : Multi-école, login par téléphone, ecole_id partout
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
 
+-- ============================================================
+-- TABLE : ecoles (multi-école)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ecoles (
+    ecole_id              TEXT PRIMARY KEY,
+    nom                   TEXT NOT NULL,
+    cle_api_portail       TEXT,
+    cle_pwa_sync          TEXT,
+    config                TEXT DEFAULT '{}',
+    date_creation         TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS utilisateurs (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-    nom_utilisateur      TEXT UNIQUE NOT NULL,
+    nom_utilisateur      TEXT NOT NULL,
+    telephone            TEXT,
     mot_de_passe_hash    TEXT NOT NULL,
     question_secrete     TEXT,
     reponse_hash         TEXT,
@@ -18,7 +31,10 @@ CREATE TABLE IF NOT EXISTS utilisateurs (
     matieres_ids         TEXT DEFAULT '[]',
     classes_ids          TEXT DEFAULT '[]',
     actif                INTEGER DEFAULT 1,
-    date_creation        TEXT DEFAULT CURRENT_TIMESTAMP
+    ecole_id             TEXT NOT NULL DEFAULT '',
+    date_creation        TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ecole_id, nom_utilisateur),
+    UNIQUE(ecole_id, telephone)
 );
 
 CREATE TRIGGER IF NOT EXISTS trg_migrate_utilisateurs
@@ -38,9 +54,11 @@ CREATE TABLE IF NOT EXISTS professeurs (
     actif              INTEGER DEFAULT 1,
     utilisateur_id     INTEGER UNIQUE REFERENCES utilisateurs(id) ON DELETE SET NULL,
     derniere_connexion TEXT,
+    ecole_id           TEXT NOT NULL DEFAULT '',
     created_at         TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_professeurs_actif ON professeurs(actif);
+CREATE INDEX IF NOT EXISTS idx_professeurs_ecole ON professeurs(ecole_id);
 
 -- ============================================================
 -- TABLE : classes  (avec professeur_principal_id)
@@ -51,19 +69,23 @@ CREATE TABLE IF NOT EXISTS classes (
     niveau                  TEXT CHECK(niveau IN ('Primaire', 'Secondaire', 'Supérieur')),
     systeme_educatif        TEXT DEFAULT 'francophone' CHECK(systeme_educatif IN ('francophone', 'anglophone')),
     matieres_json           TEXT DEFAULT '[]',
-    professeur_principal_id INTEGER REFERENCES professeurs(id) ON DELETE SET NULL
+    professeur_principal_id INTEGER REFERENCES professeurs(id) ON DELETE SET NULL,
+    ecole_id                TEXT NOT NULL DEFAULT ''
 );
+CREATE INDEX IF NOT EXISTS idx_classes_ecole ON classes(ecole_id);
 
 -- ============================================================
 -- TABLE : parents
 -- ============================================================
 CREATE TABLE IF NOT EXISTS parents (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    telephone         TEXT NOT NULL UNIQUE,
+    telephone         TEXT NOT NULL,
     mot_de_passe_hash TEXT NOT NULL,
     mot_de_passe      TEXT,
     nom_parent        TEXT,
-    date_creation     TEXT DEFAULT CURRENT_TIMESTAMP
+    ecole_id          TEXT NOT NULL DEFAULT '',
+    date_creation     TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(ecole_id, telephone)
 );
 
 -- Table de liaison parents-élèves (un parent peut avoir plusieurs élèves)
@@ -99,20 +121,23 @@ CREATE TABLE IF NOT EXISTS eleves (
     sexe             TEXT CHECK(sexe IN ('M', 'F')),
     date_inscription TEXT DEFAULT CURRENT_TIMESTAMP,
     annee_scolaire_id INTEGER,
+    ecole_id         TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(classe_id) REFERENCES classes(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_eleves_classe ON eleves(classe_id);
+CREATE INDEX IF NOT EXISTS idx_eleves_ecole ON eleves(ecole_id);
 
 CREATE TABLE IF NOT EXISTS notes (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     eleve_id     INTEGER NOT NULL,
-    matiere_id   INTEGER NOT NULL,
-    note         REAL NOT NULL CHECK(note >= 0 AND note <= 20),
+    matiere_id   INTEGER,
+    note         REAL NOT NULL CHECK(note >= 0),
     periode      TEXT DEFAULT 'Trimestre 1',
     sequence     INTEGER DEFAULT 1,
     date_import  TEXT DEFAULT CURRENT_TIMESTAMP,
     import_id    INTEGER,
     annee_scolaire_id INTEGER,
+    ecole_id     TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(eleve_id)   REFERENCES eleves(id)   ON DELETE CASCADE,
     FOREIGN KEY(matiere_id) REFERENCES matieres(id) ON DELETE CASCADE,
     FOREIGN KEY(import_id)  REFERENCES imports(id)  ON DELETE SET NULL,
@@ -134,6 +159,7 @@ CREATE TABLE IF NOT EXISTS absences (
     motif     TEXT,
     periode   TEXT DEFAULT 'Trimestre 1',
     annee_scolaire_id INTEGER,
+    ecole_id  TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(eleve_id) REFERENCES eleves(id) ON DELETE CASCADE
 );
 
@@ -145,6 +171,7 @@ CREATE TABLE IF NOT EXISTS sanctions (
     description TEXT,
     periode     TEXT DEFAULT 'Trimestre 1',
     annee_scolaire_id INTEGER,
+    ecole_id    TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(eleve_id) REFERENCES eleves(id) ON DELETE CASCADE
 );
 
@@ -160,6 +187,7 @@ CREATE TABLE IF NOT EXISTS imports (
     nb_erreurs      INTEGER DEFAULT 0,
     message         TEXT,
     annee_scolaire_id INTEGER,
+    ecole_id        TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id),
     FOREIGN KEY(classe_id)      REFERENCES classes(id),
     FOREIGN KEY(matiere_id)     REFERENCES matieres(id)
@@ -172,6 +200,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action            TEXT NOT NULL,
     details           TEXT,
     adresse_ip_locale TEXT,
+    ecole_id          TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id)
 );
 
@@ -185,6 +214,7 @@ CREATE TABLE IF NOT EXISTS heures_absence (
     periode  TEXT NOT NULL CHECK(periode IN ('Trimestre 1', 'Trimestre 2', 'Trimestre 3')),
     heures   REAL NOT NULL DEFAULT 0,
     annee_scolaire_id INTEGER,
+    ecole_id TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (eleve_id, periode, annee_scolaire_id),
     FOREIGN KEY(eleve_id) REFERENCES eleves(id) ON DELETE CASCADE
 );
@@ -237,6 +267,7 @@ CREATE TABLE IF NOT EXISTS frais_types (
     destinataire           TEXT DEFAULT 'etablissement',
     actif                  INTEGER DEFAULT 1,
     annee_scolaire_id      INTEGER,
+    ecole_id               TEXT NOT NULL DEFAULT '',
     date_creation          TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -250,6 +281,7 @@ CREATE TABLE IF NOT EXISTS tranches (
     statut         TEXT DEFAULT 'en_attente'
                    CHECK(statut IN ('en_attente', 'paye', 'en_retard')),
     annee_scolaire_id INTEGER,
+    ecole_id       TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(frais_type_id) REFERENCES frais_types(id) ON DELETE CASCADE,
     FOREIGN KEY(eleve_id)      REFERENCES eleves(id)      ON DELETE CASCADE,
     UNIQUE(frais_type_id, eleve_id, numero_tranche)
@@ -266,6 +298,7 @@ CREATE TABLE IF NOT EXISTS paiements (
     notes          TEXT,
     utilisateur_id INTEGER NOT NULL,
     annee_scolaire_id INTEGER,
+    ecole_id       TEXT NOT NULL DEFAULT '',
     created_at     TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(eleve_id)       REFERENCES eleves(id)       ON DELETE CASCADE,
     FOREIGN KEY(utilisateur_id) REFERENCES utilisateurs(id)
@@ -276,6 +309,7 @@ CREATE TABLE IF NOT EXISTS paiement_tranches (
     tranche_id       INTEGER NOT NULL,
     montant_applique REAL NOT NULL,
     annee_scolaire_id INTEGER,
+    ecole_id         TEXT NOT NULL DEFAULT '',
     PRIMARY KEY(paiement_id, tranche_id),
     FOREIGN KEY(paiement_id) REFERENCES paiements(id) ON DELETE CASCADE,
     FOREIGN KEY(tranche_id)  REFERENCES tranches(id)  ON DELETE CASCADE

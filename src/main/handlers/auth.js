@@ -21,7 +21,7 @@ const { hasRole } = require('../../shared/security/access');
  * @param {{ logger: object, getCurrentUserId: function, setCurrentUserId: function, injecterDonneesFictives: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, setCurrentUserId, injecterDonneesFictives } = deps;
+  const { logger, getCurrentUserId, setCurrentUserId, getCurrentEcoleId, injecterDonneesFictives } = deps;
 
   // Helper pour vérifier l'accès admin
   const checkAdmin = async () => {
@@ -62,7 +62,8 @@ function register(ipcMain, deps) {
 
   ipcMain.handle('auth:login', async (event, username, password) => {
     try {
-      const result = await login(username, password);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await login(username, password, ecoleId);
       if (result.success) {
         setCurrentUserId(result.user.id);
         await logAudit(result.user.id, 'CONNEXION', `Connexion: ${username}`);
@@ -83,7 +84,8 @@ function register(ipcMain, deps) {
       const first = await isFirstLaunch();
       if (!first) return { success: false, error: 'Un administrateur existe déjà' };
 
-      const result = await createAdmin(username, password, question, reponse);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await createAdmin(username, password, question, reponse, ecoleId);
       if (result.success) {
         setCurrentUserId(result.user.id);
         logger.info(`Admin créé: ${username}`);
@@ -99,7 +101,8 @@ function register(ipcMain, deps) {
 
   ipcMain.handle('auth:getQuestionSecrete', async (event, username) => {
     try {
-      return await getQuestionSecrete(username);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      return await getQuestionSecrete(username, ecoleId);
     } catch (error) {
       logger.error('Erreur getQuestionSecrete:', error);
       return { success: false, error: error.message };
@@ -108,7 +111,8 @@ function register(ipcMain, deps) {
 
   ipcMain.handle('auth:reinitialiserMotDePasse', async (event, username, reponse, nouveauMdp) => {
     try {
-      return await reinitialiserMotDePasse(username, reponse, nouveauMdp);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      return await reinitialiserMotDePasse(username, reponse, nouveauMdp, ecoleId);
     } catch (error) {
       logger.error('Erreur reinitialiserMotDePasse:', error);
       return { success: false, error: error.message };
@@ -120,7 +124,8 @@ function register(ipcMain, deps) {
   ipcMain.handle('auth:getUtilisateurs', async () => {
     if (!(await checkAdmin())) return [];
     try {
-      return await getUtilisateurs();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      return await getUtilisateurs(ecoleId);
     } catch (error) {
       logger.error('Erreur getUtilisateurs:', error);
       return [];
@@ -131,7 +136,8 @@ function register(ipcMain, deps) {
     const userId = getCurrentUserId();
     if (!userId || !(await checkAdmin())) return { success: false, error: 'Accès non autorisé' };
     try {
-      const result = await createUtilisateur(data);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await createUtilisateur({ ...data, ecole_id: ecoleId });
       if (result.success) {
         await logAudit(
           userId,
@@ -150,7 +156,8 @@ function register(ipcMain, deps) {
     const userId = getCurrentUserId();
     if (!userId || !(await checkAdmin())) return { success: false, error: 'Accès non autorisé' };
     try {
-      const result = await updateUtilisateur(id, data);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await updateUtilisateur(id, data, ecoleId);
       if (result.success) {
         await logAudit(userId, 'UPDATE_USER', `Utilisateur ID ${id} mis à jour`);
       }
@@ -165,7 +172,8 @@ function register(ipcMain, deps) {
     const userId = getCurrentUserId();
     if (!userId || !(await checkAdmin())) return { success: false, error: 'Accès non autorisé' };
     try {
-      const result = await deleteUtilisateur(id);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await deleteUtilisateur(id, ecoleId);
       if (result.success) {
         await logAudit(userId, 'DELETE_USER', `Utilisateur ID ${id} supprimé`);
       }

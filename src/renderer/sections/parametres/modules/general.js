@@ -8,6 +8,7 @@ export async function init(state) {
   attacherEvenementsGeneral();
   initLicenceInfo();
   initCloudSyncInfo();
+  initPwaSyncInfo();
 }
 
 async function initLicenceInfo() {
@@ -178,10 +179,67 @@ function attacherEvenementsGeneral() {
     if (result?.success) {
       parametres = { ...parametres, ...data };
       showToast(t('params.toast_save_success'), 'success');
-      // Mettre à jour l'info de synchro si le paramètre a changé
       initCloudSyncInfo();
     } else {
       showToast(result?.error || t('common.error'), 'error');
+    }
+  });
+}
+
+async function initPwaSyncInfo() {
+  const urlInput = document.getElementById('pwa-sync-url');
+  const keyInput = document.getElementById('pwa-api-key');
+  const statusEl = document.getElementById('pwa-sync-status');
+
+  try {
+    const config = await window.elimuAPI.getPwaSyncConfig();
+    if (urlInput) urlInput.value = config.url || '';
+    if (keyInput) keyInput.value = config.apiKey || '';
+    if (statusEl) statusEl.textContent = config.url ? 'Configure' : 'Non configure';
+  } catch (e) {
+    console.error('Erreur initPwaSyncInfo:', e);
+  }
+
+  document.getElementById('btn-save-pwa-config')?.addEventListener('click', async () => {
+    const data = {
+      pwa_sync_url: urlInput?.value?.trim() || '',
+      pwa_sync_api_key: keyInput?.value?.trim() || '',
+    };
+    const result = await window.elimuAPI.savePwaSyncConfig(data);
+    if (result?.success) {
+      showToast('Configuration PWA enregistree', 'success');
+      if (statusEl) statusEl.textContent = data.pwa_sync_url ? 'Configure' : 'Non configure';
+    } else {
+      showToast(result?.error || 'Erreur', 'error');
+    }
+  });
+
+  document.getElementById('btn-sync-pwa-now')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-pwa-now');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Synchronisation...';
+    }
+    if (statusEl) statusEl.textContent = 'Synchronisation en cours...';
+
+    try {
+      const result = await window.elimuAPI.syncToPwa();
+      if (result?.success) {
+        showToast('Sync PWA reussie: ' + (result.teachers || 0) + ' enseignants, ' +
+          (result.classes || 0) + ' classes, ' + (result.students || 0) + ' eleves', 'success');
+        if (statusEl) statusEl.textContent = 'Derniere sync: ' + new Date().toLocaleString();
+      } else {
+        showToast('Echec sync: ' + (result?.error || 'Erreur inconnue'), 'error');
+        if (statusEl) statusEl.textContent = 'Erreur: ' + (result?.error || '');
+      }
+    } catch (e) {
+      showToast('Erreur sync: ' + e.message, 'error');
+      if (statusEl) statusEl.textContent = 'Erreur: ' + e.message;
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Synchroniser maintenant';
+      }
     }
   });
 }

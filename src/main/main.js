@@ -12,6 +12,7 @@ let mainWindow = null;
 let splashWindow = null;
 let currentUserId = null;
 let currentAnneeId = null;
+let currentEcoleId = null;
 
 // === CONFIGURATION DES LOGS (Rapide) ===
 const userDataPath = app.getPath('userData');
@@ -134,6 +135,8 @@ function registerAllHandlers() {
     setCurrentUserId: (id) => { currentUserId = id; },
     getCurrentAnneeId: () => currentAnneeId,
     setCurrentAnneeId: (id) => { currentAnneeId = id; },
+    getCurrentEcoleId: () => currentEcoleId,
+    setCurrentEcoleId: (id) => { currentEcoleId = id; },
     getMainWindow: () => mainWindow,
     getBackupDir: () => backupDir,
     getDbPath: () => dbPath
@@ -178,8 +181,24 @@ app.whenReady().then(async () => {
     checkIntegrity(l);
 
     updateSplashStatus("Connexion à la base de données...");
-    const { initializeDatabase } = require('../shared/database/db');
+    const { initializeDatabase, get, run } = require('../shared/database/db');
     await initializeDatabase(dbPath);
+
+    // Générer ou récupérer l'UUID de l'école (stable)
+    let ecoleId = get("SELECT valeur FROM parametres WHERE cle = 'ecole_id'")?.valeur;
+    if (!ecoleId) {
+      const { randomUUID } = require('crypto');
+      ecoleId = randomUUID();
+      run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('ecole_id', ?)", [ecoleId]);
+    }
+    currentEcoleId = ecoleId;
+
+    // S'assurer que l'école est enregistrée dans la table ecoles
+    const ecoleExistante = get("SELECT ecole_id FROM ecoles WHERE ecole_id = ?", [ecoleId]);
+    if (!ecoleExistante) {
+      const nomEtab = get("SELECT valeur FROM parametres WHERE cle = 'nom_etablissement'")?.valeur || 'Mon Établissement';
+      run("INSERT OR IGNORE INTO ecoles (ecole_id, nom, date_creation) VALUES (?, ?, datetime('now'))", [ecoleId, nomEtab]);
+    }
 
     updateSplashStatus("Initialisation des modules...");
     await initAnneesScolaires();

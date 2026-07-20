@@ -13,10 +13,18 @@ const os = require('os');
  * @param {string} action - Type d'action (ex: "CONNEXION", "IMPORT_EXCEL")
  * @param {string} details - Détails supplémentaires sur l'action
  */
-async function logAudit(utilisateurId, action, details = '') {
+async function logAudit(utilisateurId, action, details = '', ecoleId = '') {
   try {
-    const { getDatabase } = require('../database/db');
+    const { getDatabase, get } = require('../database/db');
     const db = getDatabase();
+
+    // Essayer de récupérer ecole_id depuis la base si non fourni
+    if (!ecoleId) {
+      try {
+        const row = get("SELECT valeur FROM parametres WHERE cle = 'ecole_id'");
+        if (row) ecoleId = row.valeur;
+      } catch (_) {}
+    }
 
     // Récupération de l'adresse IP locale pour identifier le poste
     const networkInterfaces = os.networkInterfaces();
@@ -31,9 +39,9 @@ async function logAudit(utilisateurId, action, details = '') {
     }
 
     db.prepare(`
-      INSERT INTO audit_log (utilisateur_id, action, details, adresse_ip_locale)
-      VALUES (?, ?, ?, ?)
-    `).run(utilisateurId, action, details, ipLocale);
+      INSERT INTO audit_log (utilisateur_id, action, details, adresse_ip_locale, ecole_id)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(utilisateurId, action, details, ipLocale, ecoleId);
   } catch (error) {
     // On ne veut pas que l'audit bloque l'application
     console.error('Erreur audit log (non bloquant):', error);

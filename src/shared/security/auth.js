@@ -124,7 +124,7 @@ async function isFirstLaunch() {
   }
 }
 
-async function createAdmin(username, password, questionSecrete = null, reponseSecrete = null) {
+async function createAdmin(username, password, questionSecrete = null, reponseSecrete = null, ecoleId = '') {
   try {
     migrateUtilisateurs();
 
@@ -141,9 +141,9 @@ async function createAdmin(username, password, questionSecrete = null, reponseSe
 
     const result = run(
       `INSERT INTO utilisateurs
-         (nom_utilisateur, mot_de_passe_hash, question_secrete, reponse_hash, role, nom_complet, actif)
-       VALUES (?, ?, ?, ?, 'admin', ?, 1)`,
-      [username.trim(), hash, questionSecrete || null, reponseHash, username.trim()]
+         (nom_utilisateur, mot_de_passe_hash, question_secrete, reponse_hash, role, nom_complet, actif, ecole_id)
+       VALUES (?, ?, ?, ?, 'admin', ?, 1, ?)`,
+      [username.trim(), hash, questionSecrete || null, reponseHash, username.trim(), ecoleId]
     );
 
     return {
@@ -165,7 +165,7 @@ async function createAdmin(username, password, questionSecrete = null, reponseSe
   }
 }
 
-async function login(username, password) {
+async function login(username, password, ecoleId = '') {
   try {
     migrateUtilisateurs();
 
@@ -178,8 +178,8 @@ async function login(username, password) {
     const user = get(
       `SELECT id, nom_utilisateur, mot_de_passe_hash,
               role, nom_complet, matieres_ids, classes_ids, actif
-       FROM utilisateurs WHERE nom_utilisateur = ?`,
-      [username.trim()]
+       FROM utilisateurs WHERE nom_utilisateur = ? AND ecole_id = ?`,
+      [username.trim(), ecoleId]
     );
 
     if (!user) {
@@ -227,13 +227,13 @@ async function login(username, password) {
   }
 }
 
-async function getQuestionSecrete(username) {
+async function getQuestionSecrete(username, ecoleId = '') {
   try {
     if (!username?.trim())
       return { success: false, error: "Nom d'utilisateur manquant" };
     const user = get(
-      'SELECT id, question_secrete FROM utilisateurs WHERE nom_utilisateur = ?',
-      [username.trim()]
+      'SELECT id, question_secrete FROM utilisateurs WHERE nom_utilisateur = ? AND ecole_id = ?',
+      [username.trim(), ecoleId]
     );
     if (!user || !user.question_secrete)
       return { success: false, error: "Aucune question secrète configurée" };
@@ -243,7 +243,7 @@ async function getQuestionSecrete(username) {
   }
 }
 
-async function reinitialiserMotDePasse(username, reponseSecrete, nouveauMotDePasse) {
+async function reinitialiserMotDePasse(username, reponseSecrete, nouveauMotDePasse, ecoleId = '') {
   try {
     if (!username || !reponseSecrete || !nouveauMotDePasse)
       return { success: false, error: 'Tous les champs sont requis' };
@@ -251,8 +251,8 @@ async function reinitialiserMotDePasse(username, reponseSecrete, nouveauMotDePas
       return { success: false, error: 'Le nouveau mot de passe doit avoir au moins 6 caractères' };
 
     const user = get(
-      'SELECT id, reponse_hash FROM utilisateurs WHERE nom_utilisateur = ?',
-      [username.trim()]
+      'SELECT id, reponse_hash FROM utilisateurs WHERE nom_utilisateur = ? AND ecole_id = ?',
+      [username.trim(), ecoleId]
     );
     if (!user || !user.reponse_hash) {
       await bcrypt.hash(reponseSecrete, BCRYPT_ROUNDS);
@@ -274,12 +274,13 @@ async function reinitialiserMotDePasse(username, reponseSecrete, nouveauMotDePas
 // GESTION DES UTILISATEURS (admin seulement)
 // ============================================================
 
-function getUtilisateurs() {
+function getUtilisateurs(ecoleId = '') {
   try {
     migrateUtilisateurs();
     const rows = all(
       `SELECT id, nom_utilisateur, nom_complet, role, matieres_ids, classes_ids, actif, date_creation
-       FROM utilisateurs ORDER BY role, nom_utilisateur`
+       FROM utilisateurs WHERE ecole_id = ? ORDER BY role, nom_utilisateur`,
+      [ecoleId]
     );
     return rows.map(r => ({
       ...r,
@@ -296,7 +297,7 @@ async function createUtilisateur(data) {
   try {
     migrateUtilisateurs();
 
-    const { nom_utilisateur, mot_de_passe, role, nom_complet, matieres_ids, classes_ids } = data;
+    const { nom_utilisateur, mot_de_passe, role, nom_complet, matieres_ids, classes_ids, telephone, ecole_id } = data;
 
     if (!nom_utilisateur || nom_utilisateur.trim().length < 3)
       return { success: false, error: "Nom d'utilisateur trop court (min 3 caractères)" };
@@ -308,15 +309,17 @@ async function createUtilisateur(data) {
     const hash = await bcrypt.hash(mot_de_passe, BCRYPT_ROUNDS);
     const result = run(
       `INSERT INTO utilisateurs
-         (nom_utilisateur, mot_de_passe_hash, role, nom_complet, matieres_ids, classes_ids, actif)
-       VALUES (?, ?, ?, ?, ?, ?, 1)`,
+         (nom_utilisateur, mot_de_passe_hash, role, nom_complet, matieres_ids, classes_ids, actif, telephone, ecole_id)
+       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
       [
         nom_utilisateur.trim(),
         hash,
         role,
         (nom_complet || nom_utilisateur).trim(),
         JSON.stringify(matieres_ids || []),
-        JSON.stringify(classes_ids  || [])
+        JSON.stringify(classes_ids  || []),
+        telephone || null,
+        ecole_id || ''
       ]
     );
     return { success: true, id: result.lastID };
@@ -327,7 +330,7 @@ async function createUtilisateur(data) {
   }
 }
 
-async function updateUtilisateur(id, data) {
+async function updateUtilisateur(id, data, ecoleId = '') {
   try {
     migrateUtilisateurs();
 
@@ -336,7 +339,6 @@ async function updateUtilisateur(id, data) {
     if (!['admin', 'enseignant', 'secretaire', 'comptable'].includes(role))
       return { success: false, error: 'Rôle invalide' };
 
-    // Si un nouveau mot de passe est fourni, on le hash
     if (mot_de_passe && mot_de_passe.trim()) {
       if (mot_de_passe.length < 6)
         return { success: false, error: 'Mot de passe trop court (min 6 caractères)' };
@@ -344,7 +346,7 @@ async function updateUtilisateur(id, data) {
       run(
         `UPDATE utilisateurs
          SET nom_complet=?, role=?, matieres_ids=?, classes_ids=?, actif=?, mot_de_passe_hash=?
-         WHERE id=?`,
+         WHERE id=? AND ecole_id=?`,
         [
           (nom_complet || '').trim(),
           role,
@@ -352,21 +354,23 @@ async function updateUtilisateur(id, data) {
           JSON.stringify(classes_ids  || []),
           actif ? 1 : 0,
           hash,
-          id
+          id,
+          ecoleId
         ]
       );
     } else {
       run(
         `UPDATE utilisateurs
          SET nom_complet=?, role=?, matieres_ids=?, classes_ids=?, actif=?
-         WHERE id=?`,
+         WHERE id=? AND ecole_id=?`,
         [
           (nom_complet || '').trim(),
           role,
           JSON.stringify(matieres_ids || []),
           JSON.stringify(classes_ids  || []),
           actif ? 1 : 0,
-          id
+          id,
+          ecoleId
         ]
       );
     }
@@ -376,18 +380,17 @@ async function updateUtilisateur(id, data) {
   }
 }
 
-async function deleteUtilisateur(id) {
+async function deleteUtilisateur(id, ecoleId = '') {
   try {
-    // Vérifier qu'il reste au moins un admin actif
     const admins = all(
-      `SELECT id FROM utilisateurs WHERE role = 'admin' AND actif = 1 AND id != ?`,
-      [id]
+      `SELECT id FROM utilisateurs WHERE role = 'admin' AND actif = 1 AND id != ? AND ecole_id = ?`,
+      [id, ecoleId]
     );
-    const cible = get(`SELECT role FROM utilisateurs WHERE id = ?`, [id]);
+    const cible = get(`SELECT role FROM utilisateurs WHERE id = ? AND ecole_id = ?`, [id, ecoleId]);
     if (cible?.role === 'admin' && admins.length === 0) {
       return { success: false, error: 'Impossible de supprimer le dernier administrateur actif' };
     }
-    run('DELETE FROM utilisateurs WHERE id = ?', [id]);
+    run('DELETE FROM utilisateurs WHERE id = ? AND ecole_id = ?', [id, ecoleId]);
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Erreur : ' + error.message };

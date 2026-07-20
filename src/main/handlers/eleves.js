@@ -19,7 +19,7 @@ let lastDashboardInvalidation = 0;
  * @param {{ logger: object, getCurrentUserId: function, getCurrentAnneeId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getCurrentAnneeId } = deps;
+  const { logger, getCurrentUserId, getCurrentAnneeId, getCurrentEcoleId } = deps;
 
   // Invalider le cache du dashboard si nécessaire
   const checkDashboardCache = (key) => {
@@ -45,15 +45,16 @@ function register(ipcMain, deps) {
     if (!getCurrentUserId() || isSystemTampered()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const cid = parseInt(classeId);
       let sql = `
         SELECT e.id, e.nom, e.prenom, e.sexe, e.classe_id, c.nom_classe, c.niveau_v2,
                (SELECT s.moyenne_generale FROM stats_eleves s WHERE s.eleve_id = e.id AND s.annee_scolaire_id = ? LIMIT 1) as moyenne_generale
         FROM eleves e
         LEFT JOIN classes c ON c.id = e.classe_id
-        WHERE e.annee_scolaire_id = ?
+        WHERE e.annee_scolaire_id = ? AND e.ecole_id = ?
       `;
-      const params = [anneeId, anneeId];
+      const params = [anneeId, anneeId, ecoleId];
       if (!isNaN(cid) && cid > 0) { 
         sql += ' AND e.classe_id = ?'; 
         params.push(cid); 
@@ -70,13 +71,14 @@ function register(ipcMain, deps) {
     if (!getCurrentUserId()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const cid = parseInt(classeId);
       const pNum = parseInt(page) || 1;
       const lNum = parseInt(limit) || 50;
       const offset = (Math.max(1, pNum) - 1) * lNum;
 
-      const params = [anneeId];
-      let where = 'WHERE e.annee_scolaire_id = ?';
+      const params = [anneeId, ecoleId];
+      let where = 'WHERE e.annee_scolaire_id = ? AND e.ecole_id = ?';
       if (!isNaN(cid) && cid > 0) { 
         where += ' AND e.classe_id = ?'; 
         params.push(cid); 
@@ -126,24 +128,25 @@ function register(ipcMain, deps) {
       if (isNaN(id) || id < 1) return { error: 'ID élève invalide' };
 
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const eleve = get(
-        `SELECT e.*, c.nom_classe, c.niveau_v2 FROM eleves e LEFT JOIN classes c ON c.id = e.classe_id WHERE e.id = ?`,
-        [id]
+        `SELECT e.*, c.nom_classe, c.niveau_v2 FROM eleves e LEFT JOIN classes c ON c.id = e.classe_id WHERE e.id = ? AND e.ecole_id = ?`,
+        [id, ecoleId]
       );
       if (!eleve) return { error: 'Élève non trouvé' };
 
       const notes = all(
         `SELECT n.*, m.nom_matiere, m.coefficient FROM notes n LEFT JOIN matieres m ON m.id = n.matiere_id
-         WHERE n.eleve_id = ? AND n.annee_scolaire_id = ? ORDER BY n.date_import DESC`,
-        [id, anneeId]
+         WHERE n.eleve_id = ? AND n.annee_scolaire_id = ? AND n.ecole_id = ? ORDER BY n.date_import DESC`,
+        [id, anneeId, ecoleId]
       );
       const absences = all(
-        'SELECT * FROM absences WHERE eleve_id = ? ORDER BY date DESC LIMIT 10',
-        [id]
+        'SELECT * FROM absences WHERE eleve_id = ? AND ecole_id = ? ORDER BY date DESC LIMIT 10',
+        [id, ecoleId]
       );
       const sanctions = all(
-        'SELECT * FROM sanctions WHERE eleve_id = ? ORDER BY date DESC LIMIT 10',
-        [id]
+        'SELECT * FROM sanctions WHERE eleve_id = ? AND ecole_id = ? ORDER BY date DESC LIMIT 10',
+        [id, ecoleId]
       );
       return { eleve, notes, absences, sanctions };
     } catch (error) {
@@ -159,12 +162,13 @@ function register(ipcMain, deps) {
     try {
       if (!data.nom || !data.prenom) return { success: false, error: 'Nom et prénom requis' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = run(
-        `INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, email_parent, annee_scolaire_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, email_parent, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [data.nom.trim(), data.prenom.trim(), data.date_naissance, data.sexe || 'M', parseInt(data.classe_id) || null,
          data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
-         data.email_parent ? data.email_parent.trim() : null, anneeId]
+         data.email_parent ? data.email_parent.trim() : null, anneeId, ecoleId]
       );
       const eleveId = result.lastID;
 
@@ -195,12 +199,13 @@ function register(ipcMain, deps) {
     try {
       const eid = parseInt(id);
       if (isNaN(eid) || eid < 1) return { error: 'ID élève invalide' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
       run(
-        `UPDATE eleves SET nom=?, prenom=?, date_naissance=?, sexe=?, classe_id=?, nom_parent=?, telephone_parent=?, email_parent=? WHERE id=?`,
+        `UPDATE eleves SET nom=?, prenom=?, date_naissance=?, sexe=?, classe_id=?, nom_parent=?, telephone_parent=?, email_parent=? WHERE id=? AND ecole_id=?`,
         [data.nom.trim(), data.prenom.trim(), data.date_naissance, data.sexe || null, parseInt(data.classe_id) || null,
          data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
-         data.email_parent ? data.email_parent.trim() : null, eid]
+         data.email_parent ? data.email_parent.trim() : null, eid, ecoleId]
       );
 
       // Synchronisation parent automatique
@@ -219,7 +224,8 @@ function register(ipcMain, deps) {
     try {
       const eid = parseInt(id);
       if (isNaN(eid) || eid < 1) return { error: 'ID élève invalide' };
-      run('DELETE FROM eleves WHERE id=?', [eid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      run('DELETE FROM eleves WHERE id=? AND ecole_id=?', [eid, ecoleId]);
       await logAudit(getCurrentUserId(), 'DELETE_ELEVE', `Suppression élève ID ${eid}`);
       return { success: true };
     } catch (error) {
@@ -238,6 +244,7 @@ function register(ipcMain, deps) {
       if (isNaN(cid) || !periode) return { success: false, error: 'Paramètres manquants' };
       
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const isQual = ua ? true : false;
       const seq = isQual ? null : sequence;
       const mid = isQual ? null : parseInt(matiere_id);
@@ -250,27 +257,28 @@ function register(ipcMain, deps) {
         const eid = parseInt(eleve_id);
         if (isNaN(eid)) continue;
         const noteVal = parseFloat(note);
-        if (isNaN(noteVal) || noteVal < 0 || noteVal > 20) continue;
+        if (isNaN(noteVal) || noteVal < 0) continue;
+        if (!isQual && noteVal > 20) continue;
 
         if (isQual) {
           const existing = get(
-            `SELECT id FROM notes WHERE eleve_id = ? AND periode = ? AND ua = ? AND sous_competence_code IS ? AND annee_scolaire_id = ?`,
-            [eid, periode, ua, sous_competence_code || null, anneeId]
+            `SELECT id FROM notes WHERE eleve_id = ? AND periode = ? AND ua = ? AND sous_competence_code IS ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+            [eid, periode, ua, sous_competence_code || null, anneeId, ecoleId]
           );
           if (existing) {
-            run('UPDATE notes SET note = ?, date_import = CURRENT_TIMESTAMP WHERE id = ?', [noteVal, existing.id]);
+            run('UPDATE notes SET note = ?, date_import = CURRENT_TIMESTAMP WHERE id = ? AND ecole_id = ?', [noteVal, existing.id, ecoleId]);
           } else {
             run(
-              `INSERT INTO notes (eleve_id, note, periode, annee_scolaire_id, ua, sous_competence_code, type_eval)
-               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [eid, noteVal, periode, anneeId, ua, sous_competence_code || null, type_eval || 'TI']
+              `INSERT INTO notes (eleve_id, note, periode, annee_scolaire_id, ua, sous_competence_code, type_eval, ecole_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [eid, noteVal, periode, anneeId, ua, sous_competence_code || null, type_eval || 'TI', ecoleId]
             );
           }
         } else {
           run(
-            `INSERT INTO notes (eleve_id, matiere_id, note, periode, sequence, annee_scolaire_id) VALUES (?, ?, ?, ?, ?, ?)
+            `INSERT INTO notes (eleve_id, matiere_id, note, periode, sequence, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT(eleve_id, matiere_id, periode, sequence, annee_scolaire_id) DO UPDATE SET note = excluded.note, date_import = CURRENT_TIMESTAMP`,
-            [eid, mid, noteVal, periode, seq, anneeId]
+            [eid, mid, noteVal, periode, seq, anneeId, ecoleId]
           );
         }
         nbSauvegardes++;
@@ -296,6 +304,7 @@ function register(ipcMain, deps) {
       const mid = parseInt(matiereId);
       if (isNaN(cid)) return { error: 'ID classe manquant ou invalide' };
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       let sql = `
         SELECT n.id, n.eleve_id, n.matiere_id, n.note, n.periode, n.sequence,
                n.ua, n.sous_competence_code, n.type_eval, n.sous_type,
@@ -303,9 +312,9 @@ function register(ipcMain, deps) {
         FROM notes n
         JOIN eleves e ON e.id = n.eleve_id
         LEFT JOIN matieres m ON m.id = n.matiere_id
-        WHERE e.classe_id = ? AND n.annee_scolaire_id = ?
+        WHERE e.classe_id = ? AND n.annee_scolaire_id = ? AND n.ecole_id = ?
       `;
-      const params = [cid, anneeId];
+      const params = [cid, anneeId, ecoleId];
       if (!isNaN(mid)) { sql += ' AND n.matiere_id = ?'; params.push(mid); }
       sql += ' ORDER BY COALESCE(n.ua, m.nom_matiere), e.nom, e.prenom, n.periode';
       return all(sql, params);
@@ -321,6 +330,7 @@ function register(ipcMain, deps) {
     if (!getCurrentUserId()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const cacheKey = `${anneeId}-${classeId}-${periode}-${sequence}`;
       const cached = checkDashboardCache(cacheKey);
       if (cached) return cached;
@@ -336,20 +346,17 @@ function register(ipcMain, deps) {
 
       const whereClause = ' WHERE ' + whereNotes;
 
-      // Détecter si la classe sélectionnée est N1/N2 (qualitatif)
       let isN1N2 = false;
       if (!isNaN(cid) && cid > 0) {
-        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ?', [cid]);
+        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
         isN1N2 = niveauRow && (niveauRow.niveau_v2 === 'N1' || niveauRow.niveau_v2 === 'N2');
       }
 
       let moyenne = 0, nbEleves = 0, top5 = [], alertes = [], parMatiere = [];
 
       if (isN1N2) {
-        // N1/N2 : Filtrer les UA qui correspondent au trimestre sélectionné
-        // On ne prend que les lignes agrégées (sous_type IS NULL), pas les sous-types
-        let n1n2Where = whereClause + ' AND n.sous_type IS NULL';
-        const n1n2Params = [...params];
+        let n1n2Where = whereClause + ' AND n.sous_type IS NULL AND n.ecole_id = ?';
+        const n1n2Params = [...params, ecoleId];
         if (periode && periode !== 'Tous') {
           const uas = getUAsForPeriode(periode);
           if (uas.length) {
@@ -373,28 +380,30 @@ function register(ipcMain, deps) {
         alertes = studentAverages.filter(s => (s.moyenne || 0) < 5).sort((a, b) => (a.moyenne || 0) - (b.moyenne || 0)).slice(0, 5);
 
         let uaFilter = '';
-        const uaParams = [...params];
+        const uaFilterVals = [];
         if (periode && periode !== 'Tous') {
           const uas = getUAsForPeriode(periode);
           if (uas.length) {
             uaFilter = ' AND n.ua IN (' + uas.map(_ => '?').join(',') + ')';
-            uaParams.push(...uas);
+            uaFilterVals.push(...uas);
           }
         }
         parMatiere = all(
           `SELECT n.ua as nom_matiere, 1 as coefficient, ROUND(AVG(n.note), 2) as moyenne
            FROM notes n JOIN eleves e ON e.id = n.eleve_id
-           ${whereClause} AND n.ua IS NOT NULL AND n.sous_type IS NULL${uaFilter}
+           ${whereClause} AND n.ua IS NOT NULL AND n.sous_type IS NULL AND n.ecole_id = ?${uaFilter}
            GROUP BY n.ua ORDER BY n.ua`,
-          uaParams
+          [...params, ecoleId, ...uaFilterVals]
         );
       } else {
-        // N3 ou vue globale : utilise stats_eleves et matières classiques
+        const n3EcoleParams = [...params, ecoleId];
+        if (!isNaN(cid) && cid > 0) { n3EcoleParams.push(cid); }
+
         const stats = get(`
           SELECT 
-            (SELECT ROUND(AVG(s.moyenne), 2) FROM stats_eleves s JOIN eleves e ON s.eleve_id = e.id ${whereClause.replace(/n\./g, 's.')}) as moyenne,
-            (SELECT COUNT(*) FROM eleves e WHERE e.annee_scolaire_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as nb_eleves
-        `, !isNaN(cid) && cid > 0 ? [...params, anneeId, cid] : [...params, anneeId]);
+            (SELECT ROUND(AVG(s.moyenne), 2) FROM stats_eleves s JOIN eleves e ON s.eleve_id = e.id ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as moyenne,
+            (SELECT COUNT(*) FROM eleves e WHERE e.annee_scolaire_id = ? AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as nb_eleves
+        `, [...n3EcoleParams, anneeId, ecoleId, ...(!isNaN(cid) && cid > 0 ? [cid] : [])]);
 
         moyenne = stats?.moyenne || 0;
         nbEleves = stats?.nb_eleves || 0;
@@ -402,28 +411,28 @@ function register(ipcMain, deps) {
         top5 = all(
           `SELECT e.id, e.nom, e.prenom, s.moyenne
            FROM eleves e JOIN stats_eleves s ON s.eleve_id = e.id
-           ${whereClause.replace(/n\./g, 's.')} ORDER BY s.moyenne DESC LIMIT 5`,
-          params
+           ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ?
+           ORDER BY s.moyenne DESC LIMIT 5`,
+          [...params, ecoleId]
         );
         alertes = all(
           `SELECT e.id, e.nom, e.prenom, s.moyenne
            FROM eleves e JOIN stats_eleves s ON s.eleve_id = e.id
-           ${whereClause.replace(/n\./g, 's.')} AND s.moyenne < 10 ORDER BY s.moyenne ASC LIMIT 5`,
-          params
+           ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ? AND s.moyenne < 10
+           ORDER BY s.moyenne ASC LIMIT 5`,
+          [...params, ecoleId]
         );
 
         parMatiere = all(
           `SELECT m.nom_matiere, m.coefficient, ROUND(AVG(n.note), 2) as moyenne
            FROM notes n JOIN matieres m ON m.id = n.matiere_id JOIN eleves e ON e.id = n.eleve_id
-           ${whereClause} GROUP BY m.id ORDER BY m.nom_matiere`,
-          params
+           ${whereClause} AND n.ecole_id = ? GROUP BY m.id ORDER BY m.nom_matiere`,
+          [...params, ecoleId]
         );
       }
 
-      // --- Statistiques par sexe ---
-
-      let sexeWhere = 'annee_scolaire_id = ?';
-      const sexeParams = [anneeId];
+      let sexeWhere = 'annee_scolaire_id = ? AND ecole_id = ?';
+      const sexeParams = [anneeId, ecoleId];
       if (!isNaN(cid) && cid > 0) { sexeWhere += ' AND classe_id = ?'; sexeParams.push(cid); }
 
       const statsSexe = get(`
@@ -434,9 +443,8 @@ function register(ipcMain, deps) {
         WHERE ${sexeWhere}
       `, sexeParams);
 
-      // --- NOUVEAU : Statistiques d'absences ---
-      let absWhere = 'ha.annee_scolaire_id = ?';
-      const absParams = [anneeId];
+      let absWhere = 'ha.annee_scolaire_id = ? AND ha.ecole_id = ?';
+      const absParams = [anneeId, ecoleId];
       if (!isNaN(cid) && cid > 0) { absWhere += ' AND e.classe_id = ?'; absParams.push(cid); }
       if (periode && periode !== 'Tous') { absWhere += ' AND ha.periode = ?'; absParams.push(periode); }
 
@@ -451,16 +459,16 @@ function register(ipcMain, deps) {
         absParams
       );
 
-      const topAssidusParams = [anneeId];
+      const topAssidusParams = [anneeId, ecoleId];
       if (periode && periode !== 'Tous') { topAssidusParams.push(periode); }
-      topAssidusParams.push(anneeId);
+      topAssidusParams.push(anneeId, ecoleId);
       if (!isNaN(cid) && cid > 0) { topAssidusParams.push(cid); }
 
       const topAssidus = all(
         `SELECT e.id, e.nom, e.prenom, SUM(ha.heures) as total_heures
          FROM eleves e
-         LEFT JOIN heures_absence ha ON e.id = ha.eleve_id AND ha.annee_scolaire_id = ? ${periode && periode !== 'Tous' ? 'AND ha.periode = ?' : ''}
-         WHERE e.annee_scolaire_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
+         LEFT JOIN heures_absence ha ON e.id = ha.eleve_id AND ha.annee_scolaire_id = ? AND ha.ecole_id = ? ${periode && periode !== 'Tous' ? 'AND ha.periode = ?' : ''}
+         WHERE e.annee_scolaire_id = ? AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
          GROUP BY e.id
          ORDER BY total_heures ASC
          LIMIT 5`,
@@ -496,26 +504,25 @@ function register(ipcMain, deps) {
     if (!getCurrentUserId()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const cacheKey = `evolution-${anneeId}-${classeId}`;
       const cached = checkDashboardCache(cacheKey);
       if (cached) return cached;
 
       const cid = parseInt(classeId);
 
-      // Détecter N1/N2
       let isN1N2 = false;
       if (!isNaN(cid) && cid > 0) {
-        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ?', [cid]);
+        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
         isN1N2 = niveauRow && (niveauRow.niveau_v2 === 'N1' || niveauRow.niveau_v2 === 'N2');
       }
 
       let rows;
       if (isN1N2) {
-        // N1/N2 : évolution par trimestre (moyenne de toutes les UA du trimestre)
         rows = all(`
           SELECT n.periode, NULL as ua, ROUND(AVG(n.note), 2) AS moyenne
           FROM notes n JOIN eleves e ON e.id = n.eleve_id
-          WHERE n.annee_scolaire_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
+          WHERE n.annee_scolaire_id = ? AND n.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
           AND n.ua IS NOT NULL AND n.sous_type IS NULL
           GROUP BY n.periode ORDER BY
             CASE n.periode
@@ -524,18 +531,18 @@ function register(ipcMain, deps) {
               WHEN 'Trimestre 3' THEN 3
               ELSE 4
             END
-        `, !isNaN(cid) && cid > 0 ? [anneeId, cid] : [anneeId]);
+        `, !isNaN(cid) && cid > 0 ? [anneeId, ecoleId, cid] : [anneeId, ecoleId]);
       } else {
-        // N3 / global : évolution par (periode, sequence)
         let whereClause = ' WHERE s.annee_scolaire_id = ?';
-        if (!isNaN(cid) && cid > 0) { whereClause += ' AND e.classe_id = ?'; }
+        const whereParams = [anneeId];
+        if (!isNaN(cid) && cid > 0) { whereClause += ' AND e.classe_id = ?'; whereParams.push(cid); }
         rows = all(
           `SELECT s.periode, s.sequence,
                   ROUND(AVG(s.moyenne), 2) AS moyenne
-           FROM stats_eleves s JOIN eleves e ON e.id = s.eleve_id
+           FROM stats_eleves s JOIN eleves e ON e.id = s.eleve_id AND e.ecole_id = ?
            ${whereClause}
            GROUP BY s.periode, s.sequence ORDER BY s.periode, s.sequence`,
-          !isNaN(cid) && cid > 0 ? [anneeId, cid] : [anneeId]
+          [ecoleId, ...whereParams]
         );
       }
       

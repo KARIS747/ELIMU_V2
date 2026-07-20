@@ -12,7 +12,7 @@ const { hasRole } = require('../../shared/security/access');
 // ============================================================
 
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getCurrentAnneeId, setCurrentAnneeId, getMainWindow } = deps;
+  const { logger, getCurrentUserId, getCurrentAnneeId, setCurrentAnneeId, getMainWindow, getCurrentEcoleId } = deps;
 
   // Helper pour vérifier l'accès admin
   const checkAdmin = async () => {
@@ -171,6 +171,7 @@ function register(ipcMain, deps) {
     try {
       const aid = parseInt(id);
       if (isNaN(aid)) return { error: 'ID invalide.' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
       const annee = get(`SELECT * FROM annees_scolaires WHERE id = ?`, [aid]);
       if (!annee) return { error: 'Année introuvable.' };
@@ -189,11 +190,10 @@ function register(ipcMain, deps) {
         let totalDeleted = 0;
         for (const table of tables) {
           try {
-            // Pour paiement_tranches, on doit joindre avec paiements si la colonne n'existe pas directement
             if (table === 'paiement_tranches') {
-              run(`DELETE FROM paiement_tranches WHERE paiement_id IN (SELECT id FROM paiements WHERE annee_scolaire_id = ?)`, [aid]);
+              run(`DELETE FROM paiement_tranches WHERE paiement_id IN (SELECT id FROM paiements WHERE annee_scolaire_id = ? AND ecole_id = ?)`, [aid, ecoleId]);
             } else {
-              const res = run(`DELETE FROM ${table} WHERE annee_scolaire_id = ?`, [aid]);
+              const res = run(`DELETE FROM ${table} WHERE annee_scolaire_id = ? AND ecole_id = ?`, [aid, ecoleId]);
               totalDeleted += res.changes || 0;
             }
           } catch (e) {
@@ -314,18 +314,19 @@ function register(ipcMain, deps) {
         if (config.type === 'archive') continue;
         const classeDestId = parseInt(config.targetId);
 
-        const eleves = all(
-          `SELECT * FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?`,
-          [parseInt(classeSourceId), sAid]
-        );
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const eleves = all(
+        `SELECT * FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+        [parseInt(classeSourceId), sAid, ecoleId]
+      );
 
         for (const eleve of eleves) {
           let finalClasseId = classeDestId;
 
           if (redoublementActif) {
             const moyRow = get(
-              `SELECT AVG(note) as moy FROM notes WHERE eleve_id = ? AND annee_scolaire_id = ?`,
-              [eleve.id, sAid]
+              `SELECT AVG(note) as moy FROM notes WHERE eleve_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+              [eleve.id, sAid, ecoleId]
             );
             const moy = moyRow?.moy || 0;
             if (moy < parseFloat(seuilRedoublement)) finalClasseId = parseInt(classeSourceId);
@@ -335,19 +336,21 @@ function register(ipcMain, deps) {
             const ins = run(
              `INSERT INTO eleves
                 (nom, prenom, sexe, date_naissance, classe_id, nom_parent,
-                 telephone_parent, email_parent, photo, date_inscription, annee_scolaire_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+                 telephone_parent, email_parent, photo, date_inscription, annee_scolaire_id, ecole_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
              [
                eleve.nom, eleve.prenom, eleve.sexe, eleve.date_naissance, finalClasseId,
                eleve.nom_parent, eleve.telephone_parent, eleve.email_parent,
-               eleve.photo, dAid
+               eleve.photo, dAid, ecoleId
              ]
             );
             const newEleveId = ins.lastID;
 
             // Copier les liens parents
             const parents = all(
-              `SELECT parent_id FROM parents_eleves WHERE eleve_id = ?`, [eleve.id]
+              `SELECT parent_id FROM parents_eleves pe
+               JOIN parents p ON pe.parent_id = p.id
+               WHERE pe.eleve_id = ? AND p.ecole_id = ?`, [eleve.id, ecoleId]
             );
             for (const p of parents) {
               run(

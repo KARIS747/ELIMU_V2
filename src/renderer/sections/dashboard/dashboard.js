@@ -13,6 +13,7 @@ let radarChart = null;
 let evolutionChart = null;
 let currentClasses = [];
 let currentNiveauV2 = null;
+let pollTimer = null;
 
 /**
  * Initialisation de la section Dashboard
@@ -28,6 +29,100 @@ export async function init(state) {
   document.getElementById('dash-refresh')?.addEventListener('click', reloadDashboard);
   document.getElementById('dash-periode')?.addEventListener('change', reloadDashboard);
   document.getElementById('dash-sequence')?.addEventListener('change', reloadDashboard);
+
+  initPwaSync();
+  startPolling();
+}
+
+export function destroy() {
+  stopPolling();
+}
+
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (!document.getElementById('dash-kpis')) {
+      stopPolling();
+      return;
+    }
+    reloadDashboard();
+  }, 30000);
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+async function initPwaSync() {
+  const syncBtn = document.getElementById('dash-sync-pwa');
+  const banner = document.getElementById('dash-sync-banner');
+  const syncText = document.getElementById('dash-sync-text');
+
+  try {
+    const config = await window.elimuAPI.getPwaSyncConfig();
+    if (config.url && config.apiKey) {
+      syncBtn.style.display = '';
+      updateSyncBanner('info', 'PWA configurée — cliquer sur Push PWA pour synchroniser');
+    }
+  } catch (e) {
+    // PWA non configurée
+  }
+
+  syncBtn?.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:4px;"></span> Sync...';
+    updateSyncBanner('info', 'Synchronisation en cours...');
+
+    try {
+      const result = await window.elimuAPI.syncToPwa();
+      if (result?.success || result?.status === 200) {
+        const r = result.data || result;
+        const msg = 'Sync reussie: ' + (r.teachers || r.teacher_count || 0) + ' enseignants, ' +
+          (r.classes || r.class_count || 0) + ' classes, ' + (r.students || r.student_count || 0) + ' eleves';
+        updateSyncBanner('success', msg);
+        showToast(msg, 'success');
+      } else {
+        const errMsg = result?.error || 'Erreur inconnue';
+        updateSyncBanner('error', 'Echec sync: ' + errMsg);
+        showToast(errMsg, 'error');
+      }
+    } catch (e) {
+      updateSyncBanner('error', 'Erreur de connexion: ' + e.message);
+      showToast('Erreur: ' + e.message, 'error');
+    } finally {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Push PWA';
+    }
+  });
+}
+
+function updateSyncBanner(type, message) {
+  const banner = document.getElementById('dash-sync-banner');
+  const syncText = document.getElementById('dash-sync-text');
+  if (!banner || !syncText) return;
+
+  syncText.textContent = message;
+  banner.style.display = 'flex';
+
+  const colors = {
+    info: { bg: 'rgba(45,110,248,0.1)', border: 'rgba(45,110,248,0.2)', text: 'var(--blue-fifa)' },
+    success: { bg: 'rgba(0,230,118,0.1)', border: 'rgba(0,230,118,0.2)', text: 'var(--green-fifa)' },
+    error: { bg: 'rgba(255,71,87,0.1)', border: 'rgba(255,71,87,0.2)', text: 'var(--red-fifa)' },
+  };
+  const c = colors[type] || colors.info;
+  banner.style.background = c.bg;
+  banner.style.border = '1px solid ' + c.border;
+  banner.style.color = c.text;
+
+  // Auto-cacher après 10s pour les success/info
+  if (type !== 'error') {
+    setTimeout(() => {
+      banner.style.display = 'none';
+    }, 10000);
+  }
 }
 
 async function reloadDashboard() {

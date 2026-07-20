@@ -16,7 +16,7 @@ const { isSystemTampered } = require('../utils/integrity');
  * @param {{ logger: object, getCurrentUserId: function, getMainWindow: function, getCurrentAnneeId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getMainWindow, getCurrentAnneeId } = deps;
+  const { logger, getCurrentUserId, getMainWindow, getCurrentAnneeId, getCurrentEcoleId } = deps;
 
   const { hasRole } = require('../../shared/security/access');
   const { getLocalDateString } = require('../../shared/utils/dateUtils');
@@ -34,10 +34,11 @@ function register(ipcMain, deps) {
     if (!(await checkAccess()) || isSystemTampered()) return { error: 'Accès non autorisé' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       majStatutsTransches();
-      const du       = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ?`, [anneeId]) || {};
-      const encaisse = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM paiements WHERE annee_scolaire_id = ?`, [anneeId]) || {};
-      const impayes  = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ? AND statut != 'paye'`, [anneeId]) || {};
+      const du       = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]) || {};
+      const encaisse = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM paiements WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]) || {};
+      const impayes  = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ? AND ecole_id = ? AND statut != 'paye'`, [anneeId, ecoleId]) || {};
       return {
         total_du:       du.total       || 0,
         total_encaisse: encaisse.total || 0,
@@ -55,7 +56,8 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return [];
     try {
       const anneeId = getCurrentAnneeId();
-      return all(`SELECT * FROM frais_types WHERE annee_scolaire_id = ? ORDER BY actif DESC, nom`, [anneeId]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      return all(`SELECT * FROM frais_types WHERE annee_scolaire_id = ? AND ecole_id = ? ORDER BY actif DESC, nom`, [anneeId, ecoleId]);
     } catch (e) {
       logger.error('Erreur finance:getFraisTypes:', e);
       return [];
@@ -66,14 +68,15 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return { success: false, error: 'Accès non autorisé' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const r = run(
         `INSERT INTO frais_types
-           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, actif, annee_scolaire_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, actif, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire || 'etablissement', data.actif ?? 1, anneeId
+          data.destinataire || 'etablissement', data.actif ?? 1, anneeId, ecoleId
         ]
       );
       return { success: true, id: r.lastID };
@@ -88,14 +91,15 @@ function register(ipcMain, deps) {
     try {
       const fid = parseInt(id);
       if (isNaN(fid)) return { success: false, error: 'ID invalide' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       run(
         `UPDATE frais_types SET nom=?, montant_par_tranche=?, nombre_tranches=?,
            periodicite_mois=?, date_premiere_echeance=?, destinataire=?, actif=?
-         WHERE id=?`,
+         WHERE id=? AND ecole_id=?`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire, data.actif ?? 1, fid
+          data.destinataire, data.actif ?? 1, fid, ecoleId
         ]
       );
       return { success: true };
@@ -110,15 +114,16 @@ function register(ipcMain, deps) {
     try {
       const fid = parseInt(id);
       if (isNaN(fid)) return { success: false, error: 'ID invalide' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const paiements = get(
         `SELECT COUNT(*) AS nb FROM paiement_tranches pt
-         JOIN tranches t ON t.id = pt.tranche_id WHERE t.frais_type_id = ?`,
-        [fid]
+         JOIN tranches t ON t.id = pt.tranche_id WHERE t.frais_type_id = ? AND t.ecole_id = ?`,
+        [fid, ecoleId]
       );
       if (paiements?.nb > 0) {
         return { success: false, error: 'Des paiements sont liés à ce type de frais' };
       }
-      run(`DELETE FROM frais_types WHERE id = ?`, [fid]);
+      run(`DELETE FROM frais_types WHERE id = ? AND ecole_id = ?`, [fid, ecoleId]);
       return { success: true };
     } catch (e) {
       logger.error('Erreur finance:deleteFraisType:', e);
@@ -133,14 +138,15 @@ function register(ipcMain, deps) {
     try {
       const fid = parseInt(frais_type_id);
       const anneeId = getCurrentAnneeId();
-      const ft = get(`SELECT * FROM frais_types WHERE id = ?`, [fid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const ft = get(`SELECT * FROM frais_types WHERE id = ? AND ecole_id = ?`, [fid, ecoleId]);
       if (!ft) return { success: false, error: 'Type de frais introuvable' };
 
       let eleves;
       const targetId = parseInt(id_cible);
-      if (cible === 'eleve' && !isNaN(targetId))       eleves = all(`SELECT id FROM eleves WHERE id = ?`, [targetId]);
-      else if (cible === 'classe' && !isNaN(targetId))  eleves = all(`SELECT id FROM eleves WHERE classe_id = ?`, [targetId]);
-      else                                              eleves = all(`SELECT id FROM eleves WHERE annee_scolaire_id = ?`, [anneeId]);
+      if (cible === 'eleve' && !isNaN(targetId))       eleves = all(`SELECT id FROM eleves WHERE id = ? AND ecole_id = ?`, [targetId, ecoleId]);
+      else if (cible === 'classe' && !isNaN(targetId))  eleves = all(`SELECT id FROM eleves WHERE classe_id = ? AND ecole_id = ?`, [targetId, ecoleId]);
+      else                                              eleves = all(`SELECT id FROM eleves WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]);
 
       let nbGeneres = 0;
       const dateDebut = new Date(ft.date_premiere_echeance);
@@ -150,9 +156,9 @@ function register(ipcMain, deps) {
           try {
             run(
               `INSERT OR IGNORE INTO tranches
-                 (frais_type_id, eleve_id, numero_tranche, montant, date_echeance, statut, annee_scolaire_id)
-               VALUES (?, ?, ?, ?, ?, 'en_attente', ?)`,
-              [fid, eleve.id, t, ft.montant_par_tranche, getLocalDateString(date), anneeId]
+                 (frais_type_id, eleve_id, numero_tranche, montant, date_echeance, statut, annee_scolaire_id, ecole_id)
+               VALUES (?, ?, ?, ?, ?, 'en_attente', ?, ?)`,
+              [fid, eleve.id, t, ft.montant_par_tranche, getLocalDateString(date), anneeId, ecoleId]
             );
             nbGeneres++;
           } catch (err) {
@@ -176,11 +182,12 @@ function register(ipcMain, deps) {
     try {
       const anneeId = getCurrentAnneeId();
       if (!anneeId) return { tranches: [], total: 0, error: 'Aucune année scolaire active' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
       majStatutsTransches();
       const { classeId, statut, search, numero_tranche, frais_type_id, page = 1, limit = 30 } = filtres;
-      let where = ' WHERE t.annee_scolaire_id = ?';
-      const params = [anneeId];
+      let where = ' WHERE t.annee_scolaire_id = ? AND t.ecole_id = ?';
+      const params = [anneeId, ecoleId];
       
       const cid = parseInt(classeId);
       if (!isNaN(cid) && cid > 0) { where += ' AND e.classe_id = ?'; params.push(cid); }
@@ -235,11 +242,12 @@ function register(ipcMain, deps) {
       if (isNaN(eid)) return [];
       const anneeId = getCurrentAnneeId();
       majStatutsTransches();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       return all(
         `SELECT t.*, ft.nom AS nom_frais FROM tranches t
          JOIN frais_types ft ON ft.id = t.frais_type_id
-         WHERE t.eleve_id = ? AND t.annee_scolaire_id = ? ORDER BY t.statut DESC, t.date_echeance`,
-        [eid, anneeId]
+         WHERE t.eleve_id = ? AND t.annee_scolaire_id = ? AND t.ecole_id = ? ORDER BY t.statut DESC, t.date_echeance`,
+        [eid, anneeId, ecoleId]
       );
     } catch (e) {
       logger.error('Erreur finance:getTranchesParEleve:', e);
@@ -253,6 +261,7 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return { success: false, error: 'Accès non autorisé' };
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const { eleve_id, montant, date, mode, reference, notes, tranche_ids, utilisateur_id } = data;
       const eid = parseInt(eleve_id);
       if (isNaN(eid)) return { success: false, error: 'ID élève invalide' };
@@ -263,8 +272,8 @@ function register(ipcMain, deps) {
         if (ids.length) {
           const placeholders = ids.map(() => '?').join(',');
           const sumRow = get(
-            `SELECT SUM(montant) as total FROM tranches WHERE id IN (${placeholders})`,
-            ids
+            `SELECT SUM(montant) as total FROM tranches WHERE id IN (${placeholders}) AND ecole_id = ?`,
+            [...ids, ecoleId]
           );
           totalTranches = sumRow?.total || 0;
         }
@@ -277,12 +286,12 @@ function register(ipcMain, deps) {
 
       const r = run(
         `INSERT INTO paiements
-           (eleve_id, montant, date, mode, reference, recu_numero, notes, utilisateur_id, annee_scolaire_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (eleve_id, montant, date, mode, reference, recu_numero, notes, utilisateur_id, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           eid, montantFinal, date, mode,
           reference || null, recuNum, notes || null,
-          parseInt(utilisateur_id) || getCurrentUserId(), anneeId
+          parseInt(utilisateur_id) || getCurrentUserId(), anneeId, ecoleId
         ]
       );
       const paiementId = r.lastID;
@@ -292,16 +301,16 @@ function register(ipcMain, deps) {
         for (const trancheId of tranche_ids) {
           const tid = parseInt(trancheId);
           if (isNaN(tid)) continue;
-          const tranche = get(`SELECT montant FROM tranches WHERE id = ?`, [tid]);
+          const tranche = get(`SELECT montant FROM tranches WHERE id = ? AND ecole_id = ?`, [tid, ecoleId]);
           if (!tranche || montantRestant <= 0) break;
           const applique = Math.min(tranche.montant, montantRestant);
           run(
-            `INSERT OR IGNORE INTO paiement_tranches (paiement_id, tranche_id, montant_applique)
-             VALUES (?, ?, ?)`,
-            [paiementId, tid, applique]
+            `INSERT OR IGNORE INTO paiement_tranches (paiement_id, tranche_id, montant_applique, ecole_id)
+             VALUES (?, ?, ?, ?)`,
+            [paiementId, tid, applique, ecoleId]
           );
           if (applique >= tranche.montant) {
-            run(`UPDATE tranches SET statut = 'paye' WHERE id = ?`, [tid]);
+            run(`UPDATE tranches SET statut = 'paye' WHERE id = ? AND ecole_id = ?`, [tid, ecoleId]);
           }
           montantRestant -= applique;
         }
@@ -323,6 +332,7 @@ function register(ipcMain, deps) {
     if (!(await checkAccess(['admin', 'comptable', 'secretaire']))) return [];
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const { jours, classeId, limit = 50 } = filtres;
       let sql = `
         SELECT p.*, e.nom, e.prenom, c.nom_classe,
@@ -331,9 +341,9 @@ function register(ipcMain, deps) {
         JOIN eleves e ON e.id = p.eleve_id
         LEFT JOIN classes c ON c.id = e.classe_id
         LEFT JOIN utilisateurs u ON u.id = p.utilisateur_id
-        WHERE p.annee_scolaire_id = ?
+        WHERE p.annee_scolaire_id = ? AND p.ecole_id = ?
       `;
-      const params = [anneeId];
+      const params = [anneeId, ecoleId];
       const nJours = parseInt(jours);
       if (!isNaN(nJours) && nJours > 0) {
         sql += ` AND p.date >= date('now', ?)`;
@@ -372,8 +382,9 @@ function register(ipcMain, deps) {
         classeId = parseInt(filtres);
       }
 
-      let where = ` WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ?`;
-      const params = [anneeId];
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      let where = ` WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ? AND t.ecole_id = ?`;
+      const params = [anneeId, ecoleId];
       
       if (!isNaN(classeId) && classeId > 0) { where += ' AND e.classe_id = ?'; params.push(classeId); }
       if (!isNaN(fraisTypeId) && fraisTypeId > 0) { where += ' AND t.frais_type_id = ?'; params.push(fraisTypeId); }
@@ -416,6 +427,7 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return [];
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const lNum = parseInt(limit) || 5;
       majStatutsTransches();
       return all(
@@ -425,9 +437,9 @@ function register(ipcMain, deps) {
          FROM tranches t
          JOIN eleves e ON e.id = t.eleve_id
          LEFT JOIN classes c ON c.id = e.classe_id
-         WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ?
+         WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ? AND t.ecole_id = ?
          GROUP BY e.id ORDER BY total_impaye DESC LIMIT ?`,
-        [anneeId, lNum]
+        [anneeId, ecoleId, lNum]
       );
     } catch (e) {
       logger.error('Erreur finance:getTopImpayes:', e);
@@ -439,13 +451,14 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return [];
     try {
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       return all(
         `SELECT strftime('%m/%Y', date) AS mois, SUM(montant) AS total
          FROM paiements
-         WHERE date >= date('now', '-12 months') AND annee_scolaire_id = ?
+         WHERE date >= date('now', '-12 months') AND annee_scolaire_id = ? AND ecole_id = ?
          GROUP BY strftime('%Y-%m', date)
          ORDER BY strftime('%Y-%m', date)`,
-        [anneeId]
+        [anneeId, ecoleId]
       );
     } catch (e) {
       logger.error('Erreur finance:getEncaissementsParMois:', e);
@@ -460,7 +473,8 @@ function register(ipcMain, deps) {
     try {
       const pid = parseInt(paiementId);
       if (isNaN(pid)) return { error: 'ID paiement invalide' };
-      const paiement = get(`SELECT recu_numero FROM paiements WHERE id = ?`, [pid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const paiement = get(`SELECT recu_numero FROM paiements WHERE id = ? AND ecole_id = ?`, [pid, ecoleId]);
       if (!paiement) return { error: 'Paiement introuvable' };
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
         defaultPath: `recu_${paiement.recu_numero || pid}.pdf`,
@@ -486,6 +500,7 @@ function register(ipcMain, deps) {
       if (savePath.canceled) return { canceled: true };
 
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       majStatutsTransches();
 
       let sql = `
@@ -495,9 +510,9 @@ function register(ipcMain, deps) {
         JOIN frais_types ft ON ft.id = t.frais_type_id
         JOIN eleves e ON e.id = t.eleve_id
         LEFT JOIN classes c ON c.id = e.classe_id
-        WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ?
+        WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ? AND t.ecole_id = ?
       `;
-      const params = [anneeId];
+      const params = [anneeId, ecoleId];
       const cid = parseInt(classeId);
       if (!isNaN(cid) && cid > 0) { sql += ' AND e.classe_id = ?'; params.push(cid); }
       sql += ' ORDER BY e.nom, e.prenom, t.date_echeance';
@@ -578,6 +593,7 @@ function register(ipcMain, deps) {
         fraisTypeId: parseInt(fraisTypeId) || null,
         numeroTranche: parseInt(numeroTranche) || null,
         anneeId,
+        ecoleId,
         lang
       });
       

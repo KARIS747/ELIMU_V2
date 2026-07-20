@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 110; // Version 1.1.0
+const CURRENT_SCHEMA_VERSION = 120; // Version 1.2.0 (multi-école)
 
 /**
  * Initialise la base de données et applique le schéma
@@ -161,7 +161,31 @@ async function initializeDatabase(customPath = null) {
     "CREATE INDEX IF NOT EXISTS idx_notes_stats ON notes(annee_scolaire_id, periode, sequence, eleve_id)",
     "UPDATE frais_types SET annee_scolaire_id = (SELECT id FROM annees_scolaires WHERE active = 1 LIMIT 1) WHERE annee_scolaire_id IS NULL AND (SELECT COUNT(*) FROM annees_scolaires WHERE active = 1) > 0",
     "UPDATE paiement_tranches SET annee_scolaire_id = (SELECT id FROM annees_scolaires WHERE active = 1 LIMIT 1) WHERE annee_scolaire_id IS NULL AND (SELECT COUNT(*) FROM annees_scolaires WHERE active = 1) > 0",
-    "UPDATE imports SET annee_scolaire_id = (SELECT id FROM annees_scolaires WHERE active = 1 LIMIT 1) WHERE annee_scolaire_id IS NULL AND (SELECT COUNT(*) FROM annees_scolaires WHERE active = 1) > 0"
+    "UPDATE imports SET annee_scolaire_id = (SELECT id FROM annees_scolaires WHERE active = 1 LIMIT 1) WHERE annee_scolaire_id IS NULL AND (SELECT COUNT(*) FROM annees_scolaires WHERE active = 1) > 0",
+    // ── Migrations multi-école (ecole_id) ──
+    "CREATE TABLE IF NOT EXISTS ecoles (ecole_id TEXT PRIMARY KEY, nom TEXT NOT NULL, cle_api_portail TEXT, cle_pwa_sync TEXT, config TEXT DEFAULT '{}', date_creation TEXT DEFAULT CURRENT_TIMESTAMP)",
+    "ALTER TABLE utilisateurs ADD COLUMN telephone TEXT",
+    "ALTER TABLE utilisateurs ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE professeurs ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE classes ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE parents ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE eleves ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE notes ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE absences ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE sanctions ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE imports ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE audit_log ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE heures_absence ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE frais_types ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE tranches ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE paiements ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE paiement_tranches ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "CREATE INDEX IF NOT EXISTS idx_professeurs_ecole ON professeurs(ecole_id)",
+    "CREATE INDEX IF NOT EXISTS idx_classes_ecole ON classes(ecole_id)",
+    "CREATE INDEX IF NOT EXISTS idx_eleves_ecole ON eleves(ecole_id)",
+    "CREATE INDEX IF NOT EXISTS idx_notes_ecole ON notes(ecole_id)",
+    "CREATE INDEX IF NOT EXISTS idx_absences_ecole ON absences(ecole_id)",
+    "CREATE INDEX IF NOT EXISTS idx_parents_ecole ON parents(ecole_id)"
   ];
   for (const m of migrations) {
     try { db.exec(m); } catch(e) { /* colonne existe déjà */ }
@@ -182,7 +206,7 @@ async function initializeDatabase(customPath = null) {
             id                   INTEGER PRIMARY KEY AUTOINCREMENT,
             eleve_id             INTEGER NOT NULL,
             matiere_id           INTEGER, -- Optionnel pour N1/N2
-            note                 REAL NOT NULL CHECK(note >= 0 AND note <= 20),
+            note                 REAL NOT NULL CHECK(note >= 0),
             periode              TEXT DEFAULT 'Trimestre 1',
             sequence             INTEGER, -- Optionnel pour N1/N2
             date_import          TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -277,6 +301,44 @@ async function initializeDatabase(customPath = null) {
     }
   } catch (err) {
     console.warn(`Note sur la migration: ${err.message}`);
+  }
+
+  // Migration : enlever CHECK(note<=20) sur la table notes (N1/N2 utilise l'echelle reelle)
+  try {
+    const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='notes'").get();
+    if (tableInfo && tableInfo.sql.includes('note <= 20')) {
+      console.log('🔄 Migration : Mise à jour de la contrainte CHECK(note) sur notes...');
+      db.transaction(() => {
+        db.exec("ALTER TABLE notes RENAME TO notes_old");
+        db.exec(`
+          CREATE TABLE notes (
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            eleve_id             INTEGER NOT NULL,
+            matiere_id           INTEGER,
+            note                 REAL NOT NULL CHECK(note >= 0),
+            periode              TEXT DEFAULT 'Trimestre 1',
+            sequence             INTEGER,
+            date_import          TEXT DEFAULT CURRENT_TIMESTAMP,
+            import_id            INTEGER,
+            annee_scolaire_id    INTEGER,
+            ua                   TEXT,
+            sous_competence_code TEXT,
+            type_eval            TEXT,
+            sous_type            TEXT CHECK(sous_type IN ('orale','ecrite','pratique','savoirEtre')),
+            source               TEXT DEFAULT 'DESKTOP',
+            FOREIGN KEY(eleve_id)   REFERENCES eleves(id)   ON DELETE CASCADE,
+            FOREIGN KEY(matiere_id) REFERENCES matieres(id) ON DELETE CASCADE,
+            FOREIGN KEY(import_id)  REFERENCES imports(id)  ON DELETE SET NULL,
+            UNIQUE(eleve_id, matiere_id, periode, sequence, annee_scolaire_id)
+          )
+        `);
+        db.exec("INSERT INTO notes SELECT * FROM notes_old");
+        db.exec("DROP TABLE notes_old");
+      })();
+      console.log('✅ Contrainte CHECK(note) mise à jour sur notes');
+    }
+  } catch (err) {
+    console.warn(`Note sur la migration CHECK(note): ${err.message}`);
   }
 
   // Enregistrer la version

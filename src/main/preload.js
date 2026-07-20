@@ -271,7 +271,15 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   preparerNouvelleAnnee: (data) => ipcRenderer.invoke('annees:preparerNouvelleAnnee', data),
 
   // ==========================================
-  // AUTO-UPDATER
+  // SYNC PWA (Desktop → PWA Enseignants)
+  // ==========================================
+
+  syncToPwa:              ()      => ipcRenderer.invoke('db:syncToPwa'),
+  getPwaSyncConfig:       ()      => ipcRenderer.invoke('db:getPwaSyncConfig'),
+  savePwaSyncConfig:      (data)  => ipcRenderer.invoke('db:savePwaSyncConfig', data),
+
+  // ==========================================
+  // AUTOMATIC UPDATER
   // ==========================================
 
   checkUpdates: () => ipcRenderer.invoke('updater:check'),

@@ -156,32 +156,37 @@ Chaque sous-compétence a 4 poids : `orale, ecrite, pratique, savoirEtre`. Les p
 
 ### 5.1 Stockage en base de données
 
-Les sous-notes sont **toujours stockées sur /20** en DB. La contrainte SQL est : `CHECK(note >= 0 AND note <= 20)`.
+Les sous-notes N1/N2 sont stockées **sur leur échelle réelle** (orale/20, ecrite/15, pratique/0–10, savoir-être/2–5 selon sous-compétence), PAS sur une base /20. La contrainte SQL est : `CHECK(note >= 0)` sans upper bound, car certaines sous-compétences N2 ont `ecrite=28` (ex: 2A, N2).
 
 ### 5.2 Affichage d'une sous-note dans le profil élève
 
 ```
-noteAffichee = (note_stockee / 20) × poids_curriculum
+noteAffichee = note_stockee  (valeur réelle, pas de conversion)
 ```
 
-Exemple : note orale stockée 14/20, poids orale = 20 → affiché 14.0 (car 14/20×20 = 14.0)
+Exemple : note orale stockée 14/20 → affiché 14.0 (directement la valeur réelle)
 
 ### 5.3 Agrégat sous-compétence → note /20
 
-La formule correcte est la **moyenne pondérée** :
+La formule correcte est la **somme directe** :
 
 ```
-agregat = sum(val_stockee × poids) / sum(poids)
+total = Σ(val)         // somme des notes sur leur échelle réelle
+agregat = (total / Σ(poids)) × 20
 ```
 
-Où `val_stockee` est la note /20 et `poids` le max curriculum.
+Où `poids` est le max curriculum de chaque sous-type.
 
 Cette formule est implémentée dans :
 - `src/shared/constants/curriculum.js` → `calcAggregateFromSubNotes()`
-- `src/renderer/sections/eleves/eleves.js` → calcul inline (lignes ~489–495)
+- `src/renderer/sections/eleves/eleves.js` → calcul inline
 - `seed_test_data.js` → `calcAggregate()`
 
-### 5.4 Conversion note → code qualitatif
+### 5.4 Code qualitatif
+
+Le code qualitatif (`getNoteToCode()`) s'applique sur l'équivalent /20 de l'agrégat, pas sur la somme brute.
+
+### 5.5 Conversion note → code qualitatif
 
 ```javascript
 getNoteToCode(note)  // note sur /20
@@ -191,14 +196,16 @@ getNoteToCode(note)  // note sur /20
 → note 18-20 → 'A+'
 ```
 
-### 5.5 🔴 Erreurs passées (corrigées)
+### 5.6 🔴 Erreurs passées (corrigées)
 
 | Erreur | Fichier | Correctif |
 |--------|---------|-----------|
-| `val * poids` → résultat non pondéré | `curriculum.js` `calcAggregateFromSubNotes` | Revenir à `sum(val×poids)/sum(poids)` |
+| Agrégat = moyenne pondérée au lieu de somme directe | `curriculum.js` `calcAggregateFromSubNotes`, `eleves.js`, `seed_test_data.js` | Passer à `total += val` puis `(total/totalPoids)*20` |
+| Notes stockées sur /20 avec CHECK ≤ 20 | `schema.sql`, `db.js` | Supprimer upper bound, stocker sur échelle réelle |
+| Affichage `(note/20)*poids` au lieu de `note` directe | `eleves.js` | Afficher `noteReelle = s.note` |
+| Sous-notes générées sur échelle /20 | `seed_test_data.js` | Générer sur `1..weights[type]` |
 | `sous_competence_code` stocké `C1_1A` au lieu de `1A` | `seed_test_data.js`, handlers | Stocker uniquement le code (`1A`, `2B`, etc.) |
-| Notes générées `rand(4,19)` sans respecter max DB | `seed_test_data.js` | `rand(4,20)` |
-| Formule `(totalPts/totalMax)*20` saturant à 20 quand max > 20 | `eleves.js` ligne 489-495 | Remplacer par `sum(val×poids)/sum(poids)` |
+| N3 non géré par la PWA | `PWA/` | Ajouter `teacher_notes_n3`, endpoint API, frontend dédié |
 
 ---
 
@@ -246,7 +253,7 @@ CREATE TABLE notes (
     sous_competence_code TEXT,               -- N1/N2 only (ex: '1A', '2B', '4')
     type_eval            TEXT,               -- N1/N2 only ('orale','ecrite','pratique','savoirEtre')
     ua                   TEXT,               -- N1/N2 only ('UA1'..'UA8')
-    note                 REAL NOT NULL CHECK(note >= 0 AND note <= 20),
+    note                 REAL NOT NULL CHECK(note >= 0),
     trimestre            INTEGER,            -- N3 only (1,2,3)
     sequence             INTEGER,            -- N3 only (1,2)
     coefficient          REAL DEFAULT 1,
@@ -259,9 +266,9 @@ CREATE TABLE notes (
 ```
 
 ### Contraintes importantes
-- **N1/N2** : `matiere_id IS NULL`, `sous_competence_code` + `type_eval` + `ua` sont requis
+- **N1/N2** : `matiere_id IS NULL`, `sous_competence_code` + `type_eval` + `ua` sont requis. Notes stockées sur échelle réelle (max variable selon sous-type).
 - **N3** : `sous_competence_code IS NULL`, `matiere_id` + `trimestre` + `sequence` sont requis
-- **Note** : `CHECK(note >= 0 AND note <= 20)` — toujours sur /20
+- **Note** : `CHECK(note >= 0)` — plus d'upper bound fixe. Validation faite dans le code applicatif.
 
 ---
 
@@ -289,12 +296,19 @@ CREATE TABLE notes (
 | Moteur curriculum | ✅ | `curriculum.js` avec templates N1/N2/N3, fonctions de calcul |
 | Nettoyage UI Desktop | ✅ | Onglet Notes supprimé, presets classes, bannière rôles |
 
-### Bugs corrigés dans la session (Juillet 2026)
+### 🔴 Erreurs fondamentales corrigées (session Juillet 2026)
 
-- [x] `calcAggregateFromSubNotes` utilisait `val * poids` au lieu de moyenne pondérée
-- [x] `sous_competence_code` stocké avec préfixe `C1_` au lieu du code seul
-- [x] `seed_test_data.js` générait `rand(4,19)` hors plage autorisée pour certains types
-- [x] Formule `(totalPts/totalMax)*20` dans `eleves.js` saturait à 20 pour N2
+Le calcul des notes N1/N2 contenait une **erreur fondamentale** dans toute la stack (PWA + Desktop) :
+- La formule `Σ(val × poids) / Σ(poids)` (moyenne pondérée) était utilisée, mais le curriculum MINEDUB exige une **somme directe** `Σ(val)` convertie en /20 par `(total / Σ(poids)) × 20`.
+- Les sous-notes étaient stockées sur `/20` en DB, mais le curriculum MINEDUB spécifie un max différent par sous-type (orale=20, ecrite=15, pratique=0–10, savoir-être=2–5). Certaines sous-compétences N2 ont même `ecrite=28` (ex: 2A, N2), ce qui dépasse 20. Le CHECK `<= 20` a donc été supprimé.
+- L'affichage appliquait `(note_stockee / 20) × poids` pour retrouver la note réelle, mais cela inversait la formule : la note réelle est saisie directement, pas stockée sur /20.
+
+**Correctifs appliqués :**
+- `calcAggregateFromSubNotes` → `total += val` (somme directe), retourne `(total/totalPoids)*20`
+- `schema.sql` / `db.js` → CHECK passe de `>=0 AND <=20` à `>=0`
+- Affichage `eleves.js` → `noteReelle = s.note` (valeur directe), code qualitatif sur `(note/maxPts)*20`
+- `seed_test_data.js` → génération sur `1..weights[t]` (échelle réelle), agrégat somme directe
+- PWA → ajout `teacher_notes_n3` + endpoint + frontend dédié
 
 ### Transformation section Professeurs → Comptes Enseignants PWA (Juillet 2026)
 
@@ -321,18 +335,20 @@ Le niveau 3 conserve le système classique de la V1 :
 - Coefficients par matière
 - Trigger SQL `trg_calc_stats_eleves` pour les moyennes pré-calculées
 
-**Aucune modification nécessaire** — l'infrastructure V1 gère déjà nativement le N3.
+**Desktop** : l'infrastructure V1 gère déjà nativement le N3 (table `notes` avec `matiere_id`, triggers SQL, moyennes pré-calculées).
+
+**PWA** : le N3 est désormais géré via la table `teacher_notes_n3` et un flux dédié (sélection séquence → grille élèves × matières). Le backend PWA expose `POST /api/teacher/notes-n3`.
 
 ---
 
 ## 11. VÉRIFICATIONS AVANT CHAQUE MODIFICATION
 
 1. Le curriculum MINEDUB est-il respecté ? (vérifier `ELIMU_CURRICULUM_N1_N2.md` ou `ELIMU_CURRICULUM_N3.md`)
-2. La formule utilise-t-elle `sum(val×poids)/sum(poids)` et non `(total/totalMax)*20` ?
-3. Les sous-notes sont-elles stockées sur /20 en DB ?
-4. L'affichage applique-t-il `(note/20) × poids` pour la note réelle ?
+2. La formule utilise-t-elle la **somme directe** `Σ(val)` convertie en `/20` et non la moyenne pondérée ?
+3. Les sous-notes N1/N2 sont-elles stockées sur leur échelle réelle (pas /20) ?
+4. L'affichage affiche-t-il la note réelle directement (pas de conversion /20 → poids) ?
 5. Le `sous_competence_code` est-il le code seul (ex: `1A`) sans préfixe ?
-6. La conversion qualitative `getNoteToCode()` est-elle appliquée sur la note /20 ?
+6. La conversion qualitative `getNoteToCode()` est-elle appliquée sur l'équivalent /20 ?
 
 ---
 
@@ -366,4 +382,33 @@ Pas de framework de tests unitaires automatisés. La vérification se fait :
 
 ---
 
-*Document généré le 17 Juillet 2026 — à mettre à jour après chaque modification significative.*
+## 14. MULTI-ÉCOLE — ISOLATION PAR `ecole_id`
+
+### 14.1 Principe
+Chaque installation d'ÉLIMU Desktop génère un UUID stable à son démarrage (`parametres.ecole_id`).
+Cet UUID est utilisé pour isoler toutes les données de l'école dans la Base B partagée.
+
+### 14.2 Règles strictes
+1. **Chaque table de données** a une colonne `ecole_id TEXT NOT NULL DEFAULT ''`
+2. **Chaque requête SQL** (SELECT, INSERT, UPDATE, DELETE) DOIT inclure `WHERE ecole_id = ?`
+3. **`ecole_id` provient de `deps.getCurrentEcoleId()`** dans les handlers, jamais d'un paramètre client
+4. **Les INSERTS** incluent `ecole_id` comme colonne
+5. **Les contraintes UNIQUE** incluent `ecole_id` (ex: `UNIQUE(ecole_id, nom_utilisateur)`)
+
+### 14.3 UUID stable
+- Généré par `crypto.randomUUID()` au premier démarrage
+- Stocké dans `parametres.cle = 'ecole_id'`
+- Préservé entre les redémarrages, même si le nom de l'école change
+- Transmis dans les syncs Desktop→PWA au lieu de l'ancien dérivé du nom
+
+### 14.4 Tables isolées
+`utilisateurs`, `professeurs`, `classes`, `eleves`, `notes`, `absences`, `parents`,
+`sanctions`, `imports`, `audit_log`, `heures_absence`, `frais_types`, `tranches`, `paiements`
+
+### 14.5 Tests d'isolation (à faire)
+- Créer 2 écoles fictives → vérifier qu'aucune donnée ne fuit
+- Confirmer que le `ecole_id` du JWT/du Desktop est toujours utilisé, jamais celui du client
+
+---
+
+*Document généré le 20 Juillet 2026 — à mettre à jour après chaque modification significative.*

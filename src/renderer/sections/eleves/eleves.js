@@ -434,9 +434,9 @@ async function rafraichirProfil(eleveId, title, content) {
           for (const t of ['orale', 'ecrite', 'pratique', 'savoirEtre']) {
             const val = item.notes[t];
             const p = poids[t];
-            if (val != null && p > 0) { total += val * p; totalPoids += p; }
+            if (val != null && p > 0) { total += val; totalPoids += p; }
           }
-          return totalPoids > 0 ? total / totalPoids : null;
+          return totalPoids > 0 ? (total / totalPoids) * 20 : null;
         }).filter(v => v !== null);
         moy = aggs.length ? aggs.reduce((s, v) => s + v, 0) / aggs.length : null;
       }
@@ -607,8 +607,9 @@ async function rafraichirProfil(eleveId, title, content) {
                   const poids = window.curriculum.getWeightsForSousCompetence(niveauV2, code);
                   const maxPts = poids ? (poids[s.sous_type] || 0) : 20;
                   if (maxPts === 0) return '';
-                  const noteReelle = (s.note / 20) * maxPts;
-                  const sq = window.curriculum.getNoteToCode(s.note);
+                  const noteReelle = s.note;
+                  const noteSur20 = maxPts > 0 ? (s.note / maxPts) * 20 : 0;
+                  const sq = window.curriculum.getNoteToCode(noteSur20);
                   const sc = sq === 'A+' ? '#00e676' : sq === 'A' ? '#69f0ae' : sq === 'ECA' ? '#f0b429' : '#ff4757';
                   return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
                     ${labels[s.sous_type] || s.sous_type}:

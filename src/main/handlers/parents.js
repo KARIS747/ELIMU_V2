@@ -17,7 +17,7 @@ const { CURRICULUM_TEMPLATES, getPeriodeForUA } = require('../../shared/constant
  * @param {{ logger: object, getMainWindow: function, getCurrentUserId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getMainWindow, getCurrentUserId } = deps;
+  const { logger, getMainWindow, getCurrentUserId, getCurrentEcoleId } = deps;
 
   /**
    * Hache un mot de passe en utilisant scrypt (format PHC) - Version Main Thread pour un seul parent
@@ -92,6 +92,7 @@ function register(ipcMain, deps) {
   ipcMain.handle('parents:exporterFiches', async (event, classeId, lang = 'fr') => {
     if (!(await checkAccess())) return { success: false, error: 'Accès non autorisé' };
     try {
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const rowsParam = all('SELECT valeur FROM parametres WHERE cle = ?', ['portail_url']);
       const printLink = rowsParam[0]?.valeur || '[Lien portail non configuré]';
 
@@ -105,11 +106,12 @@ function register(ipcMain, deps) {
                JOIN classes c ON e.classe_id = c.id
                WHERE pe.parent_id = p.id) as eleves_json
         FROM parents p
+        WHERE p.ecole_id = ?
       `;
-      let params = [];
+      let params = [ecoleId];
       const cid = parseInt(classeId);
       if (!isNaN(cid) && cid > 0) {
-        query += ` WHERE p.id IN (SELECT parent_id FROM parents_eleves pe JOIN eleves e ON pe.eleve_id = e.id WHERE e.classe_id = ?)`;
+        query += ` AND p.id IN (SELECT parent_id FROM parents_eleves pe JOIN eleves e ON pe.eleve_id = e.id WHERE e.classe_id = ?)`;
         params.push(cid);
       }
       
@@ -143,8 +145,9 @@ function register(ipcMain, deps) {
   ipcMain.handle('parents:getListe', async (event, { recherche = '', classeId = null, page = 1, limit = 20 }) => {
     if (!(await checkAccess())) return { error: 'Accès non autorisé' };
     try {
-      let whereClauses = [];
-      let params = [];
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      let whereClauses = ['p.ecole_id = ?'];
+      let params = [ecoleId];
 
       if (recherche && recherche.trim()) {
         whereClauses.push(`(p.telephone LIKE ? OR p.nom_parent LIKE ? OR p.id IN (
@@ -218,7 +221,8 @@ function register(ipcMain, deps) {
       const id = parseInt(parentId);
       if (isNaN(id)) return { success: false, error: 'ID parent invalide' };
       
-      const parent = get('SELECT telephone FROM parents WHERE id = ?', [id]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const parent = get('SELECT telephone FROM parents WHERE id = ? AND ecole_id = ?', [id, ecoleId]);
       if (!parent) return { success: false, error: 'Parent non trouvé' };
 
       const rawPassword = generateSecurePassword();
@@ -241,7 +245,8 @@ function register(ipcMain, deps) {
   ipcMain.handle('parents:genererTousMdp', async (event) => {
     if (!(await checkAccess(['admin', 'secretaire']))) return { success: false, error: 'Accès non autorisé' };
     try {
-      const parentsRaw = all('SELECT id, telephone, nom_parent FROM parents');
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const parentsRaw = all('SELECT id, telephone, nom_parent FROM parents WHERE ecole_id = ?', [ecoleId]);
       const parents = JSON.parse(JSON.stringify(parentsRaw));
       const total = parents.length;
       logger.info(`🚀 Démarrage génération pour ${total} parents...`);
@@ -312,13 +317,13 @@ function register(ipcMain, deps) {
           telephone: r.telephone,
           nom_parent: r.nom_parent,
           mot_de_passe_clair: r.password,
-          eleves: all(`
-            SELECT e.nom, e.prenom, c.nom_classe as classe_nom 
-            FROM parents_eleves pe
-            JOIN eleves e ON pe.eleve_id = e.id
-            JOIN classes c ON e.classe_id = c.id
-            WHERE pe.parent_id = ?
-          `, [r.id])
+            eleves: all(`
+              SELECT e.nom, e.prenom, c.nom_classe as classe_nom 
+              FROM parents_eleves pe
+              JOIN eleves e ON pe.eleve_id = e.id
+              JOIN classes c ON e.classe_id = c.id
+              WHERE pe.parent_id = ? AND e.ecole_id = ?
+            `, [r.id, ecoleId])
         }));
 
         await genererFichesParentsPDF(pdfData, savePath.filePath, printLink, null, 'fr'); // Langue par défaut FR pour le bulk
@@ -418,25 +423,29 @@ function register(ipcMain, deps) {
           logo_base64: ecoleInfo.logo_bulletin, 
           config: { theme: 'dark' }
         },
-        parents: all('SELECT telephone, mot_de_passe_hash, nom_parent FROM parents'),
+        parents: all('SELECT telephone, mot_de_passe_hash, nom_parent FROM parents WHERE ecole_id = ?', [ecoleId]),
+        ecole_id: ecoleId,
         liaisons: all(`
           SELECT p.telephone, e.id as eleve_external_id 
           FROM parents_eleves pe
           JOIN parents p ON pe.parent_id = p.id
           JOIN eleves e ON pe.eleve_id = e.id
-        `),
+          WHERE p.ecole_id = ? AND e.ecole_id = ?
+        `, [ecoleId, ecoleId]),
         eleves: all(`
           SELECT e.id, e.nom, e.prenom, c.nom_classe as classe_nom 
           FROM eleves e
           LEFT JOIN classes c ON e.classe_id = c.id
-        `),
-        classes: all('SELECT id, nom_classe, niveau FROM classes'),
+          WHERE e.ecole_id = ?
+        `, [ecoleId]),
+        classes: all('SELECT id, nom_classe, niveau FROM classes WHERE ecole_id = ?', [ecoleId]),
         notes: (() => {
           const rawNotes = all(`
             SELECT n.*, m.nom_matiere as matiere_nom 
             FROM notes n
             LEFT JOIN matieres m ON n.matiere_id = m.id
-          `);
+            WHERE n.ecole_id = ?
+          `, [ecoleId]);
           return rawNotes.map(n => {
             // N3 classique: garder tel quel
             if (n.matiere_id != null) {
@@ -459,30 +468,30 @@ function register(ipcMain, deps) {
         })(),
         absences: all(`
           SELECT eleve_id, periode, heures 
-          FROM heures_absence
-        `),
+          FROM heures_absence WHERE ecole_id = ?
+        `, [ecoleId]),
         paiements: all(`
           SELECT eleve_id, montant, date, 'payé' as statut, recu_numero, COALESCE(notes, 'Paiement scolarité') as libelle
-          FROM paiements
+          FROM paiements WHERE ecole_id = ?
           UNION ALL
           SELECT t.eleve_id, t.montant, t.date_echeance as date, 'non payé' as statut, NULL as recu_numero, ft.nom as libelle
           FROM tranches t
           JOIN frais_types ft ON t.frais_type_id = ft.id
-          WHERE t.statut != 'paye'
-        `),
+          WHERE t.statut != 'paye' AND t.ecole_id = ?
+        `, [ecoleId, ecoleId]),
         backup: {
           annees_scolaires: all('SELECT * FROM annees_scolaires'),
           classes: all('SELECT * FROM classes'),
           matieres: all('SELECT * FROM matieres'),
-          professeurs: all('SELECT * FROM professeurs'),
-          utilisateurs: all('SELECT * FROM utilisateurs'),
+          professeurs: all('SELECT * FROM professeurs WHERE ecole_id = ?', [ecoleId]),
+          utilisateurs: all('SELECT * FROM utilisateurs WHERE ecole_id = ?', [ecoleId]),
           parametres: all('SELECT * FROM parametres'),
           bulletin_config: all('SELECT * FROM bulletin_config'),
-          frais_types: all('SELECT * FROM frais_types'),
-          tranches: all('SELECT * FROM tranches'),
-          paiement_tranches: all('SELECT * FROM paiement_tranches'),
-          sanctions: all('SELECT * FROM sanctions'),
-          imports: all('SELECT * FROM imports')
+          frais_types: all('SELECT * FROM frais_types WHERE ecole_id = ?', [ecoleId]),
+          tranches: all('SELECT * FROM tranches WHERE ecole_id = ?', [ecoleId]),
+          paiement_tranches: all('SELECT * FROM paiement_tranches WHERE ecole_id = ?', [ecoleId]),
+          sanctions: all('SELECT * FROM sanctions WHERE ecole_id = ?', [ecoleId]),
+          imports: all('SELECT * FROM imports WHERE ecole_id = ?', [ecoleId])
           // Les notes, élèves, parents et paiements sont déjà dans le payload principal
         },
         timestamp: getLocalTimestampForFile()
@@ -636,6 +645,7 @@ function register(ipcMain, deps) {
     try {
       const id = parseInt(parentId);
       if (isNaN(id)) return { success: false, error: 'ID parent invalide' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
       const rowsParam = all('SELECT valeur FROM parametres WHERE cle = ?', ['portail_url']);
       const printLink = rowsParam[0]?.valeur || '[Lien portail non configuré]';
@@ -650,11 +660,10 @@ function register(ipcMain, deps) {
                JOIN classes c ON e.classe_id = c.id
                WHERE pe.parent_id = p.id) as eleves_json
         FROM parents p
-        WHERE p.id = ?
-      `, [id]);
+        WHERE p.id = ? AND p.ecole_id = ?
+      `, [id, ecoleId]);
 
       if (!parentRow) return { success: false, error: 'Parent non trouvé' };
-
       const parent = { 
         ...parentRow, 
         mot_de_passe_clair: passwordOverride || parentRow.mot_de_passe_clair,

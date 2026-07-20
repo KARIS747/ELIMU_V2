@@ -10,6 +10,7 @@
  */
 
 const ExcelJS = require('exceljs');
+const crypto = require('crypto');
 const { run, get, all } = require('../database/db');
 const { syncParentEleve } = require('./parentSync');
 const { CURRICULUM_TEMPLATES, getWeightsForSousCompetence, calcAggregateFromSubNotes, getPeriodeForUA } = require('../constants/curriculum');
@@ -58,6 +59,56 @@ function trouverEleve(eleves, nom, prenom) {
 }
 
 /**
+ * Valide la feuille _metadata d'un fichier Excel signé
+ * Vérifie ecole_id et la signature SHA-256
+ */
+function validateExcelMetadata(workbook, expectedEcoleId, logger) {
+  const metaSheet = workbook.worksheets.find(ws => ws.name === '_metadata');
+  if (!metaSheet) return null;
+
+  const rows = [];
+  metaSheet.eachRow((row) => { rows.push(row); });
+  if (rows.length < 2) return null;
+
+  const meta = {};
+  const headers = rows[0].values;
+  const values = rows[1].values;
+  for (let i = 1; i < headers.length; i++) {
+    meta[headers[i]] = values[i];
+  }
+
+  if (!meta.ecole_id) {
+    return { valid: false, error: 'ecole_id manquant dans la feuille _metadata' };
+  }
+  if (meta.ecole_id !== expectedEcoleId) {
+    return { valid: false, error: `ecole_id du fichier (${meta.ecole_id}) ne correspond pas à l'école courante (${expectedEcoleId})` };
+  }
+
+  if (meta.hash) {
+    // Recalculer le hash à partir des données
+    const dataSheet = workbook.worksheets[0];
+    if (dataSheet) {
+      const dataRows = [];
+      dataSheet.eachRow((row, rowNum) => {
+        if (rowNum > 1) {
+          const rowData = {};
+          row.values.forEach((val, idx) => {
+            if (idx > 0) rowData[`col${idx}`] = val;
+          });
+          dataRows.push(rowData);
+        }
+      });
+      const recomputed = crypto.createHash('sha256').update(JSON.stringify({ rows: dataRows, meta: { ...meta, hash: undefined } })).digest('hex');
+      if (recomputed !== meta.hash) {
+        return { valid: false, error: 'Signature SHA-256 invalide — le fichier a été modifié' };
+      }
+    }
+  }
+
+  return { valid: true, meta };
+}
+
+/**
  * Point d'entrée principal (Dispatcher Pattern)
  * @param {string} filePath      - Chemin complet vers le fichier Excel
  * @param {number} classeId      - ID de la classe concernée
@@ -66,20 +117,30 @@ function trouverEleve(eleves, nom, prenom) {
  * @param {number} sequence      - Ex: 1, 2
  * @param {number} utilisateurId - ID de l'utilisateur
  * @param {number} anneeId       - ID de l'année scolaire
+ * @param {string} ecoleId       - ID de l'école courante
  * @returns {Promise<Object>}    Résultat détaillé
  */
-async function importExcel(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId = null) {
+async function importExcel(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId = null, ecoleId = '') {
   const fileName = filePath.split('/').pop().split('\\').pop();
   
+  // Format PWA Export (notes/absences signées) : ELIMU_NOTES_* ou ELIMU_ABSENCES_*
+  const pwaNotesMatch = fileName.match(/^ELIMU_NOTES_/i);
+  const pwaAbsencesMatch = fileName.match(/^ELIMU_ABSENCES_/i);
+
+  if (pwaNotesMatch || pwaAbsencesMatch) {
+    console.log(`🚀 Dispatcher : Format PWA Export détecté`);
+    return await importPwaExport(filePath, utilisateurId, anneeId, ecoleId);
+  }
+
   // Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx
   const formatBMatch = fileName.match(/^ELIMU_([^_]+)_(\d{4}-\d{4})\.xlsx$/i);
   
   if (formatBMatch) {
     console.log(`🚀 Dispatcher : Format B détecté pour la classe ${classeId}`);
-    return await importUANotesFormatB(filePath, classeId, utilisateurId, anneeId);
+    return await importUANotesFormatB(filePath, classeId, utilisateurId, anneeId, ecoleId);
   } else {
     console.log(`🚀 Dispatcher : Format classique V1 détecté pour la classe ${classeId}`);
-    return await importClassicNotes(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId);
+    return await importClassicNotes(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId, ecoleId);
   }
 }
 
@@ -91,7 +152,7 @@ async function importExcel(filePath, classeId, matiereId, periode, sequence, uti
  * Les notes sont sur l'échelle réelle MINEDUB (ex: 20/28 pour écrite de 2A).
  * L'import convertit automatiquement sur /20 avant stockage.
  */
-async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId = null) {
+async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId = null, ecoleId = '') {
   const resultat = {
     success: false,
     nbImportes: 0,
@@ -109,7 +170,19 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
     return { ...resultat, error: 'Fichier trop volumineux (max 10MB)' };
   }
 
-  // 2. Détermination du niveau (N1/N2)
+  // 2. Lecture du fichier Excel
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+
+  // 2b. Validation de la métadonnée si présente
+  if (ecoleId) {
+    const metaValidation = validateExcelMetadata(workbook, ecoleId, defaultLogger);
+    if (metaValidation && !metaValidation.valid) {
+      return { ...resultat, error: metaValidation.error };
+    }
+  }
+
+  // 3. Détermination du niveau (N1/N2)
   const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ?', [classeId]);
   if (!classe) return { ...resultat, error: 'Classe non trouvée' };
 
@@ -123,7 +196,7 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
     return { ...resultat, error: `La classe "${classe.nom_classe}" n'est pas configurée pour le système UA.` };
   }
 
-  // 3. Récupération des élèves
+  // 4. Récupération des élèves
   const eleves = all(
     'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
     [classeId, anneeId]
@@ -132,9 +205,6 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
     return { ...resultat, error: 'Aucun élève trouvé dans cette classe' };
   }
 
-  // 4. Lecture du fichier Excel
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(filePath);
   const worksheet = workbook.worksheets[0];
   if (!worksheet) return { ...resultat, error: 'Fichier Excel vide ou invalide' };
 
@@ -308,7 +378,7 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
 /**
  * MOTEUR D'INGESTION V1 (Système classique quantitatif pour Niveau 3)
  */
-async function importClassicNotes(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId = null) {
+async function importClassicNotes(filePath, classeId, matiereId, periode, sequence, utilisateurId, anneeId = null, ecoleId = '') {
   const resultat = {
     success: false,
     nbImportes: 0,
@@ -329,6 +399,14 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
   // Lecture Excel
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
+
+  // Validation de la métadonnée si présente
+  if (ecoleId) {
+    const metaValidation = validateExcelMetadata(workbook, ecoleId, defaultLogger);
+    if (metaValidation && !metaValidation.valid) {
+      return { ...resultat, error: metaValidation.error };
+    }
+  }
 
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
@@ -752,7 +830,7 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
 /**
  * Importe les absences depuis un fichier Excel
  */
-async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = null, defaultPeriode = 'all') {
+async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = null, defaultPeriode = 'all', ecoleId = '') {
   const resultat = {
     success: false,
     nbMisAJour: 0,
@@ -766,8 +844,8 @@ async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = nul
   if (!worksheet) return { ...resultat, error: 'Fichier Excel vide ou invalide' };
 
   const elevesClasse = all(
-    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
-    [classeId, anneeId]
+    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?',
+    [classeId, anneeId, ecoleId]
   );
   if (!elevesClasse.length) return { ...resultat, error: 'Aucun élève dans cette classe' };
 
@@ -783,9 +861,9 @@ async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = nul
     if (isNaN(h) || h < 0) return false;
     
     run(
-      `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id) VALUES (?, ?, ?, ?)
+      `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(eleve_id, periode, annee_scolaire_id) DO UPDATE SET heures = excluded.heures`,
-      [eleveId, periode, h, anneeId]
+      [eleveId, periode, h, anneeId, ecoleId]
     );
     return true;
   };
@@ -888,4 +966,217 @@ async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = nul
   return resultat;
 }
 
-module.exports = { importExcel, importListeEleves, importListeProfesseurs, importAbsencesExcel, importUANotesFormatB };
+/**
+ * MOTEUR D'IMPORT PWA EXPORT (ELIMU_NOTES_*.xlsx / ELIMU_ABSENCES_*.xlsx)
+ * Importe les fichiers signés exportés par la PWA enseignant
+ */
+async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId = '') {
+  const resultat = {
+    success: false,
+    nbImportes: 0,
+    nbErreurs: 0,
+    erreurs: [],
+    avertissements: []
+  };
+
+  const fs = require('fs');
+  const stats = fs.statSync(filePath);
+  if (stats.size > 10 * 1024 * 1024) {
+    return { ...resultat, error: 'Fichier trop volumineux (max 10MB)' };
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+
+  // Validation stricte : le fichier DOIT avoir _metadata avec ecole_id valide
+  if (!ecoleId) {
+    return { ...resultat, error: 'ecole_id requis pour importer un fichier PWA Export' };
+  }
+  const metaValidation = validateExcelMetadata(workbook, ecoleId, defaultLogger);
+  if (!metaValidation || !metaValidation.valid) {
+    return { ...resultat, error: metaValidation?.error || 'Métadonnées invalides ou absentes' };
+  }
+  const meta = metaValidation.meta;
+
+  const fileName = filePath.split('/').pop().split('\\').pop();
+  const isNotes = fileName.match(/^ELIMU_NOTES_/i);
+
+  if (isNotes) {
+    return await importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
+  } else {
+    return await importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
+  }
+}
+
+/**
+ * Importe les notes depuis un fichier PWA Export
+ */
+async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat) {
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return { ...resultat, error: 'Feuille de données introuvable' };
+
+  // Lire les en-têtes pour déterminer les colonnes
+  const headerRow = worksheet.getRow(1);
+  const headers = {};
+  headerRow.eachCell((cell, colNum) => {
+    headers[String(cell.value || '').trim().toLowerCase()] = colNum;
+  });
+
+  const colEleveId = headers['eleve id'] || headers['eleve_id'];
+  const colSousComp = headers['sous-competence'] || headers['sous_competence_code'];
+  const colType = headers['type evaluation'] || headers['type_eval'];
+  const colUa = headers['ua'];
+  const colNote = headers['note'];
+  const colTrimestre = headers['trimestre'];
+  const colSequence = headers['sequence'];
+
+  // Logger l'import
+  const importRecord = run(
+    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
+     VALUES (?, NULL, NULL, ?, 'Partiel', ?, ?)`,
+    [utilisateurId || 1, workbook.xlsxFile || 'pwa_export.xlsx', anneeId, ecoleId]
+  );
+  const importId = importRecord.lastID;
+
+  run('BEGIN');
+  try {
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      try {
+        const pwaEleveId = colEleveId ? row.getCell(colEleveId).value : null;
+        const sousCode = colSousComp ? String(row.getCell(colSousComp).value || '').trim().toUpperCase() : '';
+        const typeEval = colType ? String(row.getCell(colType).value || '').trim() : '';
+        const ua = colUa ? String(row.getCell(colUa).value || '').trim().toUpperCase() : '';
+        const noteVal = parseFloat(String(row.getCell(colNote).value || '').replace(',', '.'));
+        const trimestre = colTrimestre ? parseInt(row.getCell(colTrimestre).value) : null;
+
+        if (!pwaEleveId || !sousCode || !typeEval || !ua || isNaN(noteVal)) {
+          resultat.nbErreurs++;
+          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes, ignorée`);
+          return;
+        }
+
+        // Mapper PWA eleve_id → Desktop eleve.id via external_id stocké dans teacher_students
+        const eleveMapping = get(
+          'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+          [pwaEleveId, ecoleId]
+        );
+        // Fallback : chercher directement par external_id si la table teacher_students n'existe pas sur Desktop
+        const eleve = eleveMapping || get(
+          'SELECT id FROM eleves WHERE id = ? AND ecole_id = ?',
+          [pwaEleveId, ecoleId]
+        );
+        if (!eleve) {
+          resultat.nbErreurs++;
+          resultat.erreurs.push(`Ligne ${rowNumber}: élève PWA ID ${pwaEleveId} introuvable dans l'école`);
+          return;
+        }
+
+        const periode = getPeriodeForUA(ua) || `Trimestre ${trimestre || 1}`;
+
+        // Nettoyer l'ancienne note pour cet élève/sous-comp/type/ua
+        run(
+          `DELETE FROM notes
+           WHERE eleve_id = ? AND sous_competence_code = ? AND type_eval = ? AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+          [eleve.id, sousCode, typeEval, ua, anneeId, ecoleId]
+        );
+
+        run(
+          `INSERT INTO notes
+             (eleve_id, note, ua, sous_competence_code, type_eval, source, import_id, annee_scolaire_id, periode, ecole_id)
+           VALUES (?, ?, ?, ?, ?, 'PWA_EXPORT', ?, ?, ?, ?)`,
+          [eleve.id, Math.round(noteVal * 100) / 100, ua, sousCode, typeEval, importId, anneeId, periode, ecoleId]
+        );
+        resultat.nbImportes++;
+
+      } catch (rowErr) {
+        resultat.nbErreurs++;
+        resultat.erreurs.push(`Ligne ${rowNumber}: ${rowErr.message}`);
+      }
+    });
+
+    run('COMMIT');
+  } catch (globalError) {
+    run('ROLLBACK');
+    return { ...resultat, error: `Erreur critique : ${globalError.message}` };
+  }
+
+  const statut = resultat.nbErreurs === 0 ? 'Succès' : resultat.nbImportes > 0 ? 'Partiel' : 'Échec';
+  run(
+    `UPDATE imports SET statut=?, nb_importes=?, nb_erreurs=?, message=? WHERE id=?`,
+    [statut, resultat.nbImportes, resultat.nbErreurs,
+      `${resultat.nbImportes} note(s) importée(s), ${resultat.nbErreurs} erreur(s)`, importId]
+  );
+
+  resultat.success = resultat.nbImportes > 0;
+  resultat.statut = statut;
+  return resultat;
+}
+
+/**
+ * Importe les absences depuis un fichier PWA Export
+ */
+async function importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId, resultat) {
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) return { ...resultat, error: 'Feuille de données introuvable' };
+
+  const headerRow = worksheet.getRow(1);
+  const headers = {};
+  headerRow.eachCell((cell, colNum) => {
+    headers[String(cell.value || '').trim().toLowerCase()] = colNum;
+  });
+
+  run('BEGIN');
+  try {
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      try {
+        const eleveIdVal = row.getCell(headers['eleve id'] || headers['eleve_id'] || 1).value;
+        const trimestre = parseInt(row.getCell(headers['trimestre'] || 2).value);
+        const heures = parseFloat(String(row.getCell(headers['heures'] || 3).value || '').replace(',', '.'));
+
+        if (!eleveIdVal || isNaN(trimestre) || isNaN(heures) || heures < 0) {
+          resultat.nbErreurs++;
+          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes ou invalides`);
+          return;
+        }
+
+        const eleve = get(
+          'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+          [eleveIdVal, ecoleId]
+        ) || get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [eleveIdVal, ecoleId]);
+
+        if (!eleve) {
+          resultat.nbErreurs++;
+          resultat.erreurs.push(`Ligne ${rowNumber}: élève ID ${eleveIdVal} introuvable`);
+          return;
+        }
+
+        const periode = `Trimestre ${trimestre}`;
+        run(
+          `INSERT INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id, ecole_id)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(eleve_id, periode, annee_scolaire_id) DO UPDATE SET heures = excluded.heures`,
+          [eleve.id, periode, heures, anneeId, ecoleId]
+        );
+        resultat.nbImportes++;
+
+      } catch (rowErr) {
+        resultat.nbErreurs++;
+        resultat.erreurs.push(`Ligne ${rowNumber}: ${rowErr.message}`);
+      }
+    });
+
+    run('COMMIT');
+  } catch (globalError) {
+    run('ROLLBACK');
+    return { ...resultat, error: `Erreur critique : ${globalError.message}` };
+  }
+
+  resultat.success = resultat.nbImportes > 0;
+  return resultat;
+}
+
+module.exports = { importExcel, importListeEleves, importListeProfesseurs, importAbsencesExcel, importUANotesFormatB, importPwaExport };

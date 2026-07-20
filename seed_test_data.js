@@ -164,9 +164,9 @@ const N2_POIDS = {
 function calcAggregate(subNotes, weights) {
   let total = 0, totalPoids = 0;
   for (const t of SOUS_TYPES) {
-    if (weights[t] > 0 && subNotes[t] != null) { total += subNotes[t] * weights[t]; totalPoids += weights[t]; }
+    if (weights[t] > 0 && subNotes[t] != null) { total += subNotes[t]; totalPoids += weights[t]; }
   }
-  return totalPoids > 0 ? parseFloat((total / totalPoids).toFixed(2)) : null;
+  return totalPoids > 0 ? parseFloat(((total / totalPoids) * 20).toFixed(2)) : null;
 }
 
 // S'assurer que la colonne sous_type existe
@@ -276,11 +276,11 @@ try {
               const codeComp = sc.code;
               const weights = poidsMap[sc.code];
               if (!weights) continue;
-               // Générer sous-notes sur /20 (les poids sont des proportions, pas des max)
+               // Générer sous-notes sur l'echelle reelle (max = poids de la sous-competence)
               const subNotes = {};
               for (const t of SOUS_TYPES) {
                 if (weights[t] <= 0) continue;
-                subNotes[t] = rand(4, 20);
+                subNotes[t] = rand(1, weights[t]);
                 run(
                   "INSERT INTO notes (eleve_id,note,periode,annee_scolaire_id,ua,sous_competence_code,type_eval,source,sous_type) VALUES (?,?,?,?,?,?,?,?,?)",
                   [eid, subNotes[t], periode, anneeId, ua, codeComp, sc.type_eval, 'SEED', t]
