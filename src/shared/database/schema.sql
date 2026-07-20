@@ -92,10 +92,12 @@ CREATE TABLE IF NOT EXISTS parents (
 CREATE TABLE IF NOT EXISTS parents_eleves (
     parent_id INTEGER NOT NULL,
     eleve_id  INTEGER NOT NULL,
+    ecole_id  TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (parent_id, eleve_id),
     FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE,
     FOREIGN KEY (eleve_id)  REFERENCES eleves(id)  ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_parents_eleves_ecole ON parents_eleves(ecole_id);
 
 CREATE INDEX IF NOT EXISTS idx_parents_tel ON parents(telephone);
 CREATE INDEX IF NOT EXISTS idx_parents_eleves_parent ON parents_eleves(parent_id);
@@ -128,20 +130,25 @@ CREATE INDEX IF NOT EXISTS idx_eleves_classe ON eleves(classe_id);
 CREATE INDEX IF NOT EXISTS idx_eleves_ecole ON eleves(ecole_id);
 
 CREATE TABLE IF NOT EXISTS notes (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    eleve_id     INTEGER NOT NULL,
-    matiere_id   INTEGER,
-    note         REAL NOT NULL CHECK(note >= 0),
-    periode      TEXT DEFAULT 'Trimestre 1',
-    sequence     INTEGER DEFAULT 1,
-    date_import  TEXT DEFAULT CURRENT_TIMESTAMP,
-    import_id    INTEGER,
-    annee_scolaire_id INTEGER,
-    ecole_id     TEXT NOT NULL DEFAULT '',
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    eleve_id             INTEGER NOT NULL,
+    matiere_id           INTEGER,
+    note                 REAL NOT NULL CHECK(note >= 0),
+    periode              TEXT DEFAULT 'Trimestre 1',
+    sequence             INTEGER DEFAULT 1,
+    date_import          TEXT DEFAULT CURRENT_TIMESTAMP,
+    import_id            INTEGER,
+    annee_scolaire_id    INTEGER,
+    ua                   TEXT,
+    sous_competence_code TEXT,
+    type_eval            TEXT,
+    sous_type            TEXT CHECK(sous_type IN ('orale','ecrite','pratique','savoirEtre')),
+    source               TEXT DEFAULT 'DESKTOP',
+    ecole_id             TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(eleve_id)   REFERENCES eleves(id)   ON DELETE CASCADE,
     FOREIGN KEY(matiere_id) REFERENCES matieres(id) ON DELETE CASCADE,
     FOREIGN KEY(import_id)  REFERENCES imports(id)  ON DELETE SET NULL,
-    UNIQUE(eleve_id, matiere_id, periode, sequence, annee_scolaire_id)
+    UNIQUE(ecole_id, eleve_id, matiere_id, periode, sequence, annee_scolaire_id)
 );
 CREATE INDEX IF NOT EXISTS idx_notes_eleve           ON notes(eleve_id);
 CREATE INDEX IF NOT EXISTS idx_notes_matiere         ON notes(matiere_id);
@@ -284,7 +291,7 @@ CREATE TABLE IF NOT EXISTS tranches (
     ecole_id       TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(frais_type_id) REFERENCES frais_types(id) ON DELETE CASCADE,
     FOREIGN KEY(eleve_id)      REFERENCES eleves(id)      ON DELETE CASCADE,
-    UNIQUE(frais_type_id, eleve_id, numero_tranche)
+    UNIQUE(ecole_id, frais_type_id, eleve_id, numero_tranche)
 );
 
 CREATE TABLE IF NOT EXISTS paiements (

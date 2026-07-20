@@ -75,7 +75,8 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const uid = parseInt(utilisateurId) || getCurrentUserId();
       const cid = parseInt(classeId);
-      const result = await importListeEleves(filePath, cid, mode, uid, anneeId);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await importListeEleves(filePath, cid, mode, uid, anneeId, ecoleId);
       await logAudit(uid, 'IMPORT_LISTE_ELEVES', `Classe ID ${cid} · mode ${mode}`);
       return result;
     } catch (error) {
@@ -91,7 +92,8 @@ function register(ipcMain, deps) {
     try {
       const { importListeProfesseurs } = require('../../shared/utils/importExcel');
       const uid = parseInt(utilisateurId) || getCurrentUserId();
-      const result = await importListeProfesseurs(filePath, mode, uid);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const result = await importListeProfesseurs(filePath, mode, uid, ecoleId);
       if (result.success) {
         await logAudit(
           uid,
@@ -222,7 +224,8 @@ function register(ipcMain, deps) {
       const cid = parseInt(classeId);
       if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
       const { generateBordereauAbsencesPDF } = require('../../shared/utils/exportFiles');
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       if (!classe) return { error: 'Classe non trouvée' };
       
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
@@ -234,9 +237,10 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
       
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const eleves = all(
-        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? ORDER BY nom, prenom',
-        [cid, anneeId]
+        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
+        [cid, anneeId, ecoleId]
       );
       eleves.sort((a,b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
 
@@ -258,7 +262,8 @@ function register(ipcMain, deps) {
       const cid = parseInt(classeId);
       if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
       const { generateBordereauEmargementPDF } = require('../../shared/utils/exportFiles');
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       if (!classe) return { error: 'Classe non trouvée' };
       
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
@@ -271,8 +276,8 @@ function register(ipcMain, deps) {
       const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
       
       const eleves = all(
-        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? ORDER BY nom, prenom',
-        [cid, anneeId]
+        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
+        [cid, anneeId, ecoleId]
       );
       eleves.sort((a,b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
 
@@ -296,7 +301,8 @@ function register(ipcMain, deps) {
       if (isNaN(cid) || isNaN(mid)) return { success: false, error: 'ID invalide' };
 
       const { generateBordereauPDF } = require('../../shared/utils/exportFiles');
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       const matiere = get('SELECT nom_matiere FROM matieres WHERE id = ?', [mid]);
       if (!classe || !matiere) return { error: 'Classe ou matière non trouvée' };
       
@@ -309,9 +315,10 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
       
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const eleves = all(
-        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? ORDER BY nom, prenom',
-        [cid, anneeId]
+        'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
+        [cid, anneeId, ecoleId]
       );
       eleves.sort((a,b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
 
@@ -332,7 +339,8 @@ function register(ipcMain, deps) {
     try {
       const cid = parseInt(classeId);
       if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
-      const nomClasse = (get('SELECT nom_classe FROM classes WHERE id = ?', [cid]))?.nom_classe || cid;
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const nomClasse = (get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]))?.nom_classe || cid;
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
         defaultPath: `rentree_${String(nomClasse).replace(/\s/g, '_')}.xlsx`,
         filters: [{ name: 'Excel', extensions: ['xlsx'] }]
@@ -356,10 +364,11 @@ function register(ipcMain, deps) {
     try {
       const cid = parseInt(classeId);
       const anneeId = getCurrentAnneeId();
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       const eleves = all(
-        'SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? ORDER BY nom, prenom',
-        [cid, anneeId]
+        'SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
+        [cid, anneeId, ecoleId]
       );
       if (!eleves.length) return { error: 'Aucun élève dans cette classe' };
 
@@ -400,13 +409,14 @@ function register(ipcMain, deps) {
     if (!(await checkAccess(['admin', 'secretaire']))) return { error: 'Accès non autorisé' };
     try {
       const cid = parseInt(classeId);
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       if (!classe) return { error: 'Classe non trouvée' };
 
       const anneeId = getCurrentAnneeId();
       const eleves = all(
-        `SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? ORDER BY nom, prenom`,
-        [cid, anneeId]
+        `SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom`,
+        [cid, anneeId, ecoleId]
       );
       if (!eleves.length) return { error: 'Aucun élève dans cette classe' };
 
@@ -447,7 +457,8 @@ function register(ipcMain, deps) {
     if (!(await checkAccess(['admin', 'secretaire', 'enseignant']))) return { success: false, error: 'Accès non autorisé' };
     try {
       const cid = parseInt(classeId);
-      const classe = get('SELECT nom_classe FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       if (!classe) return { error: 'Classe non trouvée' };
 
       const suffix = periode && periode !== 'all' ? `_${periode.replace(/\s/g, '_')}` : '';
@@ -470,7 +481,8 @@ function register(ipcMain, deps) {
     if (!(await checkAccess(['admin', 'secretaire', 'enseignant']))) return { success: false, error: 'Accès non autorisé' };
     try {
       const cid = parseInt(classeId);
-      const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ?', [cid]);
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
       if (!classe) return { error: 'Classe non trouvée' };
       
       const defaultFilename = (classe.niveau_v2 === 'N1' || classe.niveau_v2 === 'N2')

@@ -198,8 +198,8 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
 
   // 4. Récupération des élèves
   const eleves = all(
-    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
-    [classeId, anneeId]
+    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?',
+    [classeId, anneeId, ecoleId]
   );
   if (!eleves || eleves.length === 0) {
     return { ...resultat, error: 'Aucun élève trouvé dans cette classe' };
@@ -211,9 +211,9 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
   // 5. Enregistrement de l'import
   const fileName = filePath.split('/').pop().split('\\').pop();
   const importRecord = run(
-    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id)
-     VALUES (?, ?, NULL, ?, 'Partiel', ?)`,
-    [utilisateurId || 1, classeId, fileName, anneeId]
+    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
+     VALUES (?, ?, NULL, ?, 'Partiel', ?, ?)`,
+    [utilisateurId || 1, classeId, fileName, anneeId, ecoleId]
   );
   const importId = importRecord.lastID;
 
@@ -255,8 +255,8 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
         if (!eleve) {
           try {
             const inserted = run(
-              'INSERT INTO eleves (nom, prenom, sexe, classe_id, annee_scolaire_id) VALUES (?, ?, ?, ?, ?)',
-              [nomLu, prenomLu, 'M', classeId, anneeId]
+              'INSERT INTO eleves (nom, prenom, sexe, classe_id, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?)',
+              [nomLu, prenomLu, 'M', classeId, anneeId, ecoleId]
             );
             eleve = { id: inserted.lastID, nom: nomLu, prenom: prenomLu };
             eleves.push(eleve);
@@ -315,15 +315,15 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
           // Nettoyage avant insertion
           run(
             `DELETE FROM notes
-             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type = ? AND ua = ? AND annee_scolaire_id = ?`,
-            [eleve.id, sousCode, type, ua, anneeId]
+             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type = ? AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+            [eleve.id, sousCode, type, ua, anneeId, ecoleId]
           );
 
           run(
             `INSERT INTO notes
-               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
-             VALUES (?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?)`,
-            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, importId, anneeId, periode]
+               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+             VALUES (?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?, ?)`,
+            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, importId, anneeId, periode, ecoleId]
           );
           resultat.nbImportes++;
           hasNote = true;
@@ -340,14 +340,14 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
         if (aggNote !== null) {
           run(
             `DELETE FROM notes
-             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type IS NULL AND ua = ? AND annee_scolaire_id = ?`,
-            [eleve.id, sousCode, ua, anneeId]
+             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type IS NULL AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+            [eleve.id, sousCode, ua, anneeId, ecoleId]
           );
           run(
             `INSERT INTO notes
-               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode)
-             VALUES (?, ?, ?, ?, NULL, 'EXCEL', ?, ?, ?)`,
-            [eleve.id, Math.round(aggNote * 100) / 100, ua, sousCode, importId, anneeId, periode]
+               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+             VALUES (?, ?, ?, ?, NULL, 'EXCEL', ?, ?, ?, ?)`,
+            [eleve.id, Math.round(aggNote * 100) / 100, ua, sousCode, importId, anneeId, periode, ecoleId]
           );
           resultat.nbImportes++;
         }
@@ -415,8 +415,8 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
 
   // Récupération des élèves
   const eleves = all(
-    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?',
-    [classeId, anneeId]
+    'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?',
+    [classeId, anneeId, ecoleId]
   );
 
   if (!eleves || eleves.length === 0) {
@@ -426,9 +426,9 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
   // Enregistrement d'import
   const fileName = filePath.split('/').pop().split('\\').pop();
   const importRecord = run(
-    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id)
-     VALUES (?, ?, ?, ?, 'Partiel', ?)`,
-    [utilisateurId || 1, classeId, matiereId, fileName, anneeId]
+    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
+     VALUES (?, ?, ?, ?, 'Partiel', ?, ?)`,
+    [utilisateurId || 1, classeId, matiereId, fileName, anneeId, ecoleId]
   );
   const importId = importRecord.lastID;
 
@@ -484,8 +484,8 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
         if (!eleve) {
           try {
             const inserted = run(
-              'INSERT INTO eleves (nom, prenom, sexe, classe_id, annee_scolaire_id) VALUES (?, ?, ?, ?, ?)',
-              [nomLu, prenomLu || '', 'M', classeId, anneeId]
+              'INSERT INTO eleves (nom, prenom, sexe, classe_id, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?)',
+              [nomLu, prenomLu || '', 'M', classeId, anneeId, ecoleId]
             );
             eleveId = inserted.lastID;
             eleve = { id: eleveId, nom: nomLu, prenom: prenomLu || '' };
@@ -507,9 +507,9 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
         // Insertion classique
         run(
           `INSERT OR REPLACE INTO notes
-             (eleve_id, matiere_id, note, periode, sequence, import_id, annee_scolaire_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [eleveId, matiereId, noteLue, periode || 'Trimestre 1', sequence || 1, importId, anneeId]
+             (eleve_id, matiere_id, note, periode, sequence, import_id, annee_scolaire_id, ecole_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [eleveId, matiereId, noteLue, periode || 'Trimestre 1', sequence || 1, importId, anneeId, ecoleId]
         );
         resultat.nbImportes++;
 
@@ -544,7 +544,7 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
 /**
  * Importe une liste d'élèves depuis un fichier Excel
  */
-async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateurId = null, anneeId = null) {
+async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateurId = null, anneeId = null, ecoleId = '') {
   const resultat = {
     success: false,
     nbAjoutes: 0,
@@ -590,13 +590,13 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
   run('BEGIN');
   try {
     if (mode === 'ecrase') {
-      run('UPDATE eleves SET classe_id = NULL WHERE classe_id = ?', [classeId]);
+      run('UPDATE eleves SET classe_id = NULL WHERE classe_id = ? AND ecole_id = ?', [classeId, ecoleId]);
       resultat.nbRemplaces = lignes.length;
     }
 
     const elevesActuels = all(
-      'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ?', 
-      [classeId, anneeId]
+      'SELECT id, nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?', 
+      [classeId, anneeId, ecoleId]
     );
 
     for (const { nom, prenom, sexe, dateN, nomParent, telParent, rowNumber } of lignes) {
@@ -624,9 +624,9 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
 
         const eleveGlobal = get(
           `SELECT id FROM eleves
-           WHERE LOWER(nom) = LOWER(?) AND LOWER(prenom) = LOWER(?)
+           WHERE LOWER(nom) = LOWER(?) AND LOWER(prenom) = LOWER(?) AND ecole_id = ?
            LIMIT 1`,
-          [nom, prenom]
+          [nom, prenom, ecoleId]
         );
 
         const { getLocalDateString } = require('./dateUtils');
@@ -643,16 +643,16 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
         let estNouveau = false;
         if (eleveGlobal) {
           run(
-            'UPDATE eleves SET classe_id = ?, sexe = ?, nom_parent = ?, telephone_parent = ? WHERE id = ?',
-            [classeId, sexe, nomParent, telParent, eleveGlobal.id]
+            'UPDATE eleves SET classe_id = ?, sexe = ?, nom_parent = ?, telephone_parent = ? WHERE id = ? AND ecole_id = ?',
+            [classeId, sexe, nomParent, telParent, eleveGlobal.id, ecoleId]
           );
           eleveId = eleveGlobal.id;
           resultat.nbAjoutes++;
           estNouveau = true; 
         } else {
           const inserted = run(
-            'INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, annee_scolaire_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [nom, prenom, dateStr, sexe, classeId, nomParent, telParent, anneeId]
+            'INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [nom, prenom, dateStr, sexe, classeId, nomParent, telParent, anneeId, ecoleId]
           );
           eleveId = inserted.lastID;
           resultat.nbAjoutes++;
@@ -686,7 +686,7 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
 /**
  * Importe une liste de professeurs et cree automatiquement leurs comptes PWA
  */
-async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId = null) {
+async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId = null, ecoleId = '') {
   const resultat = {
     success:    false,
     nbAjoutes:  0,
@@ -752,14 +752,14 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
   run('BEGIN');
   try {
     if (mode === 'remplacer') {
-      run(`DELETE FROM professeurs_classes`);
-      run(`UPDATE classes SET professeur_principal_id = NULL`);
-      run(`UPDATE professeurs SET utilisateur_id = NULL`);
-      run(`DELETE FROM utilisateurs WHERE role = 'enseignant'`);
-      run(`DELETE FROM professeurs`);
+      run(`DELETE FROM professeurs_classes WHERE professeur_id IN (SELECT id FROM professeurs WHERE ecole_id = ?)`, [ecoleId]);
+      run(`UPDATE classes SET professeur_principal_id = NULL WHERE ecole_id = ?`, [ecoleId]);
+      run(`UPDATE professeurs SET utilisateur_id = NULL WHERE ecole_id = ?`, [ecoleId]);
+      run(`DELETE FROM utilisateurs WHERE role = 'enseignant' AND ecole_id = ?`, [ecoleId]);
+      run(`DELETE FROM professeurs WHERE ecole_id = ?`, [ecoleId]);
     }
 
-    const profsActuels = all(`SELECT id, nom, prenom FROM professeurs`);
+    const profsActuels = all(`SELECT id, nom, prenom FROM professeurs WHERE ecole_id = ?`, [ecoleId]);
 
     const normaliser = s =>
       (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -795,16 +795,16 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
         const hash = bcrypt.hashSync(rawPassword, 10);
 
         const userResult = run(
-          `INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, role, nom_complet, actif)
-           VALUES (?, ?, 'enseignant', ?, 1)`,
-          [username, hash, (prenom + ' ' + nom).trim()]
+          `INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, role, nom_complet, actif, ecole_id)
+           VALUES (?, ?, 'enseignant', ?, 1, ?)`,
+          [username, hash, (prenom + ' ' + nom).trim(), ecoleId]
         );
 
         const r = run(
           `INSERT INTO professeurs (
-            nom, prenom, matiere_principale, telephone, email, actif, utilisateur_id
-          ) VALUES (?, ?, ?, ?, ?, 1, ?)`,
-          [nom, prenom, matiere, tel, email, userResult.lastID]
+            nom, prenom, matiere_principale, telephone, email, actif, utilisateur_id, ecole_id
+          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+          [nom, prenom, matiere, tel, email, userResult.lastID, ecoleId]
         );
 
         profsActuels.push({ id: r.lastID, nom, prenom });
