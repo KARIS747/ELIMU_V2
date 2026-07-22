@@ -1081,16 +1081,24 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
           return;
         }
 
-        // Mapper PWA eleve_id → Desktop eleve.id via external_id stocké dans teacher_students
-        const eleveMapping = get(
-          'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
-          [pwaEleveId, ecoleId]
-        );
-        // Fallback : chercher directement par external_id si la table teacher_students n'existe pas sur Desktop
-        const eleve = eleveMapping || get(
-          'SELECT id FROM eleves WHERE id = ? AND ecole_id = ?',
-          [pwaEleveId, ecoleId]
-        );
+        // Mapper PWA eleve_id → Desktop eleve.id
+        // D'abord via external_id (teacher_students) si la table existe sur le Desktop
+        let eleve = null;
+        try {
+          eleve = get(
+            'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+            [pwaEleveId, ecoleId]
+          );
+        } catch (_) {
+          // teacher_students n'existe pas sur Desktop, ignorer
+        }
+        // Fallback : chercher directement par ID
+        if (!eleve) {
+          eleve = get(
+            'SELECT id FROM eleves WHERE id = ? AND ecole_id = ?',
+            [pwaEleveId, ecoleId]
+          );
+        }
         if (!eleve) {
           resultat.nbErreurs++;
           resultat.erreurs.push(`Ligne ${rowNumber}: élève PWA ID ${pwaEleveId} introuvable dans l'école`);
@@ -1167,10 +1175,16 @@ async function importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId
           return;
         }
 
-        const eleve = get(
-          'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
-          [eleveIdVal, ecoleId]
-        ) || get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [eleveIdVal, ecoleId]);
+        let eleve = null;
+        try {
+          eleve = get(
+            'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+            [eleveIdVal, ecoleId]
+          );
+        } catch (_) {}
+        if (!eleve) {
+          eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [eleveIdVal, ecoleId]);
+        }
 
         if (!eleve) {
           resultat.nbErreurs++;
