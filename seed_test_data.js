@@ -10,6 +10,7 @@
 const path = require('path');
 const fs = require('fs');
 const { DatabaseSync } = require('node:sqlite');
+const bcrypt = require('bcryptjs');
 
 // ── Chemin DB ─────────────────────────────────────────────────────
 const knownDbPaths = [
@@ -193,6 +194,16 @@ try {
       run("DELETE FROM eleves WHERE id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
       console.log('  🧹 Anciennes données nettoyées');
     }
+    // Supprimer enseignants seed
+    for (const nom of ['sil.a','ce1.a','cm1.a']) {
+      const u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=?", [nom]);
+      if (u) {
+        run("DELETE FROM professeurs WHERE utilisateur_id=?", [u.id]);
+        run("DELETE FROM utilisateurs WHERE id=?", [u.id]);
+      }
+    }
+    console.log('  🧹 Enseignants seed supprimés');
+
     // Supprimer classes seed
     for (const nom of ['SIL-A','CE1-A','CM1-A']) {
       const c = get("SELECT id FROM classes WHERE nom_classe=?", [nom]);
@@ -237,7 +248,33 @@ try {
   }
   console.log('  ✅ Classes SIL(N1), CE1(N2), CM1(N3)');
 
-  // ── 4. Élèves ───────────────────────────────────────────────────
+  // ── 4. Comptes enseignants ───────────────────────────────────────
+  const ecoleId = get("SELECT valeur FROM parametres WHERE cle='ecole_id'")?.valeur || 'ECOLE001';
+  const PWD_HASH = bcrypt.hashSync('teacher123', 10);
+  const teacherData = [
+    { username: 'sil.a',  nom: 'Nkono',   prenom: 'Jean',  classe_nom: 'SIL-A', niveau: 'N1', classe_id: classIds['N1'], tel: '600000001' },
+    { username: 'ce1.a',  nom: 'Mvondo',  prenom: 'Paul',  classe_nom: 'CE1-A', niveau: 'N2', classe_id: classIds['N2'], tel: '600000002' },
+    { username: 'cm1.a',  nom: 'Essomba', prenom: 'Marie', classe_nom: 'CM1-A', niveau: 'N3', classe_id: classIds['N3'], tel: '600000003' },
+  ];
+  let teacherCount = 0;
+  for (const td of teacherData) {
+    let u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=? AND ecole_id=?", [td.username, ecoleId]);
+    if (!u) {
+      const r = run(
+        "INSERT INTO utilisateurs (nom_utilisateur, telephone, mot_de_passe_hash, role, nom_complet, classes_ids, actif, ecole_id) VALUES (?,?,?,?,?,?,?,?)",
+        [td.username, td.tel, PWD_HASH, 'enseignant', td.nom + ' ' + td.prenom, JSON.stringify([td.classe_id]), 1, ecoleId]
+      );
+      const uid = Number(r.lastInsertRowid);
+      run(
+        "INSERT INTO professeurs (nom, prenom, telephone, actif, utilisateur_id, ecole_id) VALUES (?,?,?,?,?,?)",
+        [td.nom, td.prenom, td.tel, 1, uid, ecoleId]
+      );
+      teacherCount++;
+    }
+  }
+  if (teacherCount > 0) console.log(`  ✅ ${teacherCount} comptes enseignants créés (mdp: teacher123)`);
+
+  // ── 5. Élèves ───────────────────────────────────────────────────
   let eleveCount = 0;
   function createEleves(classeId, count) {
     const ids = [];
@@ -262,7 +299,7 @@ try {
   const cm1Ids = createEleves(classIds['N3'], 12);
   console.log(`  ✅ ${eleveCount} élèves`);
 
-  // ── 5. Notes N1/N2 avec VRAIS codes MINEDUB ─────────────────────
+  // ── 6. Notes N1/N2 avec VRAIS codes MINEDUB ─────────────────────
   // Chaque sous-compétence a 4 sous-types (orale, ecrite, pratique, savoirEtre).
   // La note agrégée = moyenne pondérée des sous-types selon le curriculum.
   function generateNotesN1N2(eleveIds, poidsMap, curriculum, niveauLabel) {
@@ -307,7 +344,7 @@ try {
   console.log(`  ✅ ${n1Count} notes N1 (SIL) — 4 sous-types + 1 agrégée par sc`);
   console.log(`  ✅ ${n2Count} notes N2 (CE1) — 4 sous-types + 1 agrégée par sc`);
 
-  // ── 6. Notes N3 (3 trimestres × 2 séquences) ─────────────────────
+  // ── 7. Notes N3 (3 trimestres × 2 séquences) ─────────────────────
   let n3Count = 0;
   for (const periode of PERIODES) {
     for (const seq of [1, 2]) {
@@ -324,7 +361,7 @@ try {
   }
   console.log(`  ✅ ${n3Count} notes N3 (CM1) — 3 trimestres × 2 séquences`);
 
-  // ── 7. Absences (3 trimestres) ──────────────────────────────────
+  // ── 8. Absences (3 trimestres) ──────────────────────────────────
   let absCount = 0;
   for (const ids of [silIds, ce1Ids, cm1Ids]) {
     for (const eid of ids) {
@@ -339,7 +376,7 @@ try {
   }
   console.log(`  ✅ ${absCount} absences`);
 
-  // ── 8. Paramètres + triggers stats_eleves ───────────────────────
+  // ── 9. Paramètres + triggers stats_eleves ───────────────────────
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['schema_version','110']);
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['seuil_alerte','10']);
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['nom_etablissement','École Primaire Test']);
