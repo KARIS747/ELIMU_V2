@@ -1109,6 +1109,9 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
       }
     }
 
+    // Map pour accumuler les sous-notes par (eleve_id, sous_code, ua)
+    const subsByCombo = {};
+
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
@@ -1128,12 +1131,10 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
         }
 
         // Mapper élève PWA → Desktop
-        // D'abord par External ID (= Desktop eleves.id)
         let eleve = null;
         if (externalId) {
           eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [externalId, ecoleId]);
         }
-        // Sinon par le mapping teacher_students id → external_id
         if (!eleve) {
           try {
             eleve = get(
@@ -1142,7 +1143,6 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
             );
           } catch (_) {}
         }
-        // Dernier fallback : chercher directement par ID PWA
         if (!eleve) {
           eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [pwaEleveId, ecoleId]);
         }
@@ -1153,27 +1153,48 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
         }
 
         const periode = getPeriodeForUA(ua) || `Trimestre ${trimestre || 1}`;
+        const eleveId = eleve.id;
 
-        // Nettoyer l'ancienne note pour cet élève/sous-comp/type/ua
-        run(
-          `DELETE FROM notes
-           WHERE eleve_id = ? AND sous_competence_code = ? AND type_eval = ? AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
-          [eleve.id, sousCode, typeEval, ua, anneeId, ecoleId]
-        );
-
+        // Insérer la sous-note
         run(
           `INSERT INTO notes
              (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
            VALUES (?, ?, ?, ?, ?, ?, 'PWA_EXPORT', ?, ?, ?, ?)`,
-          [eleve.id, Math.round(noteVal * 100) / 100, ua, sousCode, typeEval, typeEval, importId, anneeId, periode, ecoleId]
+          [eleveId, Math.round(noteVal * 100) / 100, ua, sousCode, typeEval, typeEval, importId, anneeId, periode, ecoleId]
         );
         resultat.nbImportes++;
+
+        // Accumuler pour l'agrégat
+        const key = `${eleveId}|${sousCode}|${ua}`;
+        if (!subsByCombo[key]) subsByCombo[key] = { eleveId, sousCode, ua, subs: {}, periode };
+        subsByCombo[key].subs[typeEval] = noteVal;
 
       } catch (rowErr) {
         resultat.nbErreurs++;
         resultat.erreurs.push(`Ligne ${rowNumber}: ${rowErr.message}`);
       }
     });
+
+    // Créer les notes agrégées (sous_type = NULL) pour les stats dashboard
+    for (const key in subsByCombo) {
+      const combo = subsByCombo[key];
+      const eleveRow = get('SELECT c.niveau_v2 FROM eleves e JOIN classes c ON c.id = e.classe_id WHERE e.id = ?', [combo.eleveId]);
+      if (!eleveRow) continue;
+      const weights = getWeightsForSousCompetence(eleveRow.niveau_v2, combo.sousCode);
+      if (!weights) {
+        resultat.avertissements.push(`${combo.sousCode}/${combo.ua}: poids introuvable pour niveau ${eleveRow.niveau_v2}`);
+        continue;
+      }
+      const aggNote = calcAggregateFromSubNotes(combo.subs, weights);
+      if (aggNote === null || aggNote === undefined) continue;
+      run(
+        `INSERT INTO notes
+           (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+         VALUES (?, ?, ?, ?, ?, NULL, 'PWA_EXPORT', ?, ?, ?, ?)`,
+        [combo.eleveId, Math.round(aggNote * 100) / 100, combo.ua, combo.sousCode, null, importId, anneeId, combo.periode, ecoleId]
+      );
+      resultat.nbImportes++;
+    }
 
     run('COMMIT');
   } catch (globalError) {
