@@ -865,7 +865,8 @@ function setupEvents() {
 function isV2File(filePath) {
   if (!filePath) return false;
   const filename = filePath.split(/[/\\]/).pop();
-  return /^ELIMU_([^_]+)_(\d{4}-\d{4})\.xlsx$/i.test(filename);
+  return /^ELIMU_([^_]+)_(\d{4}-\d{4})\.xlsx$/i.test(filename) ||
+         /^ELIMU_(NOTES|ABSENCES)_/i.test(filename);
 }
 
 function toggleImportFieldsForNiveau(classeId) {
