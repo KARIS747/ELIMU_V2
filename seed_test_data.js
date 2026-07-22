@@ -35,8 +35,9 @@ const cleanMode = process.argv.includes('clean');
 const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA journal_mode=WAL');
 db.exec('PRAGMA foreign_keys=ON');
-  db.exec('PRAGMA journal_mode=WAL');
-  db.exec('PRAGMA foreign_keys=ON');
+
+// Garantir que la table parametres existe (ne pas supposer npm start lance d'abord)
+try { db.exec("CREATE TABLE IF NOT EXISTS parametres (cle TEXT PRIMARY KEY, valeur TEXT NOT NULL)"); } catch(e) {}
 
 // ── Helpers (node:sqlite veut des params individuels, pas d'array) ─
 const _p = v => (Array.isArray(v) && v.length === 1 && Array.isArray(v[0])) ? v[0] : v;
@@ -237,7 +238,15 @@ try {
     matieresMap[nom] = m.id;
   }
 
-  // ── 3. Classes ──────────────────────────────────────────────────
+  // ── 3. ecole_id ───────────────────────────────────────────────────
+  let ecoleId = get("SELECT valeur FROM parametres WHERE cle='ecole_id'")?.valeur;
+  if (!ecoleId) {
+    const { randomUUID } = require('crypto');
+    ecoleId = randomUUID();
+    run("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES ('ecole_id', ?)", [ecoleId]);
+  }
+
+  // ── 4. Classes ──────────────────────────────────────────────────
   const classesData = [
     { nom: 'SIL-A', niveau_v2: 'N1', systeme: 'francophone' },
     { nom: 'CE1-A', niveau_v2: 'N2', systeme: 'francophone' },
@@ -247,18 +256,15 @@ try {
   for (const cd of classesData) {
     let c = get("SELECT id FROM classes WHERE nom_classe=? AND niveau_v2=?", [cd.nom, cd.niveau_v2]);
     if (!c) {
-      run("INSERT INTO classes (nom_classe,niveau,systeme_educatif,niveau_v2,matieres_json) VALUES (?,?,?,?,?)",
-          [cd.nom, 'Primaire', cd.systeme, cd.niveau_v2, '[]']);
+      run("INSERT INTO classes (nom_classe,niveau,systeme_educatif,niveau_v2,matieres_json,ecole_id) VALUES (?,?,?,?,?,?)",
+          [cd.nom, 'Primaire', cd.systeme, cd.niveau_v2, '[]', ecoleId]);
       c = get("SELECT id FROM classes WHERE nom_classe=? AND niveau_v2=?", [cd.nom, cd.niveau_v2]);
     }
     classIds[cd.niveau_v2] = c.id;
   }
   console.log('  ✅ Classes SIL(N1), CE1(N2), CM1(N3)');
 
-  // ── 4. Comptes enseignants ───────────────────────────────────────
-  const ecoleId = get("SELECT valeur FROM parametres WHERE cle='ecole_id'")?.valeur || 'ECOLE001';
-
-  // Admin par défaut
+  // ── 5. Comptes enseignants ───────────────────────────────────────
   const adminExists = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=? AND ecole_id=?", ['admin', ecoleId]);
   if (!adminExists) {
     const adminHash = bcrypt.hashSync('admin123', 10);
@@ -304,8 +310,8 @@ try {
       const naiss = `${rnd(2012,2018)}-${String(rnd(1,12)).padStart(2,'0')}-${String(rnd(1,28)).padStart(2,'0')}`;
       const tel = `6${rnd(50,99)}${rnd(100000,999999)}`;
       const r = run(
-        "INSERT INTO eleves (nom,prenom,date_naissance,sexe,classe_id,nom_parent,telephone_parent,annee_scolaire_id) VALUES (?,?,?,?,?,?,?,?)",
-        [nom,prenom,naiss,sexe,classeId,`M./Mme ${nom}`,tel,anneeId]
+        "INSERT INTO eleves (nom,prenom,date_naissance,sexe,classe_id,nom_parent,telephone_parent,annee_scolaire_id,ecole_id) VALUES (?,?,?,?,?,?,?,?,?)",
+        [nom,prenom,naiss,sexe,classeId,`M./Mme ${nom}`,tel,anneeId,ecoleId]
       );
       ids.push(Number(r.lastInsertRowid));
       eleveCount++;
@@ -338,16 +344,16 @@ try {
                 if (weights[t] <= 0) continue;
                 subNotes[t] = rand(1, weights[t]);
                 run(
-                  "INSERT INTO notes (eleve_id,note,periode,annee_scolaire_id,ua,sous_competence_code,type_eval,source,sous_type) VALUES (?,?,?,?,?,?,?,?,?)",
-                  [eid, subNotes[t], periode, anneeId, ua, codeComp, sc.type_eval, 'SEED', t]
+                  "INSERT INTO notes (eleve_id,note,periode,annee_scolaire_id,ua,sous_competence_code,type_eval,source,sous_type,ecole_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                  [eid, subNotes[t], periode, anneeId, ua, codeComp, sc.type_eval, 'SEED', t, ecoleId]
                 );
                 count++;
               }
               // Calculer la note agrégée /20 (pondérée par les poids curriculum)
               const aggregate = calcAggregate(subNotes, weights);
               run(
-                "INSERT INTO notes (eleve_id,note,periode,annee_scolaire_id,ua,sous_competence_code,type_eval,source,sous_type) VALUES (?,?,?,?,?,?,?,?,?)",
-                [eid, aggregate, periode, anneeId, ua, codeComp, sc.type_eval, 'SEED', null]
+                "INSERT INTO notes (eleve_id,note,periode,annee_scolaire_id,ua,sous_competence_code,type_eval,source,sous_type,ecole_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                [eid, aggregate, periode, anneeId, ua, codeComp, sc.type_eval, 'SEED', null, ecoleId]
               );
               count++;
             }
@@ -370,8 +376,8 @@ try {
       for (const eid of cm1Ids) {
         for (const matId of Object.values(matieresMap)) {
           run(
-            "INSERT INTO notes (eleve_id,matiere_id,note,periode,sequence,annee_scolaire_id,source) VALUES (?,?,?,?,?,?,?)",
-            [eid, matId, rand(3, 19), periode, seq, anneeId, 'SEED']
+            "INSERT INTO notes (eleve_id,matiere_id,note,periode,sequence,annee_scolaire_id,source,ecole_id) VALUES (?,?,?,?,?,?,?,?)",
+            [eid, matId, rand(3, 19), periode, seq, anneeId, 'SEED', ecoleId]
           );
           n3Count++;
         }
@@ -386,8 +392,8 @@ try {
     for (const eid of ids) {
       for (const periode of PERIODES) {
         if (Math.random() < 0.6) {
-          run("INSERT INTO heures_absence (eleve_id,periode,heures,annee_scolaire_id) VALUES (?,?,?,?)",
-              [eid, periode, rand(0, 15), anneeId]);
+          run("INSERT INTO heures_absence (eleve_id,periode,heures,annee_scolaire_id,ecole_id) VALUES (?,?,?,?,?)",
+              [eid, periode, rand(0, 15), anneeId, ecoleId]);
           absCount++;
         }
       }
@@ -396,7 +402,7 @@ try {
   console.log(`  ✅ ${absCount} absences`);
 
   // ── 9. Paramètres + triggers stats_eleves ───────────────────────
-  run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['schema_version','110']);
+  run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['schema_version','120']);
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['seuil_alerte','10']);
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['nom_etablissement','École Primaire Test']);
   run("INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)", ['periode_active','Trimestre 1']);
