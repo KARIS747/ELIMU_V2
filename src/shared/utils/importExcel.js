@@ -749,11 +749,7 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
 
   if (!lignes.length) {
     return { ...resultat, error: 'Aucune ligne de donnees trouvee dans le fichier' };
-  } catch (e) {
-    console.log('💥 Erreur BEGIN:', e.message);
   }
-
-  const importId = importRecord.lastID;
 
   try {
     if (mode === 'remplacer') {
@@ -1070,25 +1066,19 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
   console.log('📌 Parametres utilisateurId=%s, anneeId=%s, ecoleId=%s, xlsxFile=%s', utilisateurId, anneeId, ecoleId, workbook.xlsxFile);
 
-  let importRecord;
+  let importId;
   try {
-    importRecord = run(
+    const importRecord = run(
       `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
        VALUES (?, 0, 0, ?, 'Partiel', ?, ?)`,
       [utilisateurId || 1, workbook.xlsxFile || 'pwa_export.xlsx', anneeId, ecoleId]
     );
-    console.log('📌 importRecord.lastID:', importRecord.lastID);
+    importId = importRecord.lastID;
   } catch (e) {
-    console.log('💥 Erreur INSERT imports:', e.message);
     return { ...resultat, error: `Erreur INSERT imports: ${e.message}` };
   }
 
-  try {
-    run('BEGIN');
-    console.log('📌 BEGIN OK');
-  } catch (e) {
-    console.log('💥 Erreur BEGIN:', e.message);
-  }
+  run('BEGIN');
   try {
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
