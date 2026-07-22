@@ -128,8 +128,10 @@ async function importExcel(filePath, classeId, matiereId, periode, sequence, uti
   const pwaAbsencesMatch = fileName.match(/^ELIMU_ABSENCES_/i);
 
   if (pwaNotesMatch || pwaAbsencesMatch) {
-    console.log(`🚀 Dispatcher : Format PWA Export détecté`);
-    return await importPwaExport(filePath, utilisateurId, anneeId, ecoleId);
+    console.log(`🚀 Dispatcher : Format PWA Export détecté pour ${fileName}`);
+    const result = await importPwaExport(filePath, utilisateurId, anneeId, ecoleId);
+    console.log('📦 Resultat PWA Export:', JSON.stringify(result));
+    return result;
   }
 
   // Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx
@@ -1025,9 +1027,15 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
   const fileName = filePath.split('/').pop().split('\\').pop();
   const isNotes = fileName.match(/^ELIMU_NOTES_/i);
 
+  console.log('🔍 Metadata lues:', JSON.stringify(meta));
+
   if (isNotes) {
-    return await importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
+    console.log('📝 Dispatch vers importPwaNotes');
+    const r = await importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
+    console.log('📝 Resultat importPwaNotes:', JSON.stringify(r));
+    return r;
   } else {
+    console.log('📝 Dispatch vers importPwaAbsences');
     return await importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
   }
 }
@@ -1045,6 +1053,8 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
   headerRow.eachCell((cell, colNum) => {
     headers[String(cell.value || '').trim().toLowerCase()] = colNum;
   });
+
+  console.log('📋 En-têtes PWA Notes:', JSON.stringify(headers));
 
   const colEleveId = headers['eleve id'] || headers['eleve_id'];
   const colExternalId = headers['external id'] || headers['external_id'];
@@ -1079,7 +1089,7 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
         if (!pwaEleveId || !sousCode || !typeEval || !ua || isNaN(noteVal)) {
           resultat.nbErreurs++;
-          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes, ignorée`);
+          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes (eleve=${pwaEleveId}, sc=${sousCode}, type=${typeEval}, ua=${ua}, note=${noteVal}), ignorée`);
           return;
         }
 
