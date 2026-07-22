@@ -194,6 +194,10 @@ try {
       run("DELETE FROM eleves WHERE id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
       console.log('  🧹 Anciennes données nettoyées');
     }
+    // Supprimer admin seed
+    const admin = get("SELECT id FROM utilisateurs WHERE nom_utilisateur='admin'");
+    if (admin) run("DELETE FROM utilisateurs WHERE id=?", [admin.id]);
+
     // Supprimer enseignants seed
     for (const nom of ['sil.a','ce1.a','cm1.a']) {
       const u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=?", [nom]);
@@ -250,6 +254,18 @@ try {
 
   // ── 4. Comptes enseignants ───────────────────────────────────────
   const ecoleId = get("SELECT valeur FROM parametres WHERE cle='ecole_id'")?.valeur || 'ECOLE001';
+
+  // Admin par défaut
+  const adminExists = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=? AND ecole_id=?", ['admin', ecoleId]);
+  if (!adminExists) {
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    run(
+      "INSERT INTO utilisateurs (nom_utilisateur, telephone, mot_de_passe_hash, role, nom_complet, classes_ids, actif, ecole_id) VALUES (?,?,?,?,?,?,?,?)",
+      ['admin', '650000000', adminHash, 'admin', 'Administrateur ELIMU', '[]', 1, ecoleId]
+    );
+    console.log('  ✅ Admin créé (identifiant: admin, mot de passe: admin123)');
+  }
+
   const PWD_HASH = bcrypt.hashSync('teacher123', 10);
   const teacherData = [
     { username: 'sil.a',  nom: 'Nkono',   prenom: 'Jean',  classe_nom: 'SIL-A', niveau: 'N1', classe_id: classIds['N1'], tel: '600000001' },
@@ -444,7 +460,17 @@ try {
     }
   }
   console.log('═══════════════════════════════════════════\n');
-  console.log('✅ Données MINEDUB générées ! Lancez : npx electron .');
+  console.log('✅ Données MINEDUB générées !');
+  console.log('');
+  console.log('┌──────────────────────┬──────────────────────┬──────────────┐');
+  console.log('│ Identifiant          │ Mot de passe         │ Rôle         │');
+  console.log('├──────────────────────┼──────────────────────┼──────────────┤');
+  console.log('│ admin                │ admin123             │ Administrateur│');
+  console.log('│ sil.a                │ teacher123           │ Enseignant   │');
+  console.log('│ ce1.a                │ teacher123           │ Enseignant   │');
+  console.log('│ cm1.a                │ teacher123           │ Enseignant   │');
+  console.log('└──────────────────────┴──────────────────────┴──────────────┘\n');
+  console.log('Lancez : npx electron .');
 } catch (err) {
   db.exec('ROLLBACK');
   console.error('\n❌ Erreur:', err.message);
