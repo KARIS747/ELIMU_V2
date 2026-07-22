@@ -1137,9 +1137,9 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
         run(
           `INSERT INTO notes
-             (eleve_id, note, ua, sous_competence_code, type_eval, source, import_id, annee_scolaire_id, periode, ecole_id)
-           VALUES (?, ?, ?, ?, ?, 'PWA_EXPORT', ?, ?, ?, ?)`,
-          [eleve.id, Math.round(noteVal * 100) / 100, ua, sousCode, typeEval, importId, anneeId, periode, ecoleId]
+             (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+           VALUES (?, ?, ?, ?, ?, ?, 'PWA_EXPORT', ?, ?, ?, ?)`,
+          [eleve.id, Math.round(noteVal * 100) / 100, ua, sousCode, typeEval, typeEval, importId, anneeId, periode, ecoleId]
         );
         resultat.nbImportes++;
 
