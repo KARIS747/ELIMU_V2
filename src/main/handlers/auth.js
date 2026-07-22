@@ -15,6 +15,7 @@ const {
 } = require('../../shared/security/auth');
 const { logAudit } = require('../../shared/security/audit');
 const { hasRole } = require('../../shared/security/access');
+const { run, get } = require('../../shared/database/db');
 
 /**
  * @param {Electron.IpcMain} ipcMain
@@ -139,6 +140,16 @@ function register(ipcMain, deps) {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = await createUtilisateur({ ...data, ecole_id: ecoleId });
       if (result.success) {
+        if (data.role === 'enseignant') {
+          const nomParts = (data.nom_complet || data.nom_utilisateur).trim().split(/\s+/);
+          const prenom = nomParts.length > 1 ? nomParts.slice(0, -1).join(' ') : '';
+          const nom = nomParts.length > 1 ? nomParts[nomParts.length - 1] : nomParts[0];
+          run(
+            `INSERT OR IGNORE INTO professeurs (nom, prenom, telephone, actif, utilisateur_id, ecole_id)
+             VALUES (?, ?, ?, 1, ?, ?)`,
+            [nom, prenom, data.telephone || null, result.id, ecoleId]
+          );
+        }
         await logAudit(
           userId,
           'CREATE_USER',
@@ -158,6 +169,19 @@ function register(ipcMain, deps) {
     try {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = await updateUtilisateur(id, data, ecoleId);
+      if (result.success && data.role === 'enseignant') {
+        const profExist = get('SELECT id FROM professeurs WHERE utilisateur_id = ? AND ecole_id = ?', [id, ecoleId]);
+        if (!profExist) {
+          const nomParts = (data.nom_complet || '').trim().split(/\s+/);
+          const prenom = nomParts.length > 1 ? nomParts.slice(0, -1).join(' ') : '';
+          const nom = nomParts.length > 1 ? nomParts[nomParts.length - 1] : nomParts[0];
+          run(
+            `INSERT OR IGNORE INTO professeurs (nom, prenom, telephone, actif, utilisateur_id, ecole_id)
+             VALUES (?, ?, ?, 1, ?, ?)`,
+            [nom, prenom, data.telephone || null, id, ecoleId]
+          );
+        }
+      }
       if (result.success) {
         await logAudit(userId, 'UPDATE_USER', `Utilisateur ID ${id} mis à jour`);
       }
