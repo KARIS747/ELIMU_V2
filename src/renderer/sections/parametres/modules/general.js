@@ -202,13 +202,13 @@ async function initPwaSyncInfo() {
 
   document.getElementById('btn-save-pwa-config')?.addEventListener('click', async () => {
     const data = {
-      pwa_sync_url: urlInput?.value?.trim() || '',
-      pwa_sync_api_key: keyInput?.value?.trim() || '',
+      url: urlInput?.value?.trim() || '',
+      apiKey: keyInput?.value?.trim() || '',
     };
     const result = await window.elimuAPI.savePwaSyncConfig(data);
     if (result?.success) {
       showToast('Configuration PWA enregistree', 'success');
-      if (statusEl) statusEl.textContent = data.pwa_sync_url ? 'Configure' : 'Non configure';
+      if (statusEl) statusEl.textContent = data.url ? 'Configure' : 'Non configure';
     } else {
       showToast(result?.error || 'Erreur', 'error');
     }

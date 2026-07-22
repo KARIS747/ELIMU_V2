@@ -187,7 +187,9 @@ async function initializeDatabase(customPath = null) {
     "CREATE INDEX IF NOT EXISTS idx_eleves_ecole ON eleves(ecole_id)",
     "CREATE INDEX IF NOT EXISTS idx_notes_ecole ON notes(ecole_id)",
     "CREATE INDEX IF NOT EXISTS idx_absences_ecole ON absences(ecole_id)",
-    "CREATE INDEX IF NOT EXISTS idx_parents_ecole ON parents(ecole_id)"
+    "CREATE INDEX IF NOT EXISTS idx_parents_ecole ON parents(ecole_id)",
+    // ── Migration: table professeurs_classes manquante ──
+    "CREATE TABLE IF NOT EXISTS professeurs_classes (professeur_id INTEGER NOT NULL, classe_id INTEGER NOT NULL, PRIMARY KEY(professeur_id,classe_id), FOREIGN KEY(professeur_id) REFERENCES professeurs(id) ON DELETE CASCADE, FOREIGN KEY(classe_id) REFERENCES classes(id) ON DELETE CASCADE)"
   ];
   for (const m of migrations) {
     try { db.exec(m); } catch(e) { /* colonne existe déjà */ }

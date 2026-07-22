@@ -61,6 +61,17 @@ CREATE INDEX IF NOT EXISTS idx_professeurs_actif ON professeurs(actif);
 CREATE INDEX IF NOT EXISTS idx_professeurs_ecole ON professeurs(ecole_id);
 
 -- ============================================================
+-- TABLE : professeurs_classes (liaison enseignants ↔ classes)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS professeurs_classes (
+    professeur_id INTEGER NOT NULL,
+    classe_id     INTEGER NOT NULL,
+    PRIMARY KEY(professeur_id, classe_id),
+    FOREIGN KEY(professeur_id) REFERENCES professeurs(id) ON DELETE CASCADE,
+    FOREIGN KEY(classe_id)     REFERENCES classes(id)     ON DELETE CASCADE
+);
+
+-- ============================================================
 -- TABLE : classes  (avec professeur_principal_id)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS classes (

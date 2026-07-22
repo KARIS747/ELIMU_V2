@@ -38,6 +38,7 @@ db.exec('PRAGMA foreign_keys=ON');
 
 // Garantir que la table parametres existe (ne pas supposer npm start lance d'abord)
 try { db.exec("CREATE TABLE IF NOT EXISTS parametres (cle TEXT PRIMARY KEY, valeur TEXT NOT NULL)"); } catch(e) {}
+try { db.exec("CREATE TABLE IF NOT EXISTS professeurs_classes (professeur_id INTEGER NOT NULL, classe_id INTEGER NOT NULL, PRIMARY KEY(professeur_id,classe_id))"); } catch(e) {}
 
 // ── Helpers (node:sqlite veut des params individuels, pas d'array) ─
 const _p = v => (Array.isArray(v) && v.length === 1 && Array.isArray(v[0])) ? v[0] : v;
@@ -298,6 +299,17 @@ try {
     }
   }
   if (teacherCount > 0) console.log(`  ✅ ${teacherCount} comptes enseignants créés (mdp: teacher123)`);
+
+  // Lier chaque enseignant à sa classe dans professeurs_classes
+  for (const td of teacherData) {
+    const u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=? AND ecole_id=?", [td.username, ecoleId]);
+    if (u) {
+      const p = get("SELECT id FROM professeurs WHERE utilisateur_id=? AND ecole_id=?", [u.id, ecoleId]);
+      if (p) {
+        run("INSERT OR IGNORE INTO professeurs_classes (professeur_id, classe_id) VALUES (?,?)", [p.id, td.classe_id]);
+      }
+    }
+  }
 
   // ── 5. Élèves ───────────────────────────────────────────────────
   let eleveCount = 0;
