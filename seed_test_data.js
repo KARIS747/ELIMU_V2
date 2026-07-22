@@ -13,27 +13,30 @@ const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
 
 // ── Chemin DB ─────────────────────────────────────────────────────
-const knownDbPaths = [
-  path.join(__dirname, 'database', 'elimu.db'),
-  path.join(process.env.HOME || '', '.config', 'elimu', 'elimu.db'),
-];
-let dbPath;
-if (process.argv[2] && !process.argv[2].startsWith('--') && process.argv[2] !== 'clean') {
-  dbPath = path.resolve(process.argv[2]);
-} else {
-  for (const c of [
-    path.join(__dirname, 'database', 'elimu.db'),
-    path.join(process.env.HOME || '', '.config', 'elimu', 'elimu.db'),
-  ]) { if (fs.existsSync(c)) { dbPath = c; break; } }
+const defaultDb = process.env.HOME ? path.join(process.env.HOME, '.config', 'elimu', 'elimu.db')
+  : path.join(__dirname, 'database', 'elimu.db');
+let dbPath = process.argv[2] && !process.argv[2].startsWith('--') && process.argv[2] !== 'clean'
+  ? path.resolve(process.argv[2]) : defaultDb;
+
+if (!fs.existsSync(dbPath)) {
+  // Si la DB du Desktop n'existe pas, essayer la locale
+  const local = path.join(__dirname, 'database', 'elimu.db');
+  if (fs.existsSync(local)) dbPath = local;
+  else {
+    console.error('❌ Aucune base de données trouvée.');
+    console.error('   Lancez d\'abord : npm start');
+    console.error('   Puis re-lancez : node seed_test_data.js');
+    process.exit(1);
+  }
 }
-if (!dbPath) { console.error('❌ DB introuvable'); process.exit(1); }
 console.log(`📁 ${dbPath}`);
 
+const cleanMode = process.argv.includes('clean');
 const db = new DatabaseSync(dbPath);
 db.exec('PRAGMA journal_mode=WAL');
 db.exec('PRAGMA foreign_keys=ON');
-
-const cleanMode = process.argv.includes('clean');
+  db.exec('PRAGMA journal_mode=WAL');
+  db.exec('PRAGMA foreign_keys=ON');
 
 // ── Helpers (node:sqlite veut des params individuels, pas d'array) ─
 const _p = v => (Array.isArray(v) && v.length === 1 && Array.isArray(v[0])) ? v[0] : v;
@@ -179,42 +182,42 @@ try {
   }
 } catch(e) { console.warn('  Note: sous_type:', e.message); }
 
+// ── Clean si demandé ────────────────────────────────────────────
+if (cleanMode) {
+  db.exec('PRAGMA foreign_keys=OFF');
+  const seedEleves = all("SELECT id FROM eleves WHERE nom IN (" + NOMS.map(_ => '?').join(',') + ")", NOMS);
+  const eids = seedEleves.map(r => r.id);
+  if (eids.length > 0) {
+    run("DELETE FROM notes WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM absences WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM heures_absence WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM sanctions WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM parents_eleves WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM tranches WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM paiements WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+    run("DELETE FROM stats_eleves");
+    run("DELETE FROM eleves WHERE id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
+  }
+  const admin = get("SELECT id FROM utilisateurs WHERE nom_utilisateur='admin'");
+  if (admin) run("DELETE FROM utilisateurs WHERE id=?", [admin.id]);
+  for (const nom of ['sil.a','ce1.a','cm1.a']) {
+    const u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=?", [nom]);
+    if (u) {
+      run("DELETE FROM professeurs WHERE utilisateur_id=?", [u.id]);
+      run("DELETE FROM utilisateurs WHERE id=?", [u.id]);
+    }
+  }
+  console.log('  🧹 Enseignants seed supprimés');
+  for (const nom of ['SIL-A','CE1-A','CM1-A']) {
+    const c = get("SELECT id FROM classes WHERE nom_classe=?", [nom]);
+    if (c) run("DELETE FROM classes WHERE id=?", [c.id]);
+  }
+  console.log('  🧹 Classes seed supprimées');
+  db.exec('PRAGMA foreign_keys=ON');
+}
+
 try {
   db.exec('BEGIN');
-
-  // ── Clean si demandé ────────────────────────────────────────────
-  if (cleanMode) {
-    // Trouver les IDs des élèves/classes générés par seed
-    const seedEleves = all("SELECT id FROM eleves WHERE nom IN (" + NOMS.map(_ => '?').join(',') + ")", NOMS);
-    const eids = seedEleves.map(r => r.id);
-    if (eids.length > 0) {
-      run("DELETE FROM notes WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
-      run("DELETE FROM heures_absence WHERE eleve_id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
-      run("DELETE FROM stats_eleves");
-      run("DELETE FROM eleves WHERE id IN (" + eids.map(_ => '?').join(',') + ")", ...eids);
-      console.log('  🧹 Anciennes données nettoyées');
-    }
-    // Supprimer admin seed
-    const admin = get("SELECT id FROM utilisateurs WHERE nom_utilisateur='admin'");
-    if (admin) run("DELETE FROM utilisateurs WHERE id=?", [admin.id]);
-
-    // Supprimer enseignants seed
-    for (const nom of ['sil.a','ce1.a','cm1.a']) {
-      const u = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=?", [nom]);
-      if (u) {
-        run("DELETE FROM professeurs WHERE utilisateur_id=?", [u.id]);
-        run("DELETE FROM utilisateurs WHERE id=?", [u.id]);
-      }
-    }
-    console.log('  🧹 Enseignants seed supprimés');
-
-    // Supprimer classes seed
-    for (const nom of ['SIL-A','CE1-A','CM1-A']) {
-      const c = get("SELECT id FROM classes WHERE nom_classe=?", [nom]);
-      if (c) run("DELETE FROM classes WHERE id=?", [c.id]);
-    }
-    console.log('  🧹 Classes seed supprimées');
-  }
 
   // ── 1. Année scolaire ───────────────────────────────────────────
   let annee = get("SELECT id FROM annees_scolaires WHERE libelle=?", ['2025-2026']);
