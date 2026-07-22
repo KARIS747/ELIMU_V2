@@ -237,7 +237,6 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
       
-      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const eleves = all(
         'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
         [cid, anneeId, ecoleId]
@@ -315,7 +314,6 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
       
-      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const eleves = all(
         'SELECT nom, prenom FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
         [cid, anneeId, ecoleId]

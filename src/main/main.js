@@ -7,6 +7,8 @@ const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+app.commandLine.appendSwitch('disable-gpu');
+
 // === ÉTAT GLOBAL ===
 let mainWindow = null;
 let splashWindow = null;
