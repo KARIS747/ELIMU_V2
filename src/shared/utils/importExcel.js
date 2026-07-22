@@ -1068,6 +1068,7 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
   let importId;
   try {
+    run('PRAGMA foreign_keys = OFF');
     const importRecord = run(
       `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
        VALUES (?, 0, 0, ?, 'Partiel', ?, ?)`,
@@ -1076,6 +1077,8 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
     importId = importRecord.lastID;
   } catch (e) {
     return { ...resultat, error: `Erreur INSERT imports: ${e.message}` };
+  } finally {
+    run('PRAGMA foreign_keys = ON');
   }
 
   run('BEGIN');
