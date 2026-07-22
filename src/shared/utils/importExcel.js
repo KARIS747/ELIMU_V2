@@ -1081,8 +1081,34 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
     run('PRAGMA foreign_keys = ON');
   }
 
+  // Collecter tous les (eleve_id, sous_code, ua) uniques pour clean large
+  const combos = new Set();
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const pwaId = colEleveId ? row.getCell(colEleveId).value : null;
+    const extId = colExternalId ? row.getCell(colExternalId).value : null;
+    const code = colSousComp ? String(row.getCell(colSousComp).value || '').trim().toUpperCase() : '';
+    const uaVal = colUa ? String(row.getCell(colUa).value || '').trim().toUpperCase() : '';
+    if (pwaId && code && uaVal) combos.add(JSON.stringify({ pwaId, extId, code, ua: uaVal }));
+  });
+
   run('BEGIN');
   try {
+    // Clean large : supprime toutes les notes existantes pour ces combos
+    for (const comboJson of combos) {
+      const { pwaId, extId, code, ua: uaVal } = JSON.parse(comboJson);
+      let el = null;
+      if (extId) el = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [extId, ecoleId]);
+      if (!el) {
+        try { el = get('SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?', [pwaId, ecoleId]); } catch (_) {}
+      }
+      if (!el) el = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [pwaId, ecoleId]);
+      if (el) {
+        run('DELETE FROM notes WHERE eleve_id = ? AND sous_competence_code = ? AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?',
+          [el.id, code, uaVal, anneeId, ecoleId]);
+      }
+    }
+
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
 
