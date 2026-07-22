@@ -1047,6 +1047,7 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
   });
 
   const colEleveId = headers['eleve id'] || headers['eleve_id'];
+  const colExternalId = headers['external id'] || headers['external_id'];
   const colSousComp = headers['sous-competence'] || headers['sous_competence_code'];
   const colType = headers['type evaluation'] || headers['type_eval'];
   const colUa = headers['ua'];
@@ -1069,6 +1070,7 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
       try {
         const pwaEleveId = colEleveId ? row.getCell(colEleveId).value : null;
+        const externalId = colExternalId ? row.getCell(colExternalId).value : null;
         const sousCode = colSousComp ? String(row.getCell(colSousComp).value || '').trim().toUpperCase() : '';
         const typeEval = colType ? String(row.getCell(colType).value || '').trim() : '';
         const ua = colUa ? String(row.getCell(colUa).value || '').trim().toUpperCase() : '';
@@ -1081,23 +1083,24 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
           return;
         }
 
-        // Mapper PWA eleve_id → Desktop eleve.id
-        // D'abord via external_id (teacher_students) si la table existe sur le Desktop
+        // Mapper élève PWA → Desktop
+        // D'abord par External ID (= Desktop eleves.id)
         let eleve = null;
-        try {
-          eleve = get(
-            'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
-            [pwaEleveId, ecoleId]
-          );
-        } catch (_) {
-          // teacher_students n'existe pas sur Desktop, ignorer
+        if (externalId) {
+          eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [externalId, ecoleId]);
         }
-        // Fallback : chercher directement par ID
+        // Sinon par le mapping teacher_students id → external_id
         if (!eleve) {
-          eleve = get(
-            'SELECT id FROM eleves WHERE id = ? AND ecole_id = ?',
-            [pwaEleveId, ecoleId]
-          );
+          try {
+            eleve = get(
+              'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+              [pwaEleveId, ecoleId]
+            );
+          } catch (_) {}
+        }
+        // Dernier fallback : chercher directement par ID PWA
+        if (!eleve) {
+          eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [pwaEleveId, ecoleId]);
         }
         if (!eleve) {
           resultat.nbErreurs++;
@@ -1166,6 +1169,7 @@ async function importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId
 
       try {
         const eleveIdVal = row.getCell(headers['eleve id'] || headers['eleve_id'] || 1).value;
+        const externalId = (headers['external id'] || headers['external_id']) ? row.getCell(headers['external id'] || headers['external_id']).value : null;
         const trimestre = parseInt(row.getCell(headers['trimestre'] || 2).value);
         const heures = parseFloat(String(row.getCell(headers['heures'] || 3).value || '').replace(',', '.'));
 
@@ -1176,12 +1180,17 @@ async function importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId
         }
 
         let eleve = null;
-        try {
-          eleve = get(
-            'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
-            [eleveIdVal, ecoleId]
-          );
-        } catch (_) {}
+        if (externalId) {
+          eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [externalId, ecoleId]);
+        }
+        if (!eleve) {
+          try {
+            eleve = get(
+              'SELECT id FROM eleves WHERE id = (SELECT external_id FROM teacher_students WHERE id = ?) AND ecole_id = ?',
+              [eleveIdVal, ecoleId]
+            );
+          } catch (_) {}
+        }
         if (!eleve) {
           eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [eleveIdVal, ecoleId]);
         }
