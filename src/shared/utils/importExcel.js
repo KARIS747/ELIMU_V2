@@ -128,10 +128,7 @@ async function importExcel(filePath, classeId, matiereId, periode, sequence, uti
   const pwaAbsencesMatch = fileName.match(/^ELIMU_ABSENCES_/i);
 
   if (pwaNotesMatch || pwaAbsencesMatch) {
-    console.log(`🚀 Dispatcher : Format PWA Export détecté pour ${fileName}`);
-    const result = await importPwaExport(filePath, utilisateurId, anneeId, ecoleId);
-    console.log('📦 Resultat PWA Export:', JSON.stringify(result));
-    return result;
+    return await importPwaExport(filePath, utilisateurId, anneeId, ecoleId);
   }
 
   // Format B (N1/N2) : ELIMU_{CLASSE}_{ANNEE}.xlsx
@@ -1026,15 +1023,9 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
   const fileName = filePath.split('/').pop().split('\\').pop();
   const isNotes = fileName.match(/^ELIMU_NOTES_/i);
 
-  console.log('🔍 Metadata lues:', JSON.stringify(meta));
-
   if (isNotes) {
-    console.log('📝 Dispatch vers importPwaNotes');
-    const r = await importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
-    console.log('📝 Resultat importPwaNotes:', JSON.stringify(r));
-    return r;
+    return await importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
   } else {
-    console.log('📝 Dispatch vers importPwaAbsences');
     return await importPwaAbsences(workbook, meta, utilisateurId, anneeId, ecoleId, resultat);
   }
 }
@@ -1053,8 +1044,6 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
     headers[String(cell.value || '').trim().toLowerCase()] = colNum;
   });
 
-  console.log('📋 En-têtes PWA Notes:', JSON.stringify(headers));
-
   const colEleveId = headers['eleve id'] || headers['eleve_id'];
   const colExternalId = headers['external id'] || headers['external_id'];
   const colSousComp = headers['sous-competence'] || headers['sous_competence_code'];
@@ -1063,8 +1052,6 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
   const colNote = headers['note'];
   const colTrimestre = headers['trimestre'];
   const colSequence = headers['sequence'];
-
-  console.log('📌 Parametres utilisateurId=%s, anneeId=%s, ecoleId=%s, xlsxFile=%s', utilisateurId, anneeId, ecoleId, workbook.xlsxFile);
 
   let importId;
   try {
