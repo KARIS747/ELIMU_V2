@@ -749,9 +749,12 @@ async function importListeProfesseurs(filePath, mode = 'ajouter', utilisateurId 
 
   if (!lignes.length) {
     return { ...resultat, error: 'Aucune ligne de donnees trouvee dans le fichier' };
+  } catch (e) {
+    console.log('💥 Erreur BEGIN:', e.message);
   }
 
-  run('BEGIN');
+  const importId = importRecord.lastID;
+
   try {
     if (mode === 'remplacer') {
       run(`DELETE FROM professeurs_classes WHERE professeur_id IN (SELECT id FROM professeurs WHERE ecole_id = ?)`, [ecoleId]);
@@ -1065,15 +1068,27 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
   const colTrimestre = headers['trimestre'];
   const colSequence = headers['sequence'];
 
-  // Logger l'import (classe_id=0 et matiere_id=0 car PWA n'a pas de classe/matière unique)
-  const importRecord = run(
-    `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
-     VALUES (?, 0, 0, ?, 'Partiel', ?, ?)`,
-    [utilisateurId || 1, workbook.xlsxFile || 'pwa_export.xlsx', anneeId, ecoleId]
-  );
-  const importId = importRecord.lastID;
+  console.log('📌 Parametres utilisateurId=%s, anneeId=%s, ecoleId=%s, xlsxFile=%s', utilisateurId, anneeId, ecoleId, workbook.xlsxFile);
 
-  run('BEGIN');
+  let importRecord;
+  try {
+    importRecord = run(
+      `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
+       VALUES (?, 0, 0, ?, 'Partiel', ?, ?)`,
+      [utilisateurId || 1, workbook.xlsxFile || 'pwa_export.xlsx', anneeId, ecoleId]
+    );
+    console.log('📌 importRecord.lastID:', importRecord.lastID);
+  } catch (e) {
+    console.log('💥 Erreur INSERT imports:', e.message);
+    return { ...resultat, error: `Erreur INSERT imports: ${e.message}` };
+  }
+
+  try {
+    run('BEGIN');
+    console.log('📌 BEGIN OK');
+  } catch (e) {
+    console.log('💥 Erreur BEGIN:', e.message);
+  }
   try {
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return;
