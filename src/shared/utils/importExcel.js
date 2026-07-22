@@ -967,6 +967,28 @@ async function importAbsencesExcel(filePath, classeId, uid = null, anneeId = nul
 }
 
 /**
+ * Lit les métadonnées d'un fichier PWA Export sans validation de hash
+ * (le hash SHA-256 calculé par la PWA et le Desktop sont incompatibles
+ *  car les structures de rows diffèrent entre xlsx et exceljs)
+ */
+function readPwaMetadata(workbook, expectedEcoleId) {
+  const metaSheet = workbook.worksheets.find(ws => ws.name === '_metadata');
+  if (!metaSheet) return null;
+
+  const rows = [];
+  metaSheet.eachRow((row) => { rows.push(row); });
+  if (rows.length < 2) return null;
+
+  const meta = {};
+  const headers = rows[0].values;
+  const values = rows[1].values;
+  for (let i = 1; i < headers.length; i++) {
+    meta[headers[i]] = values[i];
+  }
+  return meta;
+}
+
+/**
  * MOTEUR D'IMPORT PWA EXPORT (ELIMU_NOTES_*.xlsx / ELIMU_ABSENCES_*.xlsx)
  * Importe les fichiers signés exportés par la PWA enseignant
  */
@@ -992,11 +1014,13 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
   if (!ecoleId) {
     return { ...resultat, error: 'ecole_id requis pour importer un fichier PWA Export' };
   }
-  const metaValidation = validateExcelMetadata(workbook, ecoleId, defaultLogger);
-  if (!metaValidation || !metaValidation.valid) {
-    return { ...resultat, error: metaValidation?.error || 'Métadonnées invalides ou absentes' };
+  const meta = readPwaMetadata(workbook, ecoleId);
+  if (!meta) {
+    return { ...resultat, error: 'Métadonnées invalides ou absentes — impossible de lire _metadata' };
   }
-  const meta = metaValidation.meta;
+  if (meta.ecole_id !== ecoleId) {
+    return { ...resultat, error: `ecole_id du fichier (${meta.ecole_id}) ne correspond pas à l'école courante (${ecoleId})` };
+  }
 
   const fileName = filePath.split('/').pop().split('\\').pop();
   const isNotes = fileName.match(/^ELIMU_NOTES_/i);
