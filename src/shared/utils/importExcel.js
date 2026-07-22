@@ -1065,10 +1065,10 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
   const colTrimestre = headers['trimestre'];
   const colSequence = headers['sequence'];
 
-  // Logger l'import
+  // Logger l'import (classe_id=0 et matiere_id=0 car PWA n'a pas de classe/matière unique)
   const importRecord = run(
     `INSERT INTO imports (utilisateur_id, classe_id, matiere_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
-     VALUES (?, NULL, NULL, ?, 'Partiel', ?, ?)`,
+     VALUES (?, 0, 0, ?, 'Partiel', ?, ?)`,
     [utilisateurId || 1, workbook.xlsxFile || 'pwa_export.xlsx', anneeId, ecoleId]
   );
   const importId = importRecord.lastID;
@@ -1089,7 +1089,7 @@ async function importPwaNotes(workbook, meta, utilisateurId, anneeId, ecoleId, r
 
         if (!pwaEleveId || !sousCode || !typeEval || !ua || isNaN(noteVal)) {
           resultat.nbErreurs++;
-          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes (eleve=${pwaEleveId}, sc=${sousCode}, type=${typeEval}, ua=${ua}, note=${noteVal}), ignorée`);
+          resultat.erreurs.push(`Ligne ${rowNumber}: données incomplètes, ignorée`);
           return;
         }
 
