@@ -42,7 +42,7 @@ function generateUsername(nom, prenom) {
  * @param {{ logger: object, getCurrentUserId: function, getMainWindow: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getCurrentUserId, getMainWindow, getCurrentEcoleId } = deps;
+  const { logger, getCurrentUserId, getMainWindow, getCurrentAnneeId, getCurrentEcoleId } = deps;
 
   const checkAccess = async (roles = ['admin']) => {
     const userId = getCurrentUserId();
@@ -589,6 +589,10 @@ function register(ipcMain, deps) {
       }
 
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const anneeId = getCurrentAnneeId ? getCurrentAnneeId() : null;
+      const anneeLibelle = anneeId
+        ? (get("SELECT libelle FROM annees_scolaires WHERE id = ?", [anneeId])?.libelle || '')
+        : '';
 
       const teachers = all(`
         SELECT u.nom_utilisateur AS username, u.mot_de_passe_hash AS password_hash,
@@ -609,14 +613,14 @@ function register(ipcMain, deps) {
 
       const classes = all(`
         SELECT c.nom_classe, c.niveau_v2,
-               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ?) AS eleves_count,
+               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ? AND annee_scolaire_id = ?) AS eleves_count,
                u.nom_utilisateur AS teacher_username
         FROM classes c
         LEFT JOIN professeurs_classes pc ON pc.classe_id = c.id
         LEFT JOIN professeurs p ON p.id = pc.professeur_id
         LEFT JOIN utilisateurs u ON u.id = p.utilisateur_id
         WHERE c.ecole_id = ?
-      `, [ecoleId, ecoleId]).map((c) => ({
+      `, [ecoleId, anneeId, ecoleId]).map((c) => ({
         classe_nom: c.nom_classe,
         niveau_v2: c.niveau_v2 || 'N1',
         eleves_count: c.eleves_count || 0,
@@ -628,8 +632,8 @@ function register(ipcMain, deps) {
         SELECT e.id, e.nom, e.prenom, c.nom_classe
         FROM eleves e
         JOIN classes c ON c.id = e.classe_id
-        WHERE e.ecole_id = ?
-      `, [ecoleId]).map((s) => ({
+        WHERE e.ecole_id = ? AND e.annee_scolaire_id = ?
+      `, [ecoleId, anneeId]).map((s) => ({
         external_id: s.id,
         nom: s.nom,
         prenom: s.prenom,
@@ -637,10 +641,17 @@ function register(ipcMain, deps) {
         ecole_id: ecoleId,
       }));
 
+      const payload = {
+        annee_scolaire: anneeLibelle,
+        teachers, classes, students
+      };
+
+      logger.info('Sync PWA payload:', JSON.stringify({ annee_scolaire: anneeLibelle, teachers: teachers.length, classes: classes.length, students: students.length }));
+
       const result = await makeRequest(
         syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
         'POST',
-        { teachers, classes, students },
+        payload,
         { 'x-api-key': apiKey }
       );
 
