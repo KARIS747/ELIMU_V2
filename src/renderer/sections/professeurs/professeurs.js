@@ -51,7 +51,10 @@ async function chargerProfesseurs() {
       recherche, actifSeulement, page: _profPage, limit: _profLimit
     });
 
-    const profs = result?.professeurs || [];
+    const profs = (result?.professeurs || []).map(p => ({
+      ...p,
+      suspendu: p.actif === 1 && p.compte_actif === 0
+    }));
     _profTotal = result?.total || 0;
 
     _afficherKpis(result?.stats || {});
@@ -206,7 +209,7 @@ async function ouvrirDetailCompte(profId) {
     const detail = await window.elimuAPI.getProfesseurDetail(profId);
     if (!detail?.professeur) throw new Error('Professeur introuvable');
 
-    const p = detail.professeur;
+    const p = { ...detail.professeur, suspendu: detail.professeur.actif === 1 && detail.professeur.compte_actif === 0 };
     const prenom = p.prenom || '';
     const nom = p.nom || '';
     const initiales = ((prenom[0] || '') + (nom[0] || '')).toUpperCase() || '?';
