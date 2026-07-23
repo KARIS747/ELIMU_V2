@@ -326,12 +326,12 @@ function register(ipcMain, deps) {
 
   // ── Statistiques ────────────────────────────────────────────────────────────
 
-  ipcMain.handle('db:getDashboardStats', async (event, classeId, periode, sequence) => {
+  ipcMain.handle('db:getDashboardStats', async (event, classeId, periode, sequence, niveau) => {
     if (!getCurrentUserId()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      const cacheKey = `${anneeId}-${classeId}-${periode}-${sequence}`;
+      const cacheKey = `${anneeId}-${classeId}-${periode}-${sequence}-${niveau}`;
       const cached = checkDashboardCache(cacheKey);
       if (cached) return cached;
 
@@ -348,16 +348,15 @@ function register(ipcMain, deps) {
 
       // ── Déterminer les niveaux à traiter ────────────────────────────────
       let niveauxATraiter = [];
-      if (!isNaN(cid) && cid > 0) {
+      if (niveau) {
+        niveauxATraiter = [niveau];
+      } else if (!isNaN(cid) && cid > 0) {
         const nr = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
         if (nr) niveauxATraiter.push(nr.niveau_v2);
-      } else {
-        const rows = all('SELECT DISTINCT niveau_v2 FROM classes WHERE ecole_id = ?', [ecoleId]);
-        niveauxATraiter = rows.map(r => r.niveau_v2).filter(Boolean);
       }
 
       const hasN1N2 = niveauxATraiter.some(n => n === 'N1' || n === 'N2');
-      const hasN3 = niveauxATraiter.some(n => n === 'N3');
+      const hasN3 = niveauxATraiter.some(n => n === 'N3' || n === 'Autre');
 
       let moyenne = 0, nbEleves = 0, top5 = [], alertes = [], parMatiere = [];
       let tousEleves = []; // pour fusion N1N2 + N3
@@ -448,13 +447,18 @@ function register(ipcMain, deps) {
         `, [...n3Params, anneeId, ecoleId, ...(!isNaN(cid) && cid > 0 ? [cid] : [])]);
 
         // Per-student averages for merging (N3 students only)
+        const n3NiveauVal = (niveau === 'Autre') ? '__CUSTOM__' : 'N3';
+        const n3WhereExtra = (niveau === 'Autre')
+          ? "AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 IS NULL OR niveau_v2 NOT IN ('N1','N2','N3')))"
+          : "AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)";
+        const n3ExtraParams = (niveau === 'Autre') ? [ecoleId] : [ecoleId, 'N3'];
         const n3Students = all(
           `SELECT e.id, e.nom, e.prenom, ROUND(AVG(s.moyenne), 2) AS moyenne
            FROM eleves e JOIN stats_eleves s ON s.eleve_id = e.id
            ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ?
-           AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)
+           ${n3WhereExtra}
            GROUP BY e.id ORDER BY moyenne DESC`,
-          [...params, ecoleId, ecoleId, 'N3']
+          [...params, ecoleId, ...n3ExtraParams]
         ).map(s => ({ id: s.id, nom: s.nom, prenom: s.prenom, moyenne: s.moyenne || 0 }));
 
         tousEleves.push(...n3Students);
@@ -550,12 +554,12 @@ function register(ipcMain, deps) {
     }
   });
 
-  ipcMain.handle('db:getEvolutionStats', async (event, classeId) => {
+  ipcMain.handle('db:getEvolutionStats', async (event, classeId, niveau) => {
     if (!getCurrentUserId()) return { error: 'Non authentifié' };
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      const cacheKey = `evolution-${anneeId}-${classeId}`;
+      const cacheKey = `evolution-${anneeId}-${classeId}-${niveau}`;
       const cached = checkDashboardCache(cacheKey);
       if (cached) return cached;
 
@@ -563,16 +567,15 @@ function register(ipcMain, deps) {
 
       // Déterminer les niveaux
       let niveaux = [];
-      if (!isNaN(cid) && cid > 0) {
+      if (niveau) {
+        niveaux = [niveau];
+      } else if (!isNaN(cid) && cid > 0) {
         const nr = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
         if (nr) niveaux.push(nr.niveau_v2);
-      } else {
-        const rows = all('SELECT DISTINCT niveau_v2 FROM classes WHERE ecole_id = ?', [ecoleId]);
-        niveaux = rows.map(r => r.niveau_v2).filter(Boolean);
       }
 
       const hasN1N2 = niveaux.some(n => n === 'N1' || n === 'N2');
-      const hasN3 = niveaux.some(n => n === 'N3');
+      const hasN3 = niveaux.some(n => n === 'N3' || n === 'Autre');
 
       let rows = [];
 
@@ -627,6 +630,13 @@ function register(ipcMain, deps) {
         let whereClause = ' WHERE s.annee_scolaire_id = ?';
         const whereParams = [anneeId];
         if (!isNaN(cid) && cid > 0) { whereClause += ' AND e.classe_id = ?'; whereParams.push(cid); }
+        if (niveau === 'Autre') {
+          whereClause += " AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 IS NULL OR niveau_v2 NOT IN ('N1','N2','N3')))";
+          whereParams.push(ecoleId);
+        } else {
+          whereClause += ' AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)';
+          whereParams.push(ecoleId, 'N3');
+        }
         const n3Rows = all(
           `SELECT s.periode, s.sequence, ROUND(AVG(s.moyenne), 2) AS moyenne
            FROM stats_eleves s JOIN eleves e ON e.id = s.eleve_id AND e.ecole_id = ?

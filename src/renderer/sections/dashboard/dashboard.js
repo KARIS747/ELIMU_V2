@@ -12,6 +12,7 @@ let gaugeChart = null;
 let radarChart = null;
 let evolutionChart = null;
 let currentClasses = [];
+let currentNiveauxDisponibles = [];
 let currentNiveauV2 = null;
 let pollTimer = null;
 
@@ -22,9 +23,14 @@ let pollTimer = null;
 export async function init(state) {
   await loadChartJS();
   currentClasses = state.classes || [];
-  populateClassSelect(currentClasses);
-  await loadDashboard(null, 'Tous', 0);
+  detecterNiveauxDisponibles();
+  populateNiveauSelect();
+  populateClassSelect();
+  const firstNiveau = document.getElementById('dash-niveau-select')?.value;
+  if (firstNiveau) currentNiveauV2 = firstNiveau;
+  await loadDashboard(firstNiveau || null, null, 'Tous', 0);
 
+  document.getElementById('dash-niveau-select')?.addEventListener('change', onNiveauChange);
   document.getElementById('dash-classe-select')?.addEventListener('change', reloadDashboard);
   document.getElementById('dash-refresh')?.addEventListener('click', reloadDashboard);
   document.getElementById('dash-periode')?.addEventListener('change', reloadDashboard);
@@ -36,6 +42,43 @@ export async function init(state) {
 
 export function destroy() {
   stopPolling();
+}
+
+function detecterNiveauxDisponibles() {
+  const niveaux = new Set();
+  currentClasses.forEach(c => {
+    if (c.niveau_v2 === 'N1' || c.niveau_v2 === 'N2' || c.niveau_v2 === 'N3') {
+      niveaux.add(c.niveau_v2);
+    } else {
+      niveaux.add('Autre');
+    }
+  });
+  currentNiveauxDisponibles = ['N1', 'N2', 'N3', 'Autre'].filter(n => niveaux.has(n));
+}
+
+function populateNiveauSelect() {
+  const select = document.getElementById('dash-niveau-select');
+  if (!select) return;
+  const fragment = document.createDocumentFragment();
+  currentNiveauxDisponibles.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n;
+    const labels = { N1: 'N1 (SIL/CP)', N2: 'N2 (CE1/CE2)', N3: 'N3 (CM1/CM2)', Autre: 'Autre' };
+    opt.textContent = labels[n] || n;
+    fragment.appendChild(opt);
+  });
+  requestAnimationFrame(() => {
+    select.innerHTML = '';
+    select.appendChild(fragment);
+  });
+}
+
+function onNiveauChange() {
+  const select = document.getElementById('dash-niveau-select');
+  currentNiveauV2 = select?.value || null;
+  document.getElementById('dash-classe-select').value = '';
+  populateClassSelect();
+  reloadDashboard();
 }
 
 function startPolling() {
@@ -126,37 +169,27 @@ function updateSyncBanner(type, message) {
 }
 
 async function reloadDashboard() {
-  const select = document.getElementById('dash-classe-select');
-  const classeId = select?.value ? parseInt(select.value) : null;
+  const niveauSelect = document.getElementById('dash-niveau-select');
+  const niveau = niveauSelect?.value || null;
+  const classeSelect = document.getElementById('dash-classe-select');
+  const classeId = classeSelect?.value ? parseInt(classeSelect.value) : null;
   const periode = document.getElementById('dash-periode')?.value || 'Tous';
 
-  // Détecter le niveau_v2 de la classe sélectionnée
-  if (classeId) {
-    const classe = currentClasses.find(c => c.id === classeId);
-    currentNiveauV2 = classe?.niveau_v2 || null;
-  } else {
-    currentNiveauV2 = null; // Vue globale = mode quantitatif par défaut
-  }
+  currentNiveauV2 = niveau;
 
   // Gérer le sélecteur de séquence selon le niveau
   const seqSelect = document.getElementById('dash-sequence');
   if (seqSelect) {
-    if (currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2') {
-      seqSelect.value = "0"; // Réinitialiser à "Toutes"
-      seqSelect.disabled = true;
-      seqSelect.style.opacity = "0.5";
-      seqSelect.style.cursor = "not-allowed";
-      seqSelect.setAttribute('title', window.t('dashboard.seq_title_n1n2'));
-    } else {
-      seqSelect.disabled = false;
-      seqSelect.style.opacity = "1";
-      seqSelect.style.cursor = "default";
-      seqSelect.removeAttribute('title');
-    }
+    const isN1N2 = niveau === 'N1' || niveau === 'N2';
+    seqSelect.value = isN1N2 ? '0' : seqSelect.value;
+    seqSelect.disabled = isN1N2;
+    seqSelect.style.opacity = isN1N2 ? '0.5' : '1';
+    seqSelect.style.cursor = isN1N2 ? 'not-allowed' : 'default';
+    seqSelect.title = isN1N2 ? window.t('dashboard.seq_title_n1n2') : '';
   }
 
   const sequence = parseInt(seqSelect?.value) || 0;
-  await loadDashboard(classeId, periode, sequence);
+  await loadDashboard(niveau, classeId, periode, sequence);
 }
 
 function destroyAllCharts() {
@@ -174,13 +207,13 @@ function destroyAllCharts() {
   }
 }
 
-async function loadDashboard(classeId, periode, sequence) {
+async function loadDashboard(niveau, classeId, periode, sequence) {
   try {
     destroyAllCharts();
 
     const [stats, evolution] = await Promise.all([
-      window.elimuAPI.getDashboardStats(classeId, periode, sequence),
-      window.elimuAPI.getEvolutionStats(classeId)
+      window.elimuAPI.getDashboardStats(classeId, periode, sequence, niveau),
+      window.elimuAPI.getEvolutionStats(classeId, niveau)
     ]);
 
     if (stats.error) {
@@ -197,9 +230,10 @@ async function loadDashboard(classeId, periode, sequence) {
     renderEvolution(Array.isArray(evolution) ? evolution : []);
 
     const classeSelect = document.getElementById('dash-classe-select');
+    const niveauNoms = { N1: 'N1', N2: 'N2', N3: 'N3', Autre: 'Autre' };
     const label = classeId
       ? classeSelect?.options[classeSelect.selectedIndex]?.text || window.t('dashboard.class_fallback')
-      : (window.t('dashboard.establishment') || 'Établissement');
+      : (niveauNoms[niveau] || niveau || window.t('dashboard.establishment'));
     const niveauLabel = document.getElementById('dash-niveau-label');
     if (niveauLabel) niveauLabel.textContent = label;
 
@@ -387,10 +421,8 @@ function renderRadar(parMatiere) {
   // Trier par moyenne décroissante
   const sorted = [...parMatiere].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0));
   
-  const hasMixedLevels = sorted.some(m => m.niveau) && new Set(sorted.map(m => m.niveau || '')).size > 1;
   const labels = sorted.map(m => {
     let nom = m.nom_matiere || window.t('dashboard.subject_fallback');
-    if (hasMixedLevels && m.niveau) nom += ` [${m.niveau}]`;
     if (nom.length > 25) nom = nom.substring(0, 22) + '…';
     return nom;
   });
@@ -675,116 +707,6 @@ function renderEvolution(data) {
   const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(45,54,80,0.6)';
   const labelColor = isLight ? '#263345' : '#a0b3d9';
 
-  const hasMixedLevels = data.some(r => r.niveau) && new Set(data.map(r => r.niveau || '')).size > 1;
-
-  if (hasMixedLevels) {
-    // Vue globale mixte : deux séries (N1/N2 + N3)
-    const n1n2 = data.filter(r => r.niveau === 'N1/N2');
-    const n3 = data.filter(r => r.niveau === 'N3');
-    const ORDRE_TRIM = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
-    const ORDRE = [['Trimestre 1',1],['Trimestre 1',2],['Trimestre 2',1],['Trimestre 2',2],['Trimestre 3',1],['Trimestre 3',2]];
-    // Build composite timeline
-    const allLabels = [];
-    const allN1N2 = [];
-    const allN3 = [];
-    const n1n2Map = {};
-    n1n2.forEach(r => { n1n2Map[r.periode] = r.moyenne; });
-    const n3Map = {};
-    n3.forEach(r => { n3Map[r.periode + '-' + r.sequence] = r.moyenne; });
-    ORDRE.forEach(([periode, seq]) => {
-      const lbl = `T${periode.slice(-1)} S${seq}`;
-      allLabels.push(lbl);
-      allN1N2.push(null);
-      allN3.push(n3Map[periode + '-' + seq] !== undefined ? n3Map[periode + '-' + seq] : null);
-    });
-    // Inject N1/N2 at midpoints (after each trimester's first sequence)
-    // Actually simpler: use separate label positions
-    // Better: prepend N1/N2 labels at their own positions
-    const finalLabels = [];
-    const finalN1N2 = [];
-    const finalN3 = [];
-    ORDRE_TRIM.forEach(p => {
-      const tNum = p.slice(-1);
-      // N1/N2 point for this trimester
-      finalLabels.push(`T${tNum}`);
-      finalN1N2.push(n1n2Map[p] !== undefined ? n1n2Map[p] : null);
-      finalN3.push(null);
-      // N3 sequences for this trimester
-      const seqs = ORDRE.filter(([per, seq]) => per === p);
-      seqs.forEach(([per, seq]) => {
-        finalLabels.push(`T${tNum} S${seq}`);
-        finalN1N2.push(null);
-        finalN3.push(n3Map[per + '-' + seq] !== undefined ? n3Map[per + '-' + seq] : null);
-      });
-    });
-    if (!finalN1N2.some(v => v !== null) && !finalN3.some(v => v !== null)) {
-      canvas.style.display = 'none';
-      if (emptyEl) emptyEl.style.display = 'flex';
-      return;
-    }
-    evolutionChart = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: finalLabels,
-        datasets: [{
-          label: 'N1/N2',
-          data: finalN1N2,
-          borderColor: '#00ff91',
-          backgroundColor: 'rgba(0, 255, 145, 0.05)',
-          borderWidth: 3,
-          borderDash: [5, 5],
-          pointBackgroundColor: finalN1N2.map(v => v === null ? 'transparent' : v >= 15 ? '#00ff91' : v >= 11 ? '#ffdc00' : '#ff2e63'),
-          pointBorderColor: isLight ? '#fff' : '#1a1e2c',
-          pointBorderWidth: 2,
-          pointRadius: finalN1N2.map(v => v === null ? 0 : 6),
-          pointHoverRadius: 8,
-          tension: 0.35,
-          spanGaps: false
-        }, {
-          label: 'N3',
-          data: finalN3,
-          borderColor: '#4dabf7',
-          backgroundColor: 'rgba(77, 171, 247, 0.05)',
-          borderWidth: 3,
-          pointBackgroundColor: finalN3.map(v => v === null ? 'transparent' : v >= 14 ? '#00ff91' : v >= 10 ? '#ffdc00' : '#ff2e63'),
-          pointBorderColor: isLight ? '#fff' : '#1a1e2c',
-          pointBorderWidth: 2,
-          pointRadius: finalN3.map(v => v === null ? 0 : 6),
-          pointHoverRadius: 8,
-          tension: 0.35,
-          spanGaps: false
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 800, easing: 'easeOutCubic' },
-        scales: {
-          y: { min: 0, max: 20, ticks: { color: tickColor, font: { size: 11 }, callback: v => `${v}/20` }, grid: { color: gridColor } },
-          x: { ticks: { color: labelColor, font: { size: 9 } }, grid: { color: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(45,54,80,0.3)' } }
-        },
-        plugins: {
-          legend: { labels: { color: labelColor, font: { size: 11 }, boxWidth: 12, padding: 10 } },
-          tooltip: {
-            backgroundColor: '#2a3147',
-            titleColor: '#f0f4fa',
-            bodyColor: '#a0b3d9',
-            borderColor: '#4dabf7',
-            borderWidth: 1,
-            callbacks: { label: ctx => {
-              const dsLabel = ctx.dataset.label || '';
-              const raw = ctx.raw;
-              if (raw === null) return '';
-              const isQ = dsLabel === 'N1/N2';
-              return isQ ? ` ${dsLabel}: ${window.curriculum.getNoteToCode(raw)} (${raw})` : ` ${dsLabel}: ${raw}/20`;
-            }}
-          }
-        }
-      }
-    });
-    return;
-  }
-
   const isN1N2 = currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2';
   let labels, valeurs;
   if (isN1N2) {
@@ -863,19 +785,24 @@ function renderEvolution(data) {
   });
 }
 
-function populateClassSelect(classes) {
+function populateClassSelect() {
   const select = document.getElementById('dash-classe-select');
   if (!select) return;
+  const niveau = document.getElementById('dash-niveau-select')?.value;
+
+  const filtered = (currentClasses || []).filter(c => {
+    if (niveau === 'Autre') return !c.niveau_v2 || (c.niveau_v2 !== 'N1' && c.niveau_v2 !== 'N2' && c.niveau_v2 !== 'N3');
+    return c.niveau_v2 === niveau;
+  });
 
   const fragment = document.createDocumentFragment();
-  
-  // Option par défaut
-  const optDefault = document.createElement('option');
-  optDefault.value = '';
-  optDefault.textContent = ` ${window.t('dashboard.all_establishment') || 'Tout l\'établissement'}`;
-  fragment.appendChild(optDefault);
+  const optAll = document.createElement('option');
+  optAll.value = '';
+  const niveauLabels = { N1: 'N1', N2: 'N2', N3: 'N3', Autre: '' };
+  optAll.textContent = ` Toutes les classes ${niveauLabels[niveau] || niveau || ''}`;
+  fragment.appendChild(optAll);
 
-  (classes || []).forEach(c => {
+  filtered.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
     opt.textContent = `${esc(c.nom_classe)} (${esc(c.nb_eleves || 0)} ${window.t('dashboard.students_unit')})`;

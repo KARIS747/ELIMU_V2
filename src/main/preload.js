@@ -69,8 +69,8 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   // DASHBOARD - STATISTIQUES
   // ==========================================
 
-  getDashboardStats: (classeId = null, periode = 'Tous', sequence = 0) => ipcRenderer.invoke('db:getDashboardStats', classeId, periode, sequence),
-  getEvolutionStats: (classeId = null) => ipcRenderer.invoke('db:getEvolutionStats', classeId),
+  getDashboardStats: (classeId = null, periode = 'Tous', sequence = 0, niveau = null) => ipcRenderer.invoke('db:getDashboardStats', classeId, periode, sequence, niveau),
+  getEvolutionStats: (classeId = null, niveau = null) => ipcRenderer.invoke('db:getEvolutionStats', classeId, niveau),
 
   // ==========================================
   // IMPORT / EXPORT
