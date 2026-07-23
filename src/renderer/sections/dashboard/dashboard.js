@@ -59,17 +59,13 @@ function detecterNiveauxDisponibles() {
 function populateNiveauSelect() {
   const select = document.getElementById('dash-niveau-select');
   if (!select) return;
-  const fragment = document.createDocumentFragment();
+  select.innerHTML = '';
   currentNiveauxDisponibles.forEach(n => {
     const opt = document.createElement('option');
     opt.value = n;
     const labels = { N1: 'N1 (SIL/CP)', N2: 'N2 (CE1/CE2)', N3: 'N3 (CM1/CM2)', Autre: 'Autre' };
     opt.textContent = labels[n] || n;
-    fragment.appendChild(opt);
-  });
-  requestAnimationFrame(() => {
-    select.innerHTML = '';
-    select.appendChild(fragment);
+    select.appendChild(opt);
   });
 }
 
@@ -83,12 +79,21 @@ function onNiveauChange() {
 
 function startPolling() {
   stopPolling();
-  pollTimer = setInterval(() => {
+  pollTimer = setInterval(async () => {
     if (!document.getElementById('dash-kpis')) {
       stopPolling();
       return;
     }
-    reloadDashboard();
+    const niveauSelect = document.getElementById('dash-niveau-select');
+    const niveau = niveauSelect?.value || null;
+    const classeSelect = document.getElementById('dash-classe-select');
+    const classeId = classeSelect?.value ? parseInt(classeSelect.value) : null;
+    const periode = document.getElementById('dash-periode')?.value || 'Tous';
+    const sequence = parseInt(document.getElementById('dash-sequence')?.value) || 0;
+    try {
+      const stats = await window.elimuAPI.getDashboardStats(classeId, periode, sequence, niveau);
+      if (stats && !stats.error) updateKPIs(stats);
+    } catch (e) { /* silent */ }
   }, 30000);
 }
 
@@ -809,10 +814,8 @@ function populateClassSelect() {
     fragment.appendChild(opt);
   });
 
-  requestAnimationFrame(() => {
-    select.innerHTML = '';
-    select.appendChild(fragment);
-  });
+  select.innerHTML = '';
+  select.appendChild(fragment);
 }
 
 function animateNumber(el, from, to, duration, decimals = 0) {
