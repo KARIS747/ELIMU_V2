@@ -945,15 +945,9 @@ const en = {
 
   // Thresholds Tab
   'params.seuils.title':           'Evaluation thresholds',
-  'params.seuils.note_max':        'Maximum grade',
-  'params.seuils.note_max_tip':    'Usually 20 in francophone Africa',
-  'params.seuils.seuil_alerte':    'Alert threshold ',
-  'params.seuils.seuil_alerte_tip':'Below → student in difficulty',
-  'params.seuils.seuil_excellent': '"Excellent" threshold ',
-  'params.seuils.seuil_exc_tip':   'From → Excellent mention',
   'params.seuils.periode':         'Active period',
-  'params.seuils.preview':         'Appreciations preview',
-  'params.seuils.save':            ' Save thresholds',
+  'params.seuils.info':            'Active period and UA determine the PWA and import entry window.',
+  'params.seuils.save':            ' Save',
   'params.seuils.save_success':    'Thresholds saved ',
   'params.seuils.save_error':      'Error during save',
 

@@ -871,15 +871,9 @@ const fr = {
 
   // Onglet Seuils
   'params.seuils.title':           'Seuils d\'évaluation',
-  'params.seuils.note_max':        'Note maximale',
-  'params.seuils.note_max_tip':    'Généralement 20 en Afrique francophone',
-  'params.seuils.seuil_alerte':    'Seuil d\'alerte ',
-  'params.seuils.seuil_alerte_tip':'En dessous → élève en difficulté',
-  'params.seuils.seuil_excellent': 'Seuil "Excellent" ',
-  'params.seuils.seuil_exc_tip':   'À partir de → mention Excellent',
   'params.seuils.periode':         'Période active',
-  'params.seuils.preview':         'Aperçu des appréciations',
-  'params.seuils.save':            ' Enregistrer les seuils',
+  'params.seuils.info':            'La période active et l\'UA active déterminent la fenêtre de saisie PWA et d\'import.',
+  'params.seuils.save':            ' Enregistrer',
   'params.seuils.save_success':    'Seuils enregistrés ',
   'params.seuils.save_error':      'Erreur lors de la sauvegarde',
 

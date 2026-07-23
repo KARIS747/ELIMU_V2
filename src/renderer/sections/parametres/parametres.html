@@ -201,21 +201,6 @@
       </div>
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
         <div class="input-group" style="margin:0;">
-          <label data-i18n="params.seuils.note_max">Note maximale</label>
-          <input type="number" id="note-max" class="input" value="20" min="10" max="100" step="1">
-          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.note_max_tip">Généralement 20 en Afrique francophone</span>
-        </div>
-        <div class="input-group" style="margin:0;">
-          <label data-i18n="params.seuils.seuil_alerte">Seuil d'alerte </label>
-          <input type="number" id="seuil-alerte" class="input" value="10" min="0" max="20" step="0.5">
-          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.seuil_alerte_tip">En dessous → élève en difficulté</span>
-        </div>
-        <div class="input-group" style="margin:0;">
-          <label data-i18n="params.seuils.seuil_excellent">Seuil "Excellent" </label>
-          <input type="number" id="seuil-excellent" class="input" value="14" min="0" max="20" step="0.5">
-          <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.seuil_exc_tip">À partir de → mention Excellent</span>
-        </div>
-        <div class="input-group" style="margin:0;">
           <label data-i18n="params.seuils.periode">Période active</label>
           <select id="periode-active" class="input">
             <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
@@ -238,24 +223,8 @@
           <span style="font-size:11px; color:var(--text-muted);" data-i18n="params.seuils.ua_active_tip">UA active pour la saisie PWA et les imports N1/N2</span>
         </div>
       </div>
-      <div style="margin-top:20px; padding:14px; background:var(--bg-secondary);
-                  border-radius:10px; border:1px solid var(--border-color);">
-        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase;
-                    letter-spacing:0.8px; margin-bottom:10px;" data-i18n="params.seuils.preview">Aperçu des appréciations</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <span style="background:rgba(0,230,118,0.15); border:1px solid rgba(0,230,118,0.3);
-                       color:var(--green-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
-            ≥ <span id="preview-excellent">14</span>/20 → Excellent
-          </span>
-          <span style="background:rgba(255,183,77,0.15); border:1px solid rgba(255,183,77,0.3);
-                       color:var(--yellow-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
-            ≥ <span id="preview-alerte">10</span>/20 → Passable
-          </span>
-          <span style="background:rgba(255,82,82,0.15); border:1px solid rgba(255,82,82,0.3);
-                       color:var(--red-fifa); padding:4px 12px; border-radius:20px; font-size:12px;">
-            &lt; <span id="preview-alerte2">10</span>/20 → En difficulté
-          </span>
-        </div>
+      <div style="margin-top:16px; font-size:11px; color:var(--text-muted); line-height:1.5;" data-i18n="params.seuils.info">
+        La période active et l'UA active déterminent la fenêtre de saisie PWA et d'import.
       </div>
       <div style="display:flex; justify-content:flex-end; margin-top:20px;
                   padding-top:16px; border-top:1px solid var(--border-color);">
