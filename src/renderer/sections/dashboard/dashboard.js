@@ -387,8 +387,10 @@ function renderRadar(parMatiere) {
   // Trier par moyenne décroissante
   const sorted = [...parMatiere].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0));
   
+  const hasMixedLevels = sorted.some(m => m.niveau) && new Set(sorted.map(m => m.niveau || '')).size > 1;
   const labels = sorted.map(m => {
     let nom = m.nom_matiere || window.t('dashboard.subject_fallback');
+    if (hasMixedLevels && m.niveau) nom += ` [${m.niveau}]`;
     if (nom.length > 25) nom = nom.substring(0, 22) + '…';
     return nom;
   });
@@ -668,10 +670,124 @@ function renderEvolution(data) {
   canvas.style.display = 'block';
   if (emptyEl) emptyEl.style.display = 'none';
 
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const tickColor = isLight ? '#526070' : '#6b7a99';
+  const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(45,54,80,0.6)';
+  const labelColor = isLight ? '#263345' : '#a0b3d9';
+
+  const hasMixedLevels = data.some(r => r.niveau) && new Set(data.map(r => r.niveau || '')).size > 1;
+
+  if (hasMixedLevels) {
+    // Vue globale mixte : deux séries (N1/N2 + N3)
+    const n1n2 = data.filter(r => r.niveau === 'N1/N2');
+    const n3 = data.filter(r => r.niveau === 'N3');
+    const ORDRE_TRIM = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+    const ORDRE = [['Trimestre 1',1],['Trimestre 1',2],['Trimestre 2',1],['Trimestre 2',2],['Trimestre 3',1],['Trimestre 3',2]];
+    // Build composite timeline
+    const allLabels = [];
+    const allN1N2 = [];
+    const allN3 = [];
+    const n1n2Map = {};
+    n1n2.forEach(r => { n1n2Map[r.periode] = r.moyenne; });
+    const n3Map = {};
+    n3.forEach(r => { n3Map[r.periode + '-' + r.sequence] = r.moyenne; });
+    ORDRE.forEach(([periode, seq]) => {
+      const lbl = `T${periode.slice(-1)} S${seq}`;
+      allLabels.push(lbl);
+      allN1N2.push(null);
+      allN3.push(n3Map[periode + '-' + seq] !== undefined ? n3Map[periode + '-' + seq] : null);
+    });
+    // Inject N1/N2 at midpoints (after each trimester's first sequence)
+    // Actually simpler: use separate label positions
+    // Better: prepend N1/N2 labels at their own positions
+    const finalLabels = [];
+    const finalN1N2 = [];
+    const finalN3 = [];
+    ORDRE_TRIM.forEach(p => {
+      const tNum = p.slice(-1);
+      // N1/N2 point for this trimester
+      finalLabels.push(`T${tNum}`);
+      finalN1N2.push(n1n2Map[p] !== undefined ? n1n2Map[p] : null);
+      finalN3.push(null);
+      // N3 sequences for this trimester
+      const seqs = ORDRE.filter(([per, seq]) => per === p);
+      seqs.forEach(([per, seq]) => {
+        finalLabels.push(`T${tNum} S${seq}`);
+        finalN1N2.push(null);
+        finalN3.push(n3Map[per + '-' + seq] !== undefined ? n3Map[per + '-' + seq] : null);
+      });
+    });
+    if (!finalN1N2.some(v => v !== null) && !finalN3.some(v => v !== null)) {
+      canvas.style.display = 'none';
+      if (emptyEl) emptyEl.style.display = 'flex';
+      return;
+    }
+    evolutionChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: finalLabels,
+        datasets: [{
+          label: 'N1/N2',
+          data: finalN1N2,
+          borderColor: '#00ff91',
+          backgroundColor: 'rgba(0, 255, 145, 0.05)',
+          borderWidth: 3,
+          borderDash: [5, 5],
+          pointBackgroundColor: finalN1N2.map(v => v === null ? 'transparent' : v >= 15 ? '#00ff91' : v >= 11 ? '#ffdc00' : '#ff2e63'),
+          pointBorderColor: isLight ? '#fff' : '#1a1e2c',
+          pointBorderWidth: 2,
+          pointRadius: finalN1N2.map(v => v === null ? 0 : 6),
+          pointHoverRadius: 8,
+          tension: 0.35,
+          spanGaps: false
+        }, {
+          label: 'N3',
+          data: finalN3,
+          borderColor: '#4dabf7',
+          backgroundColor: 'rgba(77, 171, 247, 0.05)',
+          borderWidth: 3,
+          pointBackgroundColor: finalN3.map(v => v === null ? 'transparent' : v >= 14 ? '#00ff91' : v >= 10 ? '#ffdc00' : '#ff2e63'),
+          pointBorderColor: isLight ? '#fff' : '#1a1e2c',
+          pointBorderWidth: 2,
+          pointRadius: finalN3.map(v => v === null ? 0 : 6),
+          pointHoverRadius: 8,
+          tension: 0.35,
+          spanGaps: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 800, easing: 'easeOutCubic' },
+        scales: {
+          y: { min: 0, max: 20, ticks: { color: tickColor, font: { size: 11 }, callback: v => `${v}/20` }, grid: { color: gridColor } },
+          x: { ticks: { color: labelColor, font: { size: 9 } }, grid: { color: isLight ? 'rgba(0,0,0,0.05)' : 'rgba(45,54,80,0.3)' } }
+        },
+        plugins: {
+          legend: { labels: { color: labelColor, font: { size: 11 }, boxWidth: 12, padding: 10 } },
+          tooltip: {
+            backgroundColor: '#2a3147',
+            titleColor: '#f0f4fa',
+            bodyColor: '#a0b3d9',
+            borderColor: '#4dabf7',
+            borderWidth: 1,
+            callbacks: { label: ctx => {
+              const dsLabel = ctx.dataset.label || '';
+              const raw = ctx.raw;
+              if (raw === null) return '';
+              const isQ = dsLabel === 'N1/N2';
+              return isQ ? ` ${dsLabel}: ${window.curriculum.getNoteToCode(raw)} (${raw})` : ` ${dsLabel}: ${raw}/20`;
+            }}
+          }
+        }
+      }
+    });
+    return;
+  }
+
   const isN1N2 = currentNiveauV2 === 'N1' || currentNiveauV2 === 'N2';
   let labels, valeurs;
   if (isN1N2) {
-    // N1/N2 : évolution par trimestre (moyenne des UA du trimestre)
     const ORDRE_TRIM = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
     labels = [];
     valeurs = [];
@@ -680,7 +796,6 @@ function renderEvolution(data) {
       if (row) { labels.push(p.replace('Trimestre ', 'T')); valeurs.push(row.moyenne); }
     });
   } else {
-    // N3 : évolution par (periode, sequence) dans l'ordre canonique
     const ORDRE = [['Trimestre 1',1],['Trimestre 1',2],['Trimestre 2',1],['Trimestre 2',2],['Trimestre 3',1],['Trimestre 3',2]];
     labels = [];
     valeurs = [];
@@ -694,11 +809,6 @@ function renderEvolution(data) {
     if (emptyEl) emptyEl.style.display = 'flex';
     return;
   }
-
-  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-  const tickColor = isLight ? '#526070' : '#6b7a99';
-  const gridColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(45,54,80,0.6)';
-  const labelColor = isLight ? '#263345' : '#a0b3d9';
 
   evolutionChart = new Chart(canvas, {
     type: 'line',

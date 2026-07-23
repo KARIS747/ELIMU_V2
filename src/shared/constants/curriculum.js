@@ -205,7 +205,7 @@ const SOUS_TYPES = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
  */
 function getWeightsForSousCompetence(niveauV2, sousCode) {
   const niveau = CURRICULUM_TEMPLATES[niveauV2];
-  if (!niveau) return null;
+  if (!niveau || !niveau.competences) return null;
   for (const comp of Object.values(niveau.competences)) {
     if (comp.sousCompetences[sousCode]) {
       const sc = comp.sousCompetences[sousCode];

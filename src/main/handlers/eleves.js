@@ -8,7 +8,7 @@ const { hasRole } = require('../../shared/security/access');
 const { genererTranchesPourEleve } = require('../utils/financeUtils');
 const { syncParentEleve } = require('../../shared/utils/parentSync');
 const { isSystemTampered } = require('../utils/integrity');
-const { UA_TRIMESTRE_MAP, getUAsForPeriode } = require('../../shared/constants/curriculum');
+const { UA_TRIMESTRE_MAP, getUAsForPeriode, getWeightsForSousCompetence } = require('../../shared/constants/curriculum');
 
 // Cache pour le dashboard
 let dashboardCache = new Map();
@@ -346,39 +346,74 @@ function register(ipcMain, deps) {
 
       const whereClause = ' WHERE ' + whereNotes;
 
-      let isN1N2 = false;
+      // ── Déterminer les niveaux à traiter ────────────────────────────────
+      let niveauxATraiter = [];
       if (!isNaN(cid) && cid > 0) {
-        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
-        isN1N2 = niveauRow && (niveauRow.niveau_v2 === 'N1' || niveauRow.niveau_v2 === 'N2');
+        const nr = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+        if (nr) niveauxATraiter.push(nr.niveau_v2);
+      } else {
+        const rows = all('SELECT DISTINCT niveau_v2 FROM classes WHERE ecole_id = ?', [ecoleId]);
+        niveauxATraiter = rows.map(r => r.niveau_v2).filter(Boolean);
       }
 
-      let moyenne = 0, nbEleves = 0, top5 = [], alertes = [], parMatiere = [];
+      const hasN1N2 = niveauxATraiter.some(n => n === 'N1' || n === 'N2');
+      const hasN3 = niveauxATraiter.some(n => n === 'N3');
 
-      if (isN1N2) {
-        let n1n2Where = whereClause + ' AND n.sous_type IS NULL AND n.ecole_id = ?';
-        const n1n2Params = [...params, ecoleId];
+      let moyenne = 0, nbEleves = 0, top5 = [], alertes = [], parMatiere = [];
+      let tousEleves = []; // pour fusion N1N2 + N3
+
+      // ── Path N1/N2 : moyennes pondérées par le curriculum MINEDUB ──────
+      if (hasN1N2) {
+        let n1n2Where = 'WHERE n.annee_scolaire_id = ? AND n.sous_type IS NULL AND n.ecole_id = ?';
+        n1n2Where += ' AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 = ? OR niveau_v2 = ?))';
+        const n1n2Params = [anneeId, ecoleId, ecoleId, 'N1', 'N2'];
+        if (!isNaN(cid) && cid > 0) { n1n2Where += ' AND e.classe_id = ?'; n1n2Params.push(cid); }
         if (periode && periode !== 'Tous') {
           const uas = getUAsForPeriode(periode);
+          n1n2Where += ' AND n.periode = ?'; n1n2Params.push(periode);
           if (uas.length) {
             n1n2Where += ' AND n.ua IN (' + uas.map(_ => '?').join(',') + ')';
             n1n2Params.push(...uas);
           }
         }
-        const studentAverages = all(`
-          SELECT e.id, e.nom, e.prenom, ROUND(AVG(n.note), 2) as moyenne
+
+        const rawNotes = all(`
+          SELECT e.id, e.nom, e.prenom, e.classe_id, n.note, n.sous_competence_code, n.ua
           FROM notes n JOIN eleves e ON e.id = n.eleve_id
           ${n1n2Where}
-          GROUP BY e.id
         `, n1n2Params);
 
-        nbEleves = studentAverages.length;
-        moyenne = nbEleves > 0
-          ? parseFloat((studentAverages.reduce((s, r) => s + (r.moyenne || 0), 0) / nbEleves).toFixed(2))
-          : 0;
+        // Cache des niveaux par classe
+        const niveauCache = {};
+        const studentMap = {};
+        for (const row of rawNotes) {
+          if (!studentMap[row.id]) {
+            if (!niveauCache[row.classe_id]) {
+              const cl = get('SELECT niveau_v2 FROM classes WHERE id = ?', [row.classe_id]);
+              niveauCache[row.classe_id] = cl?.niveau_v2 || 'N1';
+            }
+            studentMap[row.id] = {
+              id: row.id, nom: row.nom, prenom: row.prenom,
+              totalWeighted: 0, totalPoids: 0,
+              niveau: niveauCache[row.classe_id]
+            };
+          }
+          const weights = getWeightsForSousCompetence(studentMap[row.id].niveau, row.sous_competence_code);
+          const totalPoids = (weights?.orale || 0) + (weights?.ecrite || 0) + (weights?.pratique || 0) + (weights?.savoirEtre || 0);
+          if (totalPoids > 0) {
+            studentMap[row.id].totalWeighted += row.note * totalPoids;
+            studentMap[row.id].totalPoids += totalPoids;
+          }
+        }
 
-        top5 = [...studentAverages].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0)).slice(0, 5);
-        alertes = studentAverages.filter(s => (s.moyenne || 0) < 5).sort((a, b) => (a.moyenne || 0) - (b.moyenne || 0)).slice(0, 5);
+        const n1n2Students = Object.values(studentMap).map(s => ({
+          id: s.id, nom: s.nom, prenom: s.prenom,
+          moyenne: s.totalPoids > 0 ? parseFloat((s.totalWeighted / s.totalPoids).toFixed(2)) : 0
+        }));
 
+        tousEleves.push(...n1n2Students);
+
+        // Radar N1/N2 : groupé par UA
         let uaFilter = '';
         const uaFilterVals = [];
         if (periode && periode !== 'Tous') {
@@ -388,48 +423,61 @@ function register(ipcMain, deps) {
             uaFilterVals.push(...uas);
           }
         }
-        parMatiere = all(
-          `SELECT n.ua as nom_matiere, 1 as coefficient, ROUND(AVG(n.note), 2) as moyenne
+        const uaRadar = all(
+          `SELECT n.ua, ROUND(AVG(n.note), 2) as moyenne
            FROM notes n JOIN eleves e ON e.id = n.eleve_id
            ${whereClause} AND n.ua IS NOT NULL AND n.sous_type IS NULL AND n.ecole_id = ?${uaFilter}
            GROUP BY n.ua ORDER BY n.ua`,
           [...params, ecoleId, ...uaFilterVals]
-        );
-      } else {
-        const n3EcoleParams = [...params, ecoleId];
-        if (!isNaN(cid) && cid > 0) { n3EcoleParams.push(cid); }
+        ).map(r => ({ nom_matiere: r.ua, coefficient: 1, moyenne: r.moyenne, niveau: 'N1/N2' }));
 
-        const stats = get(`
-          SELECT 
-            (SELECT ROUND(AVG(s.moyenne), 2) FROM stats_eleves s JOIN eleves e ON s.eleve_id = e.id ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as moyenne,
-            (SELECT COUNT(*) FROM eleves e WHERE e.annee_scolaire_id = ? AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as nb_eleves
-        `, [...n3EcoleParams, anneeId, ecoleId, ...(!isNaN(cid) && cid > 0 ? [cid] : [])]);
+        parMatiere.push(...uaRadar);
+      }
 
-        moyenne = stats?.moyenne || 0;
-        nbEleves = stats?.nb_eleves || 0;
+      // ── Path N3 : stats_eleves pré-calculées ────────────────────────────
+      if (hasN3) {
+        const n3Params = [...params, ecoleId];
+        if (!isNaN(cid) && cid > 0) { n3Params.push(cid); }
 
-        top5 = all(
-          `SELECT e.id, e.nom, e.prenom, s.moyenne
+        const n3Stats = get(`
+          SELECT
+            (SELECT ROUND(AVG(s.moyenne), 2) FROM stats_eleves s JOIN eleves e ON s.eleve_id = e.id
+             ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as moyenne,
+            (SELECT COUNT(*) FROM eleves e WHERE e.annee_scolaire_id = ? AND e.ecole_id = ?
+             ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}) as nb_eleves
+        `, [...n3Params, anneeId, ecoleId, ...(!isNaN(cid) && cid > 0 ? [cid] : [])]);
+
+        // Per-student averages for merging (N3 students only)
+        const n3Students = all(
+          `SELECT e.id, e.nom, e.prenom, ROUND(AVG(s.moyenne), 2) AS moyenne
            FROM eleves e JOIN stats_eleves s ON s.eleve_id = e.id
            ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ?
-           ORDER BY s.moyenne DESC LIMIT 5`,
-          [...params, ecoleId]
-        );
-        alertes = all(
-          `SELECT e.id, e.nom, e.prenom, s.moyenne
-           FROM eleves e JOIN stats_eleves s ON s.eleve_id = e.id
-           ${whereClause.replace(/n\./g, 's.')} AND e.ecole_id = ? AND s.moyenne < 10
-           ORDER BY s.moyenne ASC LIMIT 5`,
-          [...params, ecoleId]
-        );
+           AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)
+           GROUP BY e.id ORDER BY moyenne DESC`,
+          [...params, ecoleId, ecoleId, 'N3']
+        ).map(s => ({ id: s.id, nom: s.nom, prenom: s.prenom, moyenne: s.moyenne || 0 }));
 
-        parMatiere = all(
+        tousEleves.push(...n3Students);
+
+        // Radar N3 : par matière
+        const matiereRadar = all(
           `SELECT m.nom_matiere, m.coefficient, ROUND(AVG(n.note), 2) as moyenne
            FROM notes n JOIN matieres m ON m.id = n.matiere_id JOIN eleves e ON e.id = n.eleve_id
            ${whereClause} AND n.ecole_id = ? GROUP BY m.id ORDER BY m.nom_matiere`,
           [...params, ecoleId]
-        );
+        ).map(r => ({ ...r, niveau: 'N3' }));
+
+        parMatiere.push(...matiereRadar);
       }
+
+      // ── Fusion des résultats N1/N2 et N3 ────────────────────────────────
+      nbEleves = tousEleves.length;
+      moyenne = nbEleves > 0
+        ? parseFloat((tousEleves.reduce((s, r) => s + (r.moyenne || 0), 0) / nbEleves).toFixed(2))
+        : 0;
+
+      top5 = [...tousEleves].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0)).slice(0, 5);
+      alertes = tousEleves.filter(s => (s.moyenne || 0) < 10).sort((a, b) => (a.moyenne || 0) - (b.moyenne || 0)).slice(0, 5);
 
       let sexeWhere = 'annee_scolaire_id = ? AND ecole_id = ?';
       const sexeParams = [anneeId, ecoleId];
@@ -495,8 +543,10 @@ function register(ipcMain, deps) {
       logger.info('Stats Dashboard (Recalculé):', JSON.stringify(response.statsSexe));
       return response;
     } catch (error) {
-      logger.error('Erreur getDashboardStats:', error);
-      return { error: error.message };
+      const errMsg = error?.message || error?.toString() || 'Erreur inconnue';
+      logger.error('Erreur getDashboardStats: ' + errMsg);
+      console.error('Erreur getDashboardStats détail:', error);
+      return { error: errMsg };
     }
   });
 
@@ -511,46 +561,89 @@ function register(ipcMain, deps) {
 
       const cid = parseInt(classeId);
 
-      let isN1N2 = false;
+      // Déterminer les niveaux
+      let niveaux = [];
       if (!isNaN(cid) && cid > 0) {
-        const niveauRow = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
-        isN1N2 = niveauRow && (niveauRow.niveau_v2 === 'N1' || niveauRow.niveau_v2 === 'N2');
+        const nr = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+        if (nr) niveaux.push(nr.niveau_v2);
+      } else {
+        const rows = all('SELECT DISTINCT niveau_v2 FROM classes WHERE ecole_id = ?', [ecoleId]);
+        niveaux = rows.map(r => r.niveau_v2).filter(Boolean);
       }
 
-      let rows;
-      if (isN1N2) {
-        rows = all(`
-          SELECT n.periode, NULL as ua, ROUND(AVG(n.note), 2) AS moyenne
+      const hasN1N2 = niveaux.some(n => n === 'N1' || n === 'N2');
+      const hasN3 = niveaux.some(n => n === 'N3');
+
+      let rows = [];
+
+      // N1/N2 evolution : by periode (weighted)
+      if (hasN1N2) {
+        const n1n2Params = [anneeId, ecoleId, ecoleId, 'N1', 'N2'];
+        let n1n2Where = 'n.annee_scolaire_id = ? AND n.ecole_id = ? AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 = ? OR niveau_v2 = ?)) AND n.ua IS NOT NULL AND n.sous_type IS NULL';
+        if (!isNaN(cid) && cid > 0) { n1n2Where += ' AND e.classe_id = ?'; n1n2Params.push(cid); }
+        // Fetch raw aggregate notes with their sous_competence_code for weighted calc
+        const rawNotes = all(`
+          SELECT e.classe_id, n.periode, n.note, n.sous_competence_code
           FROM notes n JOIN eleves e ON e.id = n.eleve_id
-          WHERE n.annee_scolaire_id = ? AND n.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
-          AND n.ua IS NOT NULL AND n.sous_type IS NULL
-          GROUP BY n.periode ORDER BY
-            CASE n.periode
-              WHEN 'Trimestre 1' THEN 1
-              WHEN 'Trimestre 2' THEN 2
-              WHEN 'Trimestre 3' THEN 3
-              ELSE 4
-            END
-        `, !isNaN(cid) && cid > 0 ? [anneeId, ecoleId, cid] : [anneeId, ecoleId]);
-      } else {
+          WHERE ${n1n2Where}
+        `, n1n2Params);
+
+        // Cache niveau par classe
+        const niveauCache = {};
+        const getNiveau = (classeId) => {
+          if (!niveauCache[classeId]) {
+            const cl = get('SELECT niveau_v2 FROM classes WHERE id = ?', [classeId]);
+            niveauCache[classeId] = cl?.niveau_v2 || 'N1';
+          }
+          return niveauCache[classeId];
+        };
+
+        const periodeTotals = {};
+        for (const r of rawNotes) {
+          if (!periodeTotals[r.periode]) periodeTotals[r.periode] = { totalWeighted: 0, totalPoids: 0 };
+          const weights = getWeightsForSousCompetence(getNiveau(r.classe_id), r.sous_competence_code);
+          const totalPoids = (weights?.orale || 0) + (weights?.ecrite || 0) + (weights?.pratique || 0) + (weights?.savoirEtre || 0);
+          if (totalPoids > 0) {
+            periodeTotals[r.periode].totalWeighted += r.note * totalPoids;
+            periodeTotals[r.periode].totalPoids += totalPoids;
+          }
+        }
+
+        const ordrePeriode = { 'Trimestre 1': 1, 'Trimestre 2': 2, 'Trimestre 3': 3 };
+        for (const [periode, vals] of Object.entries(periodeTotals)) {
+          rows.push({
+            periode,
+            sequence: null,
+            ua: null,
+            moyenne: vals.totalPoids > 0 ? parseFloat((vals.totalWeighted / vals.totalPoids).toFixed(2)) : 0,
+            niveau: 'N1/N2'
+          });
+        }
+        rows.sort((a, b) => (ordrePeriode[a.periode] || 99) - (ordrePeriode[b.periode] || 99));
+      }
+
+      // N3 evolution : by sequence via stats_eleves
+      if (hasN3) {
         let whereClause = ' WHERE s.annee_scolaire_id = ?';
         const whereParams = [anneeId];
         if (!isNaN(cid) && cid > 0) { whereClause += ' AND e.classe_id = ?'; whereParams.push(cid); }
-        rows = all(
-          `SELECT s.periode, s.sequence,
-                  ROUND(AVG(s.moyenne), 2) AS moyenne
+        const n3Rows = all(
+          `SELECT s.periode, s.sequence, ROUND(AVG(s.moyenne), 2) AS moyenne
            FROM stats_eleves s JOIN eleves e ON e.id = s.eleve_id AND e.ecole_id = ?
            ${whereClause}
            GROUP BY s.periode, s.sequence ORDER BY s.periode, s.sequence`,
           [ecoleId, ...whereParams]
-        );
+        ).map(r => ({ ...r, ua: null, niveau: 'N3' }));
+        rows.push(...n3Rows);
       }
       
       dashboardCache.set(cacheKey, rows);
       return rows;
     } catch (error) {
-      logger.error('Erreur getEvolutionStats:', error);
-      return { error: error.message };
+      const errMsg = error?.message || error?.toString() || 'Erreur inconnue';
+      logger.error('Erreur getEvolutionStats: ' + errMsg);
+      console.error('Erreur getEvolutionStats détail:', error);
+      return { error: errMsg };
     }
   });
 
