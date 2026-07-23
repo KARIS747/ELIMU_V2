@@ -1018,9 +1018,6 @@ const fr = {
   'params.users_add_success':      'Utilisateur créé ',
 
   // Onglet Absences
-  'params.absences.title':         'Règlement des absences',
-  'params.absences.subtitle':      'Défini par l\'établissement',
-  'params.absences.desc':          'Configurez les seuils d\'heures d\'absence à partir desquels une sanction est <strong>suggérée automatiquement</strong> sur le bulletin. Chaque établissement fixe ses propres règles. Ces sanctions restent des suggestions affichées sur le bulletin — elles ne sont jamais appliquées sans validation manuelle dans le profil élève.',
   'params.absences.comptage_title':'Paramètres de comptage',
   'params.absences.duree_cours':   'Durée d\'un cours (heures)',
   'params.absences.duree_cours_tip':'Permet de convertir le nombre d\'absences en heures cumulées',
@@ -1039,11 +1036,6 @@ const fr = {
   'params.absences.bareme_col_to':'Jusqu\'à (h)',
   'params.absences.bareme_col_sanction':'Sanction / Mesure suggérée',
   'params.absences.bareme_col_gravity':'Niveau de gravité',
-  'params.absences.gravity_labels':'Niveaux :',
-  'params.absences.gravity_observation':'Observation',
-  'params.absences.gravity_warning':'Avertissement',
-  'params.absences.gravity_serious':'Sanction grave',
-  'params.absences.gravity_critical':'Exclusion / Critique',
   'params.absences.footer_hint_html': 'Ce barème sera affiché dans la section <strong style="color:var(--text-primary);">Absences</strong> de chaque bulletin trimestriel',
   'params.abs_rule_default_1':     'Observation dans le carnet de correspondance',
   'params.abs_rule_default_2':     'Convocation des parents / tuteurs légaux',

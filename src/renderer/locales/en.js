@@ -1092,9 +1092,6 @@ const en = {
   'params.users_add_success':      'User created ',
 
   // Absences Tab
-  'params.absences.title':         'Absence regulations',
-  'params.absences.subtitle':      'Defined by the school',
-  'params.absences.desc':          'Configure the absence hour thresholds from which a sanction is <strong>automatically suggested</strong> on the report card. Each school sets its own rules. These sanctions remain suggestions displayed on the report card — they are never applied without manual validation in the student profile.',
   'params.absences.comptage_title':'Counting parameters',
   'params.absences.duree_cours':   'Course duration (hours)',
   'params.absences.duree_cours_tip':'Converts number of absences into cumulative hours',
@@ -1113,11 +1110,6 @@ const en = {
   'params.absences.bareme_col_to':'Up to (h)',
   'params.absences.bareme_col_sanction':'Suggested Sanction / Measure',
   'params.absences.bareme_col_gravity':'Gravity level',
-  'params.absences.gravity_labels':'Levels:',
-  'params.absences.gravity_observation':'Observation',
-  'params.absences.gravity_warning':'Warning',
-  'params.absences.gravity_serious':'Serious sanction',
-  'params.absences.gravity_critical':'Exclusion / Critical',
   'params.absences.footer_hint_html': 'This scale will be displayed in the <strong style="color:var(--text-primary);">Absences</strong> section of each term report card',
   'params.abs_rule_default_1':     'Observation in correspondence book',
   'params.abs_rule_default_2':     'Convocation of parents / legal guardians',
