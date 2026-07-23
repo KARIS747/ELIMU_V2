@@ -94,9 +94,13 @@ function register(ipcMain, deps) {
         LIMIT ? OFFSET ?
       `, [...params, lNum, offset]);
 
-      const nbActifs = get("SELECT COUNT(*) as count FROM professeurs WHERE actif = 1 AND ecole_id = ?", [ecoleId])?.count || 0;
-      const totalCount = get("SELECT COUNT(*) as count FROM professeurs WHERE ecole_id = ?", [ecoleId])?.count || 0;
-      const nbSuspendus = totalCount - nbActifs;
+      const totalCount = get("SELECT COUNT(*) as count FROM professeurs WHERE actif = 1 AND ecole_id = ?", [ecoleId])?.count || 0;
+      const nbActifs = get(`SELECT COUNT(*) as count FROM professeurs p
+        INNER JOIN utilisateurs u ON p.utilisateur_id = u.id
+        WHERE p.actif = 1 AND u.actif = 1 AND p.ecole_id = ?`, [ecoleId])?.count || 0;
+      const nbSuspendus = get(`SELECT COUNT(*) as count FROM professeurs p
+        LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
+        WHERE p.actif = 1 AND (u.actif IS NULL OR u.actif = 0) AND p.ecole_id = ?`, [ecoleId])?.count || 0;
 
       return {
         professeurs: profs,
@@ -319,7 +323,6 @@ function register(ipcMain, deps) {
       const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (!prof) return { success: false, error: 'Professeur introuvable' };
 
-      run('UPDATE professeurs SET actif = 0 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 0 WHERE id = ?', [prof.utilisateur_id]);
       }
@@ -346,7 +349,6 @@ function register(ipcMain, deps) {
       const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (!prof) return { success: false, error: 'Professeur introuvable' };
 
-      run('UPDATE professeurs SET actif = 1 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 1 WHERE id = ?', [prof.utilisateur_id]);
       }
