@@ -174,7 +174,7 @@ function register(ipcMain, deps) {
 
       // Synchronisation parent automatique
       if (data.telephone_parent) {
-        await syncParentEleve(eleveId, data.nom_parent, data.telephone_parent, logger);
+        await syncParentEleve(eleveId, data.nom_parent, data.telephone_parent, logger, ecoleId);
       }
 
       try {
@@ -209,7 +209,7 @@ function register(ipcMain, deps) {
       );
 
       // Synchronisation parent automatique
-      await syncParentEleve(eid, data.nom_parent, data.telephone_parent, logger);
+      await syncParentEleve(eid, data.nom_parent, data.telephone_parent, logger, ecoleId);
 
       await logAudit(getCurrentUserId(), 'UPDATE_ELEVE', `Mise à jour élève ID ${eid}`);
       return { success: true };

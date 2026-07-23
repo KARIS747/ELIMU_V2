@@ -16,23 +16,25 @@ const BCRYPT_ROUNDS = 10;
  * @param {string} nomParent 
  * @param {string} telephoneParent 
  * @param {object} logger 
+ * @param {string} ecoleId 
  */
-async function syncParentEleve(eleveId, nomParent, telephoneParent, logger) {
+async function syncParentEleve(eleveId, nomParent, telephoneParent, logger, ecoleId) {
   if (!telephoneParent || !telephoneParent.trim()) {
-    // Si pas de téléphone, on s'assure qu'il n'y a plus de liaison (facultatif selon métier)
     await run('DELETE FROM parents_eleves WHERE eleve_id = ?', [eleveId]);
     return;
   }
 
   const tel = telephoneParent.trim();
   const nom = nomParent ? nomParent.trim() : '';
+  const eid = ecoleId || '';
 
   try {
-    // 1. Trouver ou créer le parent
-    let parent = await get('SELECT id, nom_parent FROM parents WHERE telephone = ?', [tel]);
+    let parent = await get(
+      'SELECT id, nom_parent FROM parents WHERE telephone = ? AND ecole_id = ?',
+      [tel, eid]
+    );
 
     if (!parent) {
-      // Générer un mot de passe par défaut
       const charSet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let rawPassword = '';
       for (let i = 0; i < 8; i++) {
@@ -41,22 +43,21 @@ async function syncParentEleve(eleveId, nomParent, telephoneParent, logger) {
       const hash = await bcrypt.hash(rawPassword, BCRYPT_ROUNDS);
 
       const result = await run(
-        'INSERT INTO parents (telephone, mot_de_passe_hash, nom_parent) VALUES (?, ?, ?)',
-        [tel, hash, nomParent]
+        'INSERT INTO parents (telephone, mot_de_passe_hash, nom_parent, ecole_id) VALUES (?, ?, ?, ?)',
+        [tel, hash, nomParent, eid]
       );
       parent = { id: result.lastID, nom_parent: nom };
       logger.info(`Parent créé automatiquement pour le téléphone ${tel}`);
     } else if (nom && (!parent.nom_parent || parent.nom_parent === '')) {
-      // Mettre à jour le nom si on en a un maintenant
-      await run('UPDATE parents SET nom_parent = ? WHERE id = ?', [nom, parent.id]);
+      await run('UPDATE parents SET nom_parent = ? WHERE id = ? AND ecole_id = ?', [nom, parent.id, eid]);
     }
 
-    // 2. Mettre à jour la liaison dans parents_eleves
-    // Supprimer les anciennes liaisons pour cet élève (un élève n'a qu'un numéro parent dans la table eleves)
     await run('DELETE FROM parents_eleves WHERE eleve_id = ?', [eleveId]);
-    
-    // Créer la nouvelle liaison
-    await run('INSERT OR IGNORE INTO parents_eleves (parent_id, eleve_id) VALUES (?, ?)', [parent.id, eleveId]);
+
+    await run(
+      'INSERT OR IGNORE INTO parents_eleves (parent_id, eleve_id, ecole_id) VALUES (?, ?, ?)',
+      [parent.id, eleveId, eid]
+    );
 
   } catch (error) {
     logger.error(`Erreur lors de la synchronisation parent pour l'élève ${eleveId}:`, error);

@@ -614,7 +614,7 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
               [sexe, nomParent, telParent, existant.id]
             );
             if (telParent) {
-              await syncParentEleve(existant.id, nomParent, telParent, defaultLogger);
+              await syncParentEleve(existant.id, nomParent, telParent, defaultLogger, ecoleId);
             }
             resultat.nbIgnores++;
             continue;
@@ -663,7 +663,7 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
         }
 
         if (telParent) {
-          await syncParentEleve(eleveId, nomParent, telParent, defaultLogger);
+          await syncParentEleve(eleveId, nomParent, telParent, defaultLogger, ecoleId);
         }
 
       } catch (rowErr) {

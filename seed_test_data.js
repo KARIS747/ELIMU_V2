@@ -336,6 +336,25 @@ try {
   const cm1Ids = createEleves(classIds['N3'], 12);
   console.log(`  ✅ ${eleveCount} élèves`);
 
+  // ── Parents ──────────────────────────────────────────────────────
+  let parentCount = 0;
+  const allEleveIds = [...silIds, ...ce1Ids, ...cm1Ids];
+  for (const eid of allEleveIds) {
+    const el = db.prepare("SELECT nom_parent, telephone_parent FROM eleves WHERE id = ?").get(eid);
+    if (!el || !el.telephone_parent) continue;
+    const tel = el.telephone_parent.trim();
+    const nom = el.nom_parent ? el.nom_parent.trim() : '';
+    let parent = db.prepare("SELECT id FROM parents WHERE telephone = ? AND ecole_id = ?").get(tel, ecoleId);
+    if (!parent) {
+      const hash = bcrypt.hashSync('parent123', 10);
+      const r = db.prepare("INSERT INTO parents (telephone, mot_de_passe_hash, nom_parent, ecole_id) VALUES (?, ?, ?, ?)").run(tel, hash, nom, ecoleId);
+      parent = { id: Number(r.lastInsertRowid) };
+      parentCount++;
+    }
+    db.prepare("INSERT OR IGNORE INTO parents_eleves (parent_id, eleve_id, ecole_id) VALUES (?, ?, ?)").run(parent.id, eid, ecoleId);
+  }
+  if (parentCount > 0) console.log(`  ✅ ${parentCount} comptes parents créés (mdp: parent123)`);
+
   // ── 6. Notes N1/N2 avec VRAIS codes MINEDUB ─────────────────────
   // Chaque sous-compétence a 4 sous-types (orale, ecrite, pratique, savoirEtre).
   // La note agrégée = moyenne pondérée des sous-types selon le curriculum.
