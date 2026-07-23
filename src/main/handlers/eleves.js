@@ -364,8 +364,9 @@ function register(ipcMain, deps) {
       // ── Path N1/N2 : moyennes pondérées par le curriculum MINEDUB ──────
       if (hasN1N2) {
         let n1n2Where = 'WHERE n.annee_scolaire_id = ? AND n.sous_type IS NULL AND n.ecole_id = ?';
-        n1n2Where += ' AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 = ? OR niveau_v2 = ?))';
-        const n1n2Params = [anneeId, ecoleId, ecoleId, 'N1', 'N2'];
+        const n1n2Vals = (niveau === 'N1' || niveau === 'N2') ? [niveau] : ['N1', 'N2'];
+        n1n2Where += ' AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 IN (' + n1n2Vals.map(_ => '?').join(',') + '))';
+        const n1n2Params = [anneeId, ecoleId, ecoleId, ...n1n2Vals];
         if (!isNaN(cid) && cid > 0) { n1n2Where += ' AND e.classe_id = ?'; n1n2Params.push(cid); }
         if (periode && periode !== 'Tous') {
           const uas = getUAsForPeriode(periode);
@@ -483,21 +484,33 @@ function register(ipcMain, deps) {
       top5 = [...tousEleves].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0)).slice(0, 5);
       alertes = tousEleves.filter(s => (s.moyenne || 0) < 10).sort((a, b) => (a.moyenne || 0) - (b.moyenne || 0)).slice(0, 5);
 
+      // Filtre niveau pour les KPIs (sexe/absences) quand aucune classe spécifique
+      const niveauClasseFilter = (tableAlias) => {
+        if (!isNaN(cid) && cid > 0) return { sql: ` AND ${tableAlias}.classe_id = ?`, params: [cid] };
+        if (niveau === 'Autre') return { sql: ` AND ${tableAlias}.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 IS NULL OR niveau_v2 NOT IN ('N1','N2','N3')))`, params: [ecoleId] };
+        if (niveau) return { sql: ` AND ${tableAlias}.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)`, params: [ecoleId, niveau] };
+        return { sql: '', params: [] };
+      };
+
       let sexeWhere = 'annee_scolaire_id = ? AND ecole_id = ?';
       const sexeParams = [anneeId, ecoleId];
-      if (!isNaN(cid) && cid > 0) { sexeWhere += ' AND classe_id = ?'; sexeParams.push(cid); }
+      const sexeF = niveauClasseFilter('e');
+      sexeWhere += sexeF.sql;
+      sexeParams.push(...sexeF.params);
 
       const statsSexe = get(`
         SELECT 
           COALESCE(SUM(CASE WHEN sexe = 'M' THEN 1 ELSE 0 END), 0) as garcons,
           COALESCE(SUM(CASE WHEN sexe = 'F' THEN 1 ELSE 0 END), 0) as filles
-        FROM eleves 
+        FROM eleves e
         WHERE ${sexeWhere}
       `, sexeParams);
 
       let absWhere = 'ha.annee_scolaire_id = ? AND ha.ecole_id = ?';
       const absParams = [anneeId, ecoleId];
-      if (!isNaN(cid) && cid > 0) { absWhere += ' AND e.classe_id = ?'; absParams.push(cid); }
+      const absF = niveauClasseFilter('e');
+      absWhere += absF.sql;
+      absParams.push(...absF.params);
       if (periode && periode !== 'Tous') { absWhere += ' AND ha.periode = ?'; absParams.push(periode); }
 
       const topAbsences = all(
@@ -511,16 +524,16 @@ function register(ipcMain, deps) {
         absParams
       );
 
-      const topAssidusParams = [anneeId, ecoleId];
+      const assF = niveauClasseFilter('e');
+      const topAssidusParams = [anneeId, ecoleId, ...assF.params];
       if (periode && periode !== 'Tous') { topAssidusParams.push(periode); }
       topAssidusParams.push(anneeId, ecoleId);
-      if (!isNaN(cid) && cid > 0) { topAssidusParams.push(cid); }
 
       const topAssidus = all(
         `SELECT e.id, e.nom, e.prenom, SUM(ha.heures) as total_heures
          FROM eleves e
          LEFT JOIN heures_absence ha ON e.id = ha.eleve_id AND ha.annee_scolaire_id = ? AND ha.ecole_id = ? ${periode && periode !== 'Tous' ? 'AND ha.periode = ?' : ''}
-         WHERE e.annee_scolaire_id = ? AND e.ecole_id = ? ${!isNaN(cid) && cid > 0 ? 'AND e.classe_id = ?' : ''}
+         WHERE e.annee_scolaire_id = ? AND e.ecole_id = ? ${assF.sql}
          GROUP BY e.id
          ORDER BY total_heures ASC
          LIMIT 5`,
@@ -581,8 +594,9 @@ function register(ipcMain, deps) {
 
       // N1/N2 evolution : by periode (weighted)
       if (hasN1N2) {
-        const n1n2Params = [anneeId, ecoleId, ecoleId, 'N1', 'N2'];
-        let n1n2Where = 'n.annee_scolaire_id = ? AND n.ecole_id = ? AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 = ? OR niveau_v2 = ?)) AND n.ua IS NOT NULL AND n.sous_type IS NULL';
+        const n1n2Vals = (niveau === 'N1' || niveau === 'N2') ? [niveau] : ['N1', 'N2'];
+        const n1n2Params = [anneeId, ecoleId, ecoleId, ...n1n2Vals];
+        let n1n2Where = 'n.annee_scolaire_id = ? AND n.ecole_id = ? AND e.classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 IN (' + n1n2Vals.map(_ => '?').join(',') + ')) AND n.ua IS NOT NULL AND n.sous_type IS NULL';
         if (!isNaN(cid) && cid > 0) { n1n2Where += ' AND e.classe_id = ?'; n1n2Params.push(cid); }
         // Fetch raw aggregate notes with their sous_competence_code for weighted calc
         const rawNotes = all(`
