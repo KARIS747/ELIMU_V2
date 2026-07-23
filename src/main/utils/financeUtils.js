@@ -8,13 +8,14 @@ const { majStatutsTransches } = require('../../shared/utils/financeUtils');
 
 /**
  * Génère un numéro de reçu séquentiel de la forme REC-AAAAMMJJ-NNNNN.
+ * @param {string} ecoleId
  * @returns {string}
  */
-function genererNumeroRecu() {
+function genererNumeroRecu(ecoleId) {
   const dateStr = getLocalDateStringCompact();
   const last = get(
-    `SELECT recu_numero FROM paiements WHERE recu_numero LIKE ? ORDER BY id DESC LIMIT 1`,
-    [`REC-${dateStr}-%`]
+    `SELECT recu_numero FROM paiements WHERE recu_numero LIKE ? AND ecole_id = ? ORDER BY id DESC LIMIT 1`,
+    [`REC-${dateStr}-%`, ecoleId || '']
   );
   let compteur = 1;
   if (last && last.recu_numero) {
@@ -27,10 +28,15 @@ function genererNumeroRecu() {
 
 /**
  * Génère automatiquement les tranches de paiement
+ * @param {number} eleveId
+ * @param {number} anneeId
+ * @param {object} logger
+ * @param {string} ecoleId
  */
-function genererTranchesPourEleve(eleveId, anneeId, logger) {
+function genererTranchesPourEleve(eleveId, anneeId, logger, ecoleId) {
   try {
-    const fraisActifs = all(`SELECT * FROM frais_types WHERE actif = 1`);
+    const eid = ecoleId || '';
+    const fraisActifs = all(`SELECT * FROM frais_types WHERE actif = 1 AND ecole_id = ?`, [eid]);
     if (!fraisActifs || !fraisActifs.length) {
       logger.info(`genererTranchesPourEleve(${eleveId}) : aucun type de frais actif, skip.`);
       return { success: true, nbGeneres: 0 };
@@ -44,9 +50,9 @@ function genererTranchesPourEleve(eleveId, anneeId, logger) {
         try {
           run(
             `INSERT OR IGNORE INTO tranches
-               (frais_type_id, eleve_id, numero_tranche, montant, date_echeance, statut, annee_scolaire_id)
-             VALUES (?, ?, ?, ?, ?, 'en_attente', ?)`,
-            [ft.id, eleveId, t, ft.montant_par_tranche, getLocalDateString(date), anneeId]
+               (frais_type_id, eleve_id, numero_tranche, montant, date_echeance, statut, annee_scolaire_id, ecole_id)
+             VALUES (?, ?, ?, ?, ?, 'en_attente', ?, ?)`,
+            [ft.id, eleveId, t, ft.montant_par_tranche, getLocalDateString(date), anneeId, eid]
           );
           nbGeneres++;
         } catch (insertErr) {
@@ -54,8 +60,8 @@ function genererTranchesPourEleve(eleveId, anneeId, logger) {
             `genererTranchesPourEleve: tranche ${t} frais ${ft.id} élève ${eleveId} — ${insertErr.message}`
           );
         }
-        date.setMonth(date.getMonth() + ft.periodicite_mois);
       }
+      date.setMonth(date.getMonth() + ft.periodicite_mois);
     }
 
     logger.info(

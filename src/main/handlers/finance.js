@@ -35,7 +35,7 @@ function register(ipcMain, deps) {
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      majStatutsTransches();
+      majStatutsTransches(ecoleId);
       const du       = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]) || {};
       const encaisse = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM paiements WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]) || {};
       const impayes  = get(`SELECT COALESCE(SUM(montant), 0) AS total FROM tranches WHERE annee_scolaire_id = ? AND ecole_id = ? AND statut != 'paye'`, [anneeId, ecoleId]) || {};
@@ -184,7 +184,7 @@ function register(ipcMain, deps) {
       if (!anneeId) return { tranches: [], total: 0, error: 'Aucune année scolaire active' };
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
-      majStatutsTransches();
+      majStatutsTransches(ecoleId);
       const { classeId, statut, search, numero_tranche, frais_type_id, page = 1, limit = 30 } = filtres;
       let where = ' WHERE t.annee_scolaire_id = ? AND t.ecole_id = ?';
       const params = [anneeId, ecoleId];
@@ -241,8 +241,8 @@ function register(ipcMain, deps) {
       const eid = parseInt(eleveId);
       if (isNaN(eid)) return [];
       const anneeId = getCurrentAnneeId();
-      majStatutsTransches();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      majStatutsTransches(ecoleId);
       return all(
         `SELECT t.*, ft.nom AS nom_frais FROM tranches t
          JOIN frais_types ft ON ft.id = t.frais_type_id
@@ -282,7 +282,7 @@ function register(ipcMain, deps) {
       const montantFinal = totalTranches > 0 ? totalTranches : parseFloat(montant);
       if (isNaN(montantFinal) || montantFinal <= 0) return { success: false, error: 'Montant invalide' };
       
-      const recuNum = genererNumeroRecu();
+      const recuNum = genererNumeroRecu(ecoleId);
 
       const r = run(
         `INSERT INTO paiements
@@ -369,7 +369,8 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return { impayes: [], total: 0 };
     try {
       const anneeId = getCurrentAnneeId();
-      majStatutsTransches();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      majStatutsTransches(ecoleId);
       let classeId = null, fraisTypeId = null, numeroTranche = null, page = 1, limit = 50;
       
       if (filtres !== null && typeof filtres === 'object' && !Array.isArray(filtres)) {
@@ -382,7 +383,6 @@ function register(ipcMain, deps) {
         classeId = parseInt(filtres);
       }
 
-      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       let where = ` WHERE t.statut IN ('en_attente', 'en_retard') AND t.annee_scolaire_id = ? AND t.ecole_id = ?`;
       const params = [anneeId, ecoleId];
       
@@ -429,7 +429,7 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const lNum = parseInt(limit) || 5;
-      majStatutsTransches();
+      majStatutsTransches(ecoleId);
       return all(
         `SELECT e.id, e.nom, e.prenom, c.nom_classe,
                 COUNT(t.id) AS nb_tranches,
@@ -501,7 +501,7 @@ function register(ipcMain, deps) {
 
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      majStatutsTransches();
+      majStatutsTransches(ecoleId);
 
       let sql = `
         SELECT e.nom, e.prenom, c.nom_classe, e.nom_parent, e.telephone_parent,

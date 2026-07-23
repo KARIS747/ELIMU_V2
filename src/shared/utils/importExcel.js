@@ -260,7 +260,7 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
             eleve = { id: inserted.lastID, nom: nomLu, prenom: prenomLu };
             eleves.push(eleve);
             resultat.avertissements.push(`Ligne ${rowNumber}: Élève "${nomPrenom}" créé automatiquement.`);
-            if (anneeId) genererTranchesPourEleve(eleve.id, anneeId, defaultLogger);
+            if (anneeId) genererTranchesPourEleve(eleve.id, anneeId, defaultLogger, ecoleId);
           } catch (createErr) {
             resultat.erreurs.push(`Ligne ${rowNumber}: Impossible de créer "${nomPrenom}" — ${createErr.message}`);
             resultat.nbErreurs++;
@@ -492,7 +492,7 @@ async function importClassicNotes(filePath, classeId, matiereId, periode, sequen
             resultat.avertissements.push(`Ligne ${rowNumber}: Élève "${nomLu} ${prenomLu}" créé automatiquement.`);
 
             if (anneeId) {
-              genererTranchesPourEleve(eleveId, anneeId, defaultLogger);
+              genererTranchesPourEleve(eleveId, anneeId, defaultLogger, ecoleId);
             }
           } catch (createErr) {
             resultat.erreurs.push(`Ligne ${rowNumber}: Impossible de créer l'élève "${nomLu} ${prenomLu}" — ${createErr.message}`);
@@ -659,7 +659,7 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
         }
 
         if (estNouveau && anneeId) {
-          genererTranchesPourEleve(eleveId, anneeId, defaultLogger);
+          genererTranchesPourEleve(eleveId, anneeId, defaultLogger, ecoleId);
         }
 
         if (telParent) {

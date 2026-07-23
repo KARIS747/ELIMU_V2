@@ -12,13 +12,14 @@ function formatMontant(n) {
 
 /**
  * Met à jour les statuts des tranches en retard.
+ * @param {string} ecoleId
  */
-function majStatutsTransches() {
+function majStatutsTransches(ecoleId) {
   const today = getLocalDateString();
   run(
     `UPDATE tranches SET statut = 'en_retard'
-     WHERE statut = 'en_attente' AND date_echeance < ?`,
-    [today]
+     WHERE statut = 'en_attente' AND date_echeance < ? AND ecole_id = ?`,
+    [today, ecoleId || '']
   );
 }
 

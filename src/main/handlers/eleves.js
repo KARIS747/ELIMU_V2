@@ -178,7 +178,7 @@ function register(ipcMain, deps) {
       }
 
       try {
-        const tranchesResult = genererTranchesPourEleve(eleveId, anneeId, logger);
+        const tranchesResult = genererTranchesPourEleve(eleveId, anneeId, logger, ecoleId);
         if (tranchesResult.success && tranchesResult.nbGeneres > 0) {
           logger.info(`Élève ID ${eleveId} — ${tranchesResult.nbGeneres} tranche(s) finance générée(s) automatiquement.`);
         }

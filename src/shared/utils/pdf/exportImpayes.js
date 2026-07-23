@@ -22,7 +22,7 @@ async function exportImpayesPDF(outputPath, options) {
 
   return new Promise((resolve, reject) => {
     try {
-      majStatutsTransches(); // S'assurer que les retards sont à jour
+      majStatutsTransches(ecoleId); // S'assurer que les retards sont à jour
 
       let sql = `
         SELECT e.id AS eleve_id, e.nom, e.prenom, c.nom_classe, e.telephone_parent,
