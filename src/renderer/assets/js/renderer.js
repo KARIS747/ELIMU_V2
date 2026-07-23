@@ -689,6 +689,25 @@ function setupNavigation() {
   };
   document.querySelector('.sidebar-nav')?.addEventListener('click', navListener);
   document.getElementById('btn-logout')?.addEventListener('click', handleLogout);
+
+  // Sidebar toggle (responsive)
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  if (toggleBtn && sidebar && backdrop) {
+    const closeSidebar = () => {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('open');
+    };
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      backdrop.classList.toggle('open');
+    });
+    backdrop.addEventListener('click', closeSidebar);
+    document.querySelector('.sidebar-nav')?.addEventListener('click', (e) => {
+      if (e.target.closest('.nav-item')) closeSidebar();
+    });
+  }
 }
 
 async function navigateTo(sectionId) {

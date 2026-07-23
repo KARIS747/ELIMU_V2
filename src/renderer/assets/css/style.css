@@ -1740,3 +1740,115 @@ tbody td { padding: 11px 16px; color: var(--text-secondary); font-size: 13px; }
     font-size: 11px;
   }
 }
+
+/* ============================================================
+   RESPONSIVE — Sidebar overlay, grilles adaptatives, breakpoints
+   ============================================================ */
+
+/* ── Backdrop sidebar (caché > 1024px) ── */
+#sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Hamburger toggle (caché > 1024px) ── */
+#sidebar-toggle {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+#sidebar-toggle:hover {
+  border-color: var(--green-fifa);
+  background: var(--bg-hover);
+}
+
+/* ── Sidebar overlay < 1024px ── */
+@media (max-width: 1024px) {
+  #sidebar {
+    position: fixed;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #sidebar.open {
+    transform: translateX(0);
+  }
+  #sidebar-backdrop.open {
+    display: block !important;
+  }
+  #sidebar-toggle {
+    display: flex !important;
+  }
+}
+
+/* ── Grilles responsives ── */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .grid-2,
+  .grid-3,
+  .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ── KPIs sections : passage en auto-fit ── */
+@media (max-width: 1024px) {
+  #classes-kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+  #profs-kpis   { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+  #fin-kpis     { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+}
+
+/* ── Contenu et topbar ── */
+@media (max-width: 768px) {
+  .content-area { padding: 16px; }
+  .topbar { padding: 0 16px; gap: 10px; }
+  .topbar-title { font-size: 18px; }
+}
+@media (max-width: 480px) {
+  .content-area { padding: 12px; }
+  .topbar { padding: 0 10px; gap: 8px; }
+  .topbar-title { font-size: 16px; }
+}
+
+/* ── Dashboard cartes graphiques ── */
+@media (max-width: 768px) {
+  .dashboard-container .card { padding: 14px; }
+  #dash-kpis { gap: 8px; }
+}
+
+/* ── Tableaux responsives (scroll horizontal) ── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-responsive table { min-width: 600px; }
+
+/* ── Finance : tabs responsives ── */
+@media (max-width: 768px) {
+  .fin-tabs { flex-wrap: wrap; gap: 4px; }
+  .fin-tab-btn { flex: 1; min-width: 70px; text-align: center; padding: 8px 8px; font-size: 10px; }
+}
+
+/* ── Paramètres : tabs scrollables ── */
+@media (max-width: 768px) {
+  [style*="flex-wrap:nowrap"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+}
