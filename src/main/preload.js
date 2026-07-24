@@ -275,6 +275,7 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   // ==========================================
 
   syncToPwa:              ()      => ipcRenderer.invoke('db:syncToPwa'),
+  pullFromPwa:            ()      => ipcRenderer.invoke('db:pullFromPwa'),
   getPwaSyncConfig:       ()      => ipcRenderer.invoke('db:getPwaSyncConfig'),
   savePwaSyncConfig:      (data)  => ipcRenderer.invoke('db:savePwaSyncConfig', data),
 

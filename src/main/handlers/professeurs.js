@@ -690,6 +690,163 @@ function register(ipcMain, deps) {
       return { success: false, error: e.message };
     }
   });
+
+  // ── Pull depuis PWA ─────────────────────────────────────────────────────────
+  // Pont PWA → Desktop : recupere les notes/absences depuis le serveur PWA
+  // via GET /api/sync/pull-from-pwa et les importe dans la base locale
+
+  ipcMain.handle('db:pullFromPwa', async () => {
+    try {
+      const syncUrl = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_url'")?.valeur;
+      const apiKey = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_api_key'")?.valeur;
+
+      if (!syncUrl || !apiKey) {
+        return { success: false, error: 'Configuration PWA manquante. Configurez pwa_sync_url et pwa_sync_api_key dans Parametres.' };
+      }
+
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const anneeId = getCurrentAnneeId ? getCurrentAnneeId() : null;
+
+      if (!ecoleId) return { success: false, error: 'ecole_id non disponible' };
+
+      const response = await makeRequest(
+        syncUrl.replace(/\/$/, '') + '/api/sync/pull-from-pwa?ecole_id=' + encodeURIComponent(ecoleId),
+        'GET',
+        null,
+        { 'x-api-key': apiKey }
+      );
+
+      if (response.status !== 200) {
+        return { success: false, error: 'Erreur serveur PWA: ' + (response.data?.error || 'HTTP ' + response.status) };
+      }
+
+      const payload = response.data;
+      if (!payload?.success || !payload?.data) {
+        return { success: false, error: 'Format de reponse PWA invalide' };
+      }
+
+      const { notes, notesN3, absences } = payload.data;
+      const result = { notesImportees: 0, notesN3Importees: 0, absencesImportees: 0, erreurs: [] };
+
+      const periodeMap = { 1: 'Trimestre 1', 2: 'Trimestre 2', 3: 'Trimestre 3' };
+      const { getWeightsForSousCompetence, calcAggregateFromSubNotes, getPeriodeForUA } = require('../../shared/constants/curriculum');
+
+      run('BEGIN');
+      try {
+        // ══ N1/N2 Notes ══════════════════════════════════════
+        const subNotesByGroup = {};
+
+        for (const n of notes) {
+          const eleve = get('SELECT id, classe_id FROM eleves WHERE id = ? AND ecole_id = ?', [n.eleve_external_id, ecoleId]);
+          if (!eleve) {
+            result.erreurs.push('Eleve ID ' + n.eleve_external_id + ' introuvable');
+            continue;
+          }
+
+          const classe = get('SELECT niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [eleve.classe_id, ecoleId]);
+
+          const periode = periodeMap[n.trimestre] || getPeriodeForUA(n.ua) || 'Trimestre 1';
+
+          run(
+            "DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND sous_type=? AND ua=? AND annee_scolaire_id=? AND ecole_id=?",
+            [eleve.id, n.sous_competence_code, n.type_eval, n.ua, anneeId, ecoleId]
+          );
+          run(
+            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,?,'PWA',?,?,?)",
+            [eleve.id, n.note, n.ua, n.sous_competence_code, n.type_eval, anneeId, periode, ecoleId]
+          );
+          result.notesImportees++;
+
+          const key = eleve.id + '|' + n.sous_competence_code + '|' + n.ua;
+          if (!subNotesByGroup[key]) {
+            subNotesByGroup[key] = { eleveId: eleve.id, sousCode: n.sous_competence_code, ua: n.ua, lvl: classe?.niveau_v2, subNotes: {} };
+          }
+          subNotesByGroup[key].subNotes[n.type_eval] = n.note;
+        }
+
+        // Aggregate notes (sous_type IS NULL)
+        for (const key of Object.keys(subNotesByGroup)) {
+          const g = subNotesByGroup[key];
+          if (g.lvl !== 'N1' && g.lvl !== 'N2') continue;
+          const weights = getWeightsForSousCompetence(g.lvl, g.sousCode);
+          if (!weights) continue;
+          const agg = calcAggregateFromSubNotes(g.subNotes, weights);
+          if (agg === null) continue;
+
+          const periode = getPeriodeForUA(g.ua) || 'Trimestre 1';
+
+          run(
+            "DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND sous_type IS NULL AND ua=? AND annee_scolaire_id=? AND ecole_id=?",
+            [g.eleveId, g.sousCode, g.ua, anneeId, ecoleId]
+          );
+          run(
+            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,NULL,'PWA',?,?,?)",
+            [g.eleveId, Math.round(agg * 100) / 100, g.ua, g.sousCode, anneeId, periode, ecoleId]
+          );
+          result.notesImportees++;
+        }
+
+        // ══ N3 Notes ════════════════════════════════════════
+        for (const n of notesN3) {
+          const eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [n.eleve_external_id, ecoleId]);
+          if (!eleve) {
+            result.erreurs.push('Eleve ID ' + n.eleve_external_id + ' introuvable (N3)');
+            continue;
+          }
+
+          const matiere = get('SELECT id FROM matieres WHERE nom_matiere = ? AND ecole_id = ?', [n.matiere_code, ecoleId]);
+          if (!matiere) {
+            result.erreurs.push('Matiere "' + n.matiere_code + '" introuvable');
+            continue;
+          }
+
+          const periode = periodeMap[n.trimestre] || 'Trimestre 1';
+
+          run(
+            "DELETE FROM notes WHERE eleve_id=? AND matiere_id=? AND periode=? AND sequence=? AND annee_scolaire_id=? AND ecole_id=?",
+            [eleve.id, matiere.id, periode, n.sequence, anneeId, ecoleId]
+          );
+          run(
+            "INSERT INTO notes (eleve_id, matiere_id, note, periode, sequence, source, annee_scolaire_id, ecole_id) VALUES (?,?,?,?,?,'PWA',?,?)",
+            [eleve.id, matiere.id, n.note, periode, n.sequence, anneeId, ecoleId]
+          );
+          result.notesN3Importees++;
+        }
+
+        // ══ Absences ════════════════════════════════════════
+        for (const a of absences) {
+          const eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [a.eleve_external_id, ecoleId]);
+          if (!eleve) {
+            result.erreurs.push('Eleve ID ' + a.eleve_external_id + ' introuvable (absence)');
+            continue;
+          }
+
+          const periode = periodeMap[a.trimestre] || 'Trimestre 1';
+
+          run(
+            "INSERT OR REPLACE INTO heures_absence (eleve_id, periode, heures, annee_scolaire_id, ecole_id) VALUES (?,?,?,?,?)",
+            [eleve.id, periode, a.heures, anneeId, ecoleId]
+          );
+          result.absencesImportees++;
+        }
+
+        run('COMMIT');
+
+        await logAudit(getCurrentUserId(), 'PULL_FROM_PWA',
+          result.notesImportees + ' notes N1/N2, ' + result.notesN3Importees + ' notes N3, ' +
+          result.absencesImportees + ' absences');
+
+        logger.info('Pull PWA termine:', JSON.stringify(result));
+        return { success: true, ...result };
+      } catch (err) {
+        run('ROLLBACK');
+        throw err;
+      }
+    } catch (e) {
+      logger.error('Erreur pull PWA:', e);
+      return { success: false, error: e.message };
+    }
+  });
 }
 
 // ── Sync PWA ────────────────────────────────────────────────────────────

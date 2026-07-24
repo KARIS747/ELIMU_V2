@@ -145,6 +145,34 @@ async function initPwaSync() {
       syncBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Push PWA';
     }
   });
+
+  // Pull PWA
+  const pullBtn = document.getElementById('dash-pull-pwa');
+  pullBtn?.addEventListener('click', async () => {
+    pullBtn.disabled = true;
+    pullBtn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:4px;"></span> Pull...';
+    updateSyncBanner('info', 'Pull PWA en cours...');
+
+    try {
+      const result = await window.elimuAPI.pullFromPwa();
+      if (result?.success) {
+        const msg = 'Pull reussi: ' + (result.notesImportees || 0) + ' notes N1/N2, ' +
+          (result.notesN3Importees || 0) + ' notes N3, ' + (result.absencesImportees || 0) + ' absences';
+        updateSyncBanner('success', msg);
+        showToast(msg, 'success');
+        reloadDashboard();
+      } else {
+        updateSyncBanner('error', 'Echec pull: ' + (result?.error || 'Erreur inconnue'));
+        showToast(result?.error || 'Echec pull', 'error');
+      }
+    } catch (e) {
+      updateSyncBanner('error', 'Erreur de connexion: ' + e.message);
+      showToast('Erreur: ' + e.message, 'error');
+    } finally {
+      pullBtn.disabled = false;
+      pullBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Pull PWA';
+    }
+  });
 }
 
 function updateSyncBanner(type, message) {
