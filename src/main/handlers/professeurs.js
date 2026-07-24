@@ -231,18 +231,24 @@ function register(ipcMain, deps) {
           const syncUrl = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_url'")?.valeur;
           const apiKey = get("SELECT valeur FROM parametres WHERE cle = 'pwa_sync_api_key'")?.valeur;
           if (syncUrl && apiKey) {
-            makeRequest(
-              syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
-              'POST',
-              {
-                teachers: [{ username, password_hash: hash, nom_complet: (prenom + ' ' + nom).trim(), actif: 1, ecole_id: ecoleId, classes_ids: classeIds || [], telephone: telephone || '' }],
-                classes: [],
-                students: [],
-              },
-              { 'x-api-key': apiKey }
-            ).then((r) => {
-              if (r.status === 200) logger.info('Auto-sync PWA reussi pour ' + username);
-              else logger.warn('Auto-sync PWA: status ' + r.status);
+              makeRequest(
+                syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
+                'POST',
+                {
+                  ecole_id: ecoleId,
+                  teachers: [{ username, password: rawPassword, nom_complet: (prenom + ' ' + nom).trim(), actif: 1, ecole_id: ecoleId, classes_ids: classeIds || [], telephone: telephone || '' }],
+                  classes: [],
+                  students: [],
+                },
+                { 'x-api-key': apiKey }
+              ).then((r) => {
+              if (r.status === 200) {
+                logger.info('Auto-sync PWA reussi pour ' + username);
+                if (r.data?.cle_pwa_sync) {
+                  run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('pwa_sync_api_key', ?)", [r.data.cle_pwa_sync]);
+                  logger.info('Auto-bootstrap PWA : cle API sauvegardee');
+                }
+              } else logger.warn('Auto-sync PWA: status ' + r.status);
             }).catch((e) => logger.warn('Auto-sync PWA non disponible:', e.message));
           }
         } catch (syncErr) {
@@ -643,6 +649,7 @@ function register(ipcMain, deps) {
 
       const payload = {
         annee_scolaire: anneeLibelle,
+        ecole_id: ecoleId,
         teachers, classes, students
       };
 
@@ -655,12 +662,19 @@ function register(ipcMain, deps) {
         { 'x-api-key': apiKey }
       );
 
-      logger.info('Sync PWA termine:', result.status, JSON.stringify(result.data));
-      await logAudit(getCurrentUserId(), 'SYNC_TO_PWA',
-        'Synchronisation vers PWA: ' + result.data?.teachers + ' enseignants, ' +
-        result.data?.classes + ' classes, ' + result.data?.students + ' eleves');
+      // Auto-bootstrap : si la PWA a genere une cle dediee, la sauvegarder
+      const responseData = result.data || {};
+      if (responseData.cle_pwa_sync) {
+        run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('pwa_sync_api_key', ?)", [responseData.cle_pwa_sync]);
+        logger.info('Auto-bootstrap PWA : nouvelle cle API sauvegardee pour cette ecole');
+      }
 
-      return result.data || { success: true, status: result.status };
+      logger.info('Sync PWA termine:', result.status, JSON.stringify(responseData));
+      await logAudit(getCurrentUserId(), 'SYNC_TO_PWA',
+        'Synchronisation vers PWA: ' + (responseData.teachers || 0) + ' enseignants, ' +
+        (responseData.classes || 0) + ' classes, ' + (responseData.students || 0) + ' eleves');
+
+      return responseData;
     } catch (e) {
       logger.error('Erreur sync PWA:', e);
       return { success: false, error: e.message };
@@ -710,17 +724,24 @@ function register(ipcMain, deps) {
       if (!ecoleId) return { success: false, error: 'ecole_id non disponible' };
 
       const response = await makeRequest(
-        syncUrl.replace(/\/$/, '') + '/api/sync/pull-from-pwa?ecole_id=' + encodeURIComponent(ecoleId),
+        syncUrl.replace(/\/$/, '') + '/api/sync/pull-from-pwa',
         'GET',
         null,
-        { 'x-api-key': apiKey }
+        { 'x-api-key': apiKey, 'x-ecole-id': ecoleId }
       );
 
-      if (response.status !== 200) {
-        return { success: false, error: 'Erreur serveur PWA: ' + (response.data?.error || 'HTTP ' + response.status) };
+      // Auto-bootstrap : si la PWA a genere une cle dediee, la sauvegarder
+      const responseData = response.data || {};
+      if (responseData.cle_pwa_sync) {
+        run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('pwa_sync_api_key', ?)", [responseData.cle_pwa_sync]);
+        logger.info('Auto-bootstrap PWA : nouvelle cle API sauvegardee pour cette ecole (pull)');
       }
 
-      const payload = response.data;
+      if (response.status !== 200) {
+        return { success: false, error: 'Erreur serveur PWA: ' + (responseData.error || 'HTTP ' + response.status) };
+      }
+
+      const payload = responseData;
       if (!payload?.success || !payload?.data) {
         return { success: false, error: 'Format de reponse PWA invalide' };
       }
@@ -883,6 +904,7 @@ function makeRequest(url, method, body, headers) {
       let responseData = '';
       res.on('data', (chunk) => (responseData += chunk));
       res.on('end', () => {
+        clearTimeout(timeout);
         try {
           resolve({ status: res.statusCode, data: JSON.parse(responseData) });
         } catch {
@@ -890,7 +912,14 @@ function makeRequest(url, method, body, headers) {
         }
       });
     });
-    req.on('error', reject);
+    req.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
+    const timeout = setTimeout(() => {
+      req.destroy();
+      reject(new Error('TIMEOUT'));
+    }, 30000);
     if (data) req.write(data);
     req.end();
   });

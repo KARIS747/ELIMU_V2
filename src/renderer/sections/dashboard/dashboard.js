@@ -128,8 +128,11 @@ async function initPwaSync() {
       const result = await window.elimuAPI.syncToPwa();
       if (result?.success || result?.status === 200) {
         const r = result.data || result;
-        const msg = 'Sync reussie: ' + (r.teachers || r.teacher_count || 0) + ' enseignants, ' +
+        let msg = 'Sync reussie: ' + (r.teachers || r.teacher_count || 0) + ' enseignants, ' +
           (r.classes || r.class_count || 0) + ' classes, ' + (r.students || r.student_count || 0) + ' eleves';
+        if (r.auto_bootstrap) {
+          msg += ' (auto-bootstrap : cle API dediee genere)';
+        }
         updateSyncBanner('success', msg);
         showToast(msg, 'success');
       } else {

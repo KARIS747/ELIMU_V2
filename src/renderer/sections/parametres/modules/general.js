@@ -195,7 +195,18 @@ async function initPwaSyncInfo() {
     const config = await window.elimuAPI.getPwaSyncConfig();
     if (urlInput) urlInput.value = config.url || '';
     if (keyInput) keyInput.value = config.apiKey || '';
-    if (statusEl) statusEl.textContent = config.url ? 'Configure' : 'Non configure';
+    if (statusEl) {
+      if (config.url && config.apiKey) {
+        statusEl.textContent = 'Configure';
+        statusEl.style.color = 'var(--green-fifa)';
+      } else if (config.url) {
+        statusEl.textContent = 'Cle API manquante';
+        statusEl.style.color = 'var(--yellow-fifa)';
+      } else {
+        statusEl.textContent = 'Non configure';
+        statusEl.style.color = 'var(--text-muted)';
+      }
+    }
   } catch (e) {
     console.error('Erreur initPwaSyncInfo:', e);
   }
@@ -208,7 +219,7 @@ async function initPwaSyncInfo() {
     const result = await window.elimuAPI.savePwaSyncConfig(data);
     if (result?.success) {
       showToast('Configuration PWA enregistree', 'success');
-      if (statusEl) statusEl.textContent = data.url ? 'Configure' : 'Non configure';
+      initPwaSyncInfo();
     } else {
       showToast(result?.error || 'Erreur', 'error');
     }
@@ -220,21 +231,40 @@ async function initPwaSyncInfo() {
       btn.disabled = true;
       btn.textContent = 'Synchronisation...';
     }
-    if (statusEl) statusEl.textContent = 'Synchronisation en cours...';
+    if (statusEl) {
+      statusEl.textContent = 'Synchronisation en cours...';
+      statusEl.style.color = 'var(--text-muted)';
+    }
 
     try {
       const result = await window.elimuAPI.syncToPwa();
       if (result?.success) {
-        showToast('Sync PWA reussie: ' + (result.teachers || 0) + ' enseignants, ' +
-          (result.classes || 0) + ' classes, ' + (result.students || 0) + ' eleves', 'success');
-        if (statusEl) statusEl.textContent = 'Derniere sync: ' + new Date().toLocaleString();
+        let msg = 'Sync PWA reussie: ' + (result.teachers || 0) + ' enseignants, ' +
+          (result.classes || 0) + ' classes, ' + (result.students || 0) + ' eleves';
+        if (result.auto_bootstrap) {
+          msg += ' (auto-bootstrap actif)';
+          showToast(msg, 'success');
+          initPwaSyncInfo();
+        } else {
+          showToast(msg, 'success');
+        }
+        if (statusEl) {
+          statusEl.textContent = 'Derniere sync: ' + new Date().toLocaleString();
+          statusEl.style.color = 'var(--green-fifa)';
+        }
       } else {
         showToast('Echec sync: ' + (result?.error || 'Erreur inconnue'), 'error');
-        if (statusEl) statusEl.textContent = 'Erreur: ' + (result?.error || '');
+        if (statusEl) {
+          statusEl.textContent = 'Erreur: ' + (result?.error || '');
+          statusEl.style.color = 'var(--red-fifa)';
+        }
       }
     } catch (e) {
       showToast('Erreur sync: ' + e.message, 'error');
-      if (statusEl) statusEl.textContent = 'Erreur: ' + e.message;
+      if (statusEl) {
+        statusEl.textContent = 'Erreur: ' + e.message;
+        statusEl.style.color = 'var(--red-fifa)';
+      }
     } finally {
       if (btn) {
         btn.disabled = false;
