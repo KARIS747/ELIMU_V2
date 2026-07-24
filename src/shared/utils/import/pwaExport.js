@@ -6,6 +6,7 @@ const { defaultLogger, trouverEleve, readPwaMetadata } = require('./helpers');
 async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId = '') {
   const resultat = {
     success: false,
+    nbImportes: 0,
     nbNotes: 0,
     nbAbsences: 0,
     nbErreurs: 0,
@@ -47,6 +48,8 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
     }
   }
 
+  resultat.nbImportes = resultat.nbNotes + resultat.nbAbsences;
+  resultat.statut = resultat.nbErreurs === 0 ? 'Succès' : resultat.nbImportes > 0 ? 'Partiel' : 'Échec';
   resultat.success = resultat.nbNotes > 0 || resultat.nbAbsences > 0 || resultat.nbErreurs === 0;
   return resultat;
 }
