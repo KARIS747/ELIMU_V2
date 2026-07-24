@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 120; // Version 1.2.0 (multi-école)
+const CURRENT_SCHEMA_VERSION = 121; // Version 1.2.1 (pwa_login_history)
 
 /**
  * Initialise la base de données et applique le schéma
