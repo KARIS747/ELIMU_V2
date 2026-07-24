@@ -161,11 +161,11 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
             `INSERT INTO notes
                (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
              VALUES (?, ?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?, ?)`,
-            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, type, importId, anneeId, periode, ecoleId]
+            [eleve.id, raw, ua, sousCode, type, type, importId, anneeId, periode, ecoleId]
           );
           resultat.nbImportes++;
           hasNote = true;
-          subNotes[type] = Math.round(note20 * 100) / 100;
+          subNotes[type] = raw;  // raw value pour l'agregat (pas /20)
         }
 
         if (!hasNote) {

@@ -170,8 +170,7 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
           continue;
         }
 
-        const note20 = (v / maxP) * 20;
-        subNotes[t] = Math.round(note20 * 100) / 100;
+        subNotes[t] = v;  // raw value pour l'agregat (pas /20)
 
         run(
           `DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND (sous_type=? OR type_eval=?) AND ua=? AND annee_scolaire_id=? AND ecole_id=?`,
