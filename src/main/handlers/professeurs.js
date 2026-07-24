@@ -528,9 +528,19 @@ function register(ipcMain, deps) {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
-      run('UPDATE professeurs SET actif = 0 WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
+
+      const prof = get('SELECT nom, prenom, utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
+      if (!prof) return { success: false, error: 'Professeur introuvable' };
+
       run('UPDATE classes SET professeur_principal_id = NULL WHERE professeur_principal_id = ? AND ecole_id = ?', [pid, ecoleId]);
-      await logAudit(getCurrentUserId(), 'DELETE_PROFESSEUR', 'Professeur ID ' + pid + ' desactive');
+
+      if (prof.utilisateur_id) {
+        run('DELETE FROM utilisateurs WHERE id = ?', [prof.utilisateur_id]);
+      }
+      run('DELETE FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
+
+      await logAudit(getCurrentUserId(), 'DELETE_PROFESSEUR',
+        'Professeur supprime: ' + (prof.prenom || '') + ' ' + (prof.nom || ''));
       return { success: true };
     } catch (e) {
       logger.error('Erreur deleteProfesseur:', e);

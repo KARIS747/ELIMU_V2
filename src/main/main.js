@@ -102,7 +102,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -281,7 +281,7 @@ function createLicenseWindow() {
 
   const licenseWindow = new BrowserWindow({
     width: 600, height: 700, resizable: false, frame: true, backgroundColor: '#1a1e2c',
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, preload: path.join(__dirname, 'preload.js') }
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: false, preload: path.join(__dirname, 'preload.js') }
   });
 
   licenseWindow.loadFile(path.join(__dirname, '../renderer/license-screen/license.html'), { query: { lang } });

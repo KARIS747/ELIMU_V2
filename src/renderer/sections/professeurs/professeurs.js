@@ -172,6 +172,7 @@ function _afficherGrille(profs) {
           ${hasAccount && !p.suspendu
             ? `<button class="btn btn-sm btn-secondary" data-action="suspend" data-id="${p.id}" style="color:var(--yellow-fifa);">${t('profs.btn_suspend')}</button>`
             : ''}
+          <button class="btn btn-sm btn-danger" data-action="delete" data-id="${p.id}" style="color:var(--red-fifa);">${t('common.delete')}</button>
         </div>
       </div>`;
   }).join('');
@@ -194,6 +195,9 @@ function _afficherGrille(profs) {
   });
   grid.querySelectorAll('[data-action="reactivate"]').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); reactiverCompte(parseInt(btn.dataset.id)); });
+  });
+  grid.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); supprimerCompte(parseInt(btn.dataset.id)); });
   });
 }
 
@@ -350,6 +354,26 @@ async function reactiverCompte(id) {
     showToast(t('common.success'), 'success');
     await chargerProfesseurs();
     if (_currentViewProfId === id) ouvrirDetailCompte(id);
+  } else {
+    showToast(res?.error || t('common.error'), 'error');
+  }
+}
+
+async function supprimerCompte(id) {
+  let nom = 'ID ' + id;
+  try {
+    const detail = await window.elimuAPI.getProfesseurDetail(id);
+    nom = detail?.professeur ? `${detail.professeur.prenom} ${detail.professeur.nom}` : `ID ${id}`;
+  } catch {}
+
+  if (!confirm(t('profs.delete_confirm').replace('{name}', nom))) return;
+  if (!confirm('Suppression definitive. Les donnees de l\'enseignant et son compte utilisateur seront effaces. Confirmer ?')) return;
+
+  const res = await window.elimuAPI.deleteProfesseur(id);
+  if (res?.success) {
+    showToast(t('profs.delete_success'), 'success');
+    await chargerProfesseurs();
+    if (_currentViewProfId === id) _currentViewProfId = null;
   } else {
     showToast(res?.error || t('common.error'), 'error');
   }
@@ -764,6 +788,9 @@ function _setupEvents() {
   });
   document.getElementById('btn-view-prof-reactivate')?.addEventListener('click', () => {
     if (_currentViewProfId) reactiverCompte(_currentViewProfId);
+  });
+  document.getElementById('btn-view-prof-delete')?.addEventListener('click', () => {
+    if (_currentViewProfId) supprimerCompte(_currentViewProfId);
   });
   document.getElementById('btn-view-prof-reset-pw')?.addEventListener('click', () => {
     if (_currentViewProfId) reinitialiserMotDePasse(_currentViewProfId);

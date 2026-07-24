@@ -106,6 +106,7 @@ function stopPolling() {
 
 async function initPwaSync() {
   const syncBtn = document.getElementById('dash-sync-pwa');
+  const pullBtn = document.getElementById('dash-pull-pwa');
   const banner = document.getElementById('dash-sync-banner');
   const syncText = document.getElementById('dash-sync-text');
 
@@ -113,6 +114,7 @@ async function initPwaSync() {
     const config = await window.elimuAPI.getPwaSyncConfig();
     if (config.url && config.apiKey) {
       syncBtn.style.display = '';
+      pullBtn.style.display = '';
       updateSyncBanner('info', 'PWA configurée — cliquer sur Push PWA pour synchroniser');
     }
   } catch (e) {
@@ -150,7 +152,6 @@ async function initPwaSync() {
   });
 
   // Pull PWA
-  const pullBtn = document.getElementById('dash-pull-pwa');
   pullBtn?.addEventListener('click', async () => {
     pullBtn.disabled = true;
     pullBtn.innerHTML = '<span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:4px;"></span> Pull...';
