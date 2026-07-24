@@ -729,7 +729,7 @@ function register(ipcMain, deps) {
       const result = { notesImportees: 0, notesN3Importees: 0, absencesImportees: 0, erreurs: [] };
 
       const periodeMap = { 1: 'Trimestre 1', 2: 'Trimestre 2', 3: 'Trimestre 3' };
-      const { getWeightsForSousCompetence, calcAggregateFromSubNotes, getPeriodeForUA } = require('../../shared/constants/curriculum');
+      const { getWeightsForSousCompetence, calcAggregateFromSubNotes, getPeriodeForUA, CURRICULUM_TEMPLATES } = require('../../shared/constants/curriculum');
 
       run('BEGIN');
       try {
@@ -794,10 +794,17 @@ function register(ipcMain, deps) {
             continue;
           }
 
-          const matiere = get('SELECT id FROM matieres WHERE nom_matiere = ? AND ecole_id = ?', [n.matiere_code, ecoleId]);
+          // Map PWA matiere_code → Desktop matiere name via curriculum
+          let matiereName = n.matiere_code;
+          const matFixes = CURRICULUM_TEMPLATES?.N3?.matieresFixes;
+          if (matFixes?.[n.matiere_code]) {
+            matiereName = matFixes[n.matiere_code];
+          }
+
+          let matiere = get('SELECT id FROM matieres WHERE nom_matiere = ?', [matiereName]);
           if (!matiere) {
-            result.erreurs.push('Matiere "' + n.matiere_code + '" introuvable');
-            continue;
+            run('INSERT INTO matieres (nom_matiere) VALUES (?)', [matiereName]);
+            matiere = get('SELECT id FROM matieres WHERE nom_matiere = ?', [matiereName]);
           }
 
           const periode = periodeMap[n.trimestre] || 'Trimestre 1';
