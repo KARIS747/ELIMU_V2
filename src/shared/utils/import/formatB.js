@@ -153,15 +153,15 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
 
           run(
             `DELETE FROM notes
-             WHERE eleve_id = ? AND sous_competence_code = ? AND sous_type = ? AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
-            [eleve.id, sousCode, type, ua, anneeId, ecoleId]
+             WHERE eleve_id = ? AND sous_competence_code = ? AND (sous_type = ? OR type_eval = ?) AND ua = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+            [eleve.id, sousCode, type, type, ua, anneeId, ecoleId]
           );
 
           run(
             `INSERT INTO notes
-               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
-             VALUES (?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?, ?)`,
-            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, importId, anneeId, periode, ecoleId]
+               (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+             VALUES (?, ?, ?, ?, ?, ?, 'EXCEL', ?, ?, ?, ?)`,
+            [eleve.id, Math.round(note20 * 100) / 100, ua, sousCode, type, type, importId, anneeId, periode, ecoleId]
           );
           resultat.nbImportes++;
           hasNote = true;
@@ -182,8 +182,8 @@ async function importUANotesFormatB(filePath, classeId, utilisateurId, anneeId =
           );
           run(
             `INSERT INTO notes
-               (eleve_id, note, ua, sous_competence_code, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
-             VALUES (?, ?, ?, ?, NULL, 'EXCEL', ?, ?, ?, ?)`,
+               (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, import_id, annee_scolaire_id, periode, ecole_id)
+             VALUES (?, ?, ?, ?, NULL, NULL, 'EXCEL', ?, ?, ?, ?)`,
             [eleve.id, Math.round(aggNote * 100) / 100, ua, sousCode, importId, anneeId, periode, ecoleId]
           );
           resultat.nbImportes++;

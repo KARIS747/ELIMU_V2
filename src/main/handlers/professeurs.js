@@ -779,12 +779,12 @@ function register(ipcMain, deps) {
           const periode = periodeMap[n.trimestre] || getPeriodeForUA(n.ua) || 'Trimestre 1';
 
           run(
-            "DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND sous_type=? AND ua=? AND annee_scolaire_id=? AND ecole_id=?",
-            [eleve.id, n.sous_competence_code, n.type_eval, n.ua, anneeId, ecoleId]
+            "DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND (sous_type=? OR type_eval=?) AND ua=? AND annee_scolaire_id=? AND ecole_id=?",
+            [eleve.id, n.sous_competence_code, n.type_eval, n.type_eval, n.ua, anneeId, ecoleId]
           );
           run(
-            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,?,'PWA',?,?,?)",
-            [eleve.id, n.note, n.ua, n.sous_competence_code, n.type_eval, anneeId, periode, ecoleId]
+            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,?,?,'PWA',?,?,?)",
+            [eleve.id, n.note, n.ua, n.sous_competence_code, n.type_eval, n.type_eval, anneeId, periode, ecoleId]
           );
           result.notesImportees++;
 
@@ -811,7 +811,7 @@ function register(ipcMain, deps) {
             [g.eleveId, g.sousCode, g.ua, anneeId, ecoleId]
           );
           run(
-            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,NULL,'PWA',?,?,?)",
+            "INSERT INTO notes (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?,?,?,?,NULL,NULL,'PWA',?,?,?)",
             [g.eleveId, Math.round(agg * 100) / 100, g.ua, g.sousCode, anneeId, periode, ecoleId]
           );
           result.notesImportees++;

@@ -174,12 +174,12 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
         subNotes[t] = Math.round(note20 * 100) / 100;
 
         run(
-          `DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND sous_type=? AND ua=? AND annee_scolaire_id=? AND ecole_id=?`,
-          [eleve.id, sousCode, t, ua, anneeId, ecoleId]
+          `DELETE FROM notes WHERE eleve_id=? AND sous_competence_code=? AND (sous_type=? OR type_eval=?) AND ua=? AND annee_scolaire_id=? AND ecole_id=?`,
+          [eleve.id, sousCode, t, t, ua, anneeId, ecoleId]
         );
         run(
-          `INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?, ?, ?, ?, ?, 'PWA', ?, ?, ?)`,
-          [eleve.id, v, ua, sousCode, t, anneeId, periode, ecoleId]
+          `INSERT INTO notes (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?, ?, ?, ?, ?, ?, 'PWA', ?, ?, ?)`,
+          [eleve.id, v, ua, sousCode, t, t, anneeId, periode, ecoleId]
         );
         resultat.nbNotes++;
         hasNote = true;
@@ -194,7 +194,7 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
           [eleve.id, sousCode, ua, anneeId, ecoleId]
         );
         run(
-          `INSERT INTO notes (eleve_id, note, ua, sous_competence_code, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?, ?, ?, ?, NULL, 'PWA', ?, ?, ?)`,
+          `INSERT INTO notes (eleve_id, note, ua, sous_competence_code, type_eval, sous_type, source, annee_scolaire_id, periode, ecole_id) VALUES (?, ?, ?, ?, NULL, NULL, 'PWA', ?, ?, ?)`,
           [eleve.id, Math.round(agg * 100) / 100, ua, sousCode, anneeId, periode, ecoleId]
         );
         resultat.nbNotes++;
