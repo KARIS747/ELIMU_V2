@@ -415,12 +415,12 @@ function register(ipcMain, deps) {
       if (!prof?.utilisateur_id) return [];
 
       return all(`
-        SELECT timestamp, details
-        FROM audit_log
-        WHERE utilisateur_id = ? AND action IN ('CONNEXION', 'DECONNEXION')
-        ORDER BY timestamp DESC
+        SELECT date_connexion, details FROM pwa_login_history WHERE professeur_id = ? AND ecole_id = ?
+        UNION ALL
+        SELECT timestamp AS date_connexion, details FROM audit_log WHERE utilisateur_id = ? AND action IN ('CONNEXION', 'DECONNEXION')
+        ORDER BY date_connexion DESC
         LIMIT 50
-      `, [prof.utilisateur_id]);
+      `, [pid, ecoleId, prof.utilisateur_id]);
     } catch (e) {
       logger.error('Erreur getTeacherLoginHistory:', e);
       return [];
@@ -866,6 +866,33 @@ function register(ipcMain, deps) {
             [eleve.id, periode, a.heures, anneeId, ecoleId]
           );
           result.absencesImportees++;
+        }
+
+        // ══ Teacher last login (derniere_connexion) ════════
+        const teacherLogins = payload.data.teacher_last_logins || [];
+        for (const tl of teacherLogins) {
+          if (!tl.last_login) continue;
+          const u = get('SELECT id FROM utilisateurs WHERE nom_utilisateur = ? AND ecole_id = ?', [tl.username, ecoleId]);
+          if (!u) continue;
+          const p = get('SELECT id FROM professeurs WHERE utilisateur_id = ? AND ecole_id = ?', [u.id, ecoleId]);
+          if (!p) continue;
+          run("UPDATE professeurs SET derniere_connexion = ? WHERE id = ?", [tl.last_login, p.id]);
+        }
+
+        // ══ Login history (Journal) ════════════════════════
+        const loginHistory = payload.data.login_history || [];
+        if (loginHistory.length > 0) {
+          run("DELETE FROM pwa_login_history WHERE ecole_id = ?", [ecoleId]);
+          for (const lh of loginHistory) {
+            const u = get('SELECT id FROM utilisateurs WHERE nom_utilisateur = ? AND ecole_id = ?', [lh.username, ecoleId]);
+            if (!u) continue;
+            const p = get('SELECT id FROM professeurs WHERE utilisateur_id = ? AND ecole_id = ?', [u.id, ecoleId]);
+            if (!p) continue;
+            run(
+              "INSERT INTO pwa_login_history (professeur_id, date_connexion, details, ecole_id) VALUES (?,?,?,?)",
+              [p.id, lh.login_at, lh.ip_address ? 'IP: ' + lh.ip_address : '', ecoleId]
+            );
+          }
         }
 
         run('COMMIT');
