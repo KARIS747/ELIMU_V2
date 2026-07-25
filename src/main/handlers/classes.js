@@ -145,13 +145,35 @@ function register(ipcMain, deps) {
 
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
-      // Vérifier si la classe a des élèves
-      const row = get('SELECT COUNT(*) as count FROM eleves WHERE classe_id = ? AND ecole_id = ?', [cid, ecoleId]);
-      if (row && row.count > 0) {
-        return { success: false, error: 'Impossible de supprimer une classe contenant des élèves' };
+      run('BEGIN');
+      try {
+        run(
+          `DELETE FROM absences WHERE eleve_id IN (SELECT id FROM eleves WHERE classe_id=? AND ecole_id=?) AND ecole_id=?`,
+          [cid, ecoleId, ecoleId]
+        );
+        run(
+          `DELETE FROM notes WHERE eleve_id IN (SELECT id FROM eleves WHERE classe_id=? AND ecole_id=?) AND ecole_id=?`,
+          [cid, ecoleId, ecoleId]
+        );
+        run(
+          `DELETE FROM stats_eleves WHERE eleve_id IN (SELECT id FROM eleves WHERE classe_id=? AND ecole_id=?)`,
+          [cid, ecoleId]
+        );
+        run(
+          `DELETE FROM eleves WHERE classe_id=? AND ecole_id=?`,
+          [cid, ecoleId]
+        );
+        run(
+          'DELETE FROM professeurs_classes WHERE classe_id=?',
+          [cid]
+        );
+        run('DELETE FROM classes WHERE id=? AND ecole_id=?', [cid, ecoleId]);
+        run('COMMIT');
+      } catch (err) {
+        run('ROLLBACK');
+        return { error: 'Erreur lors de la suppression: ' + err.message };
       }
 
-      run('DELETE FROM classes WHERE id=? AND ecole_id=?', [cid, ecoleId]);
       return { success: true };
     } catch (error) {
       logger.error('Erreur deleteClass:', error);

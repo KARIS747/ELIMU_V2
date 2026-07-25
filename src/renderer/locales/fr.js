@@ -361,7 +361,7 @@ const fr = {
   'classes.import_abs_result_updated': 'élève(s) mis à jour',
   'classes.import_abs_result_errors': 'ligne(s) ignorée(s)',
   'classes.delete_confirm':       'Supprimer la classe "{name}" ?',
-  'classes.delete_confirm_with_eleves': 'Supprimer la classe "{name}" ?\n\n {count} élève(s) seront détachés de cette classe.',
+  'classes.delete_confirm_with_eleves': 'Supprimer la classe "{name}" ?\n\nATTENTION : {count} élève(s) et toutes leurs données (notes, absences) seront définitivement supprimés.',
   'classes.delete_success':       'Classe supprimée.',
   'classes.save_success':         ' Classe enregistrée !',
   'classes.config_tip_preset':    'Les matières, coefficients et groupes sont fixes pour ce curriculum officiel. Vous pouvez uniquement affecter les enseignants aux matières.',

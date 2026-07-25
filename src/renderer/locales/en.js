@@ -361,7 +361,7 @@ const en = {
   'classes.import_abs_result_updated': 'student(s) updated',
   'classes.import_abs_result_errors': 'line(s) ignored',
   'classes.delete_confirm':       'Delete class "{name}" ?',
-  'classes.delete_confirm_with_eleves': 'Delete class "{name}" ?\n\n {count} student(s) will be detached from this class.',
+  'classes.delete_confirm_with_eleves': 'Delete class "{name}" ?\n\nWARNING: {count} student(s) and all their data (grades, absences) will be permanently deleted.',
   'classes.delete_success':       'Class deleted.',
   'classes.save_success':         ' Class saved!',
   'classes.config_tip_preset':    'Subjects, coefficients and groups are fixed for this official curriculum. You can only assign teachers to subjects.',
