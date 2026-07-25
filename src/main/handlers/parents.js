@@ -451,8 +451,8 @@ function register(ipcMain, deps) {
             if (n.matiere_id != null) {
               return { eleve_id: n.eleve_id, matiere_nom: n.matiere_nom || '', note: n.note, periode: n.periode || '', sequence: n.sequence || 1 };
             }
-            // N1/N2: garder uniquement les agregats (sous_type NULL)
-            if (n.sous_competence_code && !n.type_eval) {
+            // N1/N2: envoyer toutes les lignes (agrégats + sous-notes)
+            if (n.sous_competence_code) {
               const compName = _buildPortalNoteName(n.sous_competence_code);
               const periode = getPeriodeForUA(n.ua);
               return {
@@ -460,7 +460,10 @@ function register(ipcMain, deps) {
                 matiere_nom: compName || 'Competence ' + n.sous_competence_code,
                 note: n.note,
                 periode: periode || n.periode || '',
-                sequence: 1
+                sequence: 1,
+                sous_competence_code: n.sous_competence_code,
+                ua: n.ua || '',
+                type_eval: n.type_eval || null
               };
             }
             return null;
