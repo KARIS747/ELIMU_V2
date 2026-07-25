@@ -1702,6 +1702,109 @@ tbody td { padding: 11px 16px; color: var(--text-secondary); font-size: 13px; }
 .w-full      { width: 100%; }
 
 /* ============================================================
+   PROFIL ÉLÈVE — AFFICHAGE NOTES N1/N2
+   ============================================================ */
+.ua-card {
+  background: var(--bg-secondary);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.ua-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  color: var(--blue-fifa);
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(255,255,255,0.06);
+}
+
+.sc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+.sc-row:hover { background: var(--bg-hover); }
+
+.sc-code {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.sc-expand {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.sc-expand.open { transform: rotate(180deg); }
+
+.agg-badge {
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.subs-container {
+  padding: 14px 12px 14px 28px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 0 0 10px 10px;
+  margin-top: -1px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.sub-chip-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.sub-chip-value {
+  font-weight: 700;
+}
+
+.sub-chip-max {
+  font-size: 11px;
+  opacity: 0.45;
+}
+
+.sub-chip-qual {
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================================
    TABLEAU JOURNAL D'ACTIVITÉ (AUDIT)
    ============================================================ */
 .audit-table {

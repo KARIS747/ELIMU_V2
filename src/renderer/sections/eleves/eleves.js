@@ -571,7 +571,6 @@ async function rafraichirProfil(eleveId, title, content) {
       }).join('');
     } else {
       // --- RENDU N1/N2 (UA et Compétences avec sous-types) ---
-      const SOUS_TYPES = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
       const labels = { orale: 'Orale', ecrite: 'Écrite', pratique: 'Pratique', savoirEtre: 'Savoir-Être' };
 
       // Séparer lignes agrégées (aggregate) des sous-types
@@ -591,11 +590,9 @@ async function rafraichirProfil(eleveId, title, content) {
       section.innerHTML = Object.keys(parUA).sort().map(ua => {
         const comps = parUA[ua];
         return `
-          <div style="margin-bottom:14px; background:var(--bg-secondary); border-radius:12px; padding:10px; border:1px solid var(--border-color);">
-            <div style="font-family:'Rajdhani',sans-serif; font-weight:700; color:var(--blue-fifa); font-size:12px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">
-              ${esc(ua)}
-            </div>
-            <div style="display:flex; flex-direction:column; gap:4px;">
+          <div class="ua-card">
+            <div class="ua-title">${esc(ua)}</div>
+            <div>
               ${Object.keys(comps).sort().map(code => {
                 const { agg, subs } = comps[code];
                 const aggNote = agg ? agg.note : null;
@@ -611,32 +608,28 @@ async function rafraichirProfil(eleveId, title, content) {
                   const noteSur20 = maxPts > 0 ? (s.note / maxPts) * 20 : 0;
                   const sq = window.curriculum.getNoteToCode(noteSur20);
                   const sc = sq === 'A+' ? '#00e676' : sq === 'A' ? '#69f0ae' : sq === 'ECA' ? '#f0b429' : '#ff4757';
-                  return `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);">
-                    ${labels[s.sous_type] || s.sous_type}:
-                    <strong style="color:${sc};">${noteReelle.toFixed(1)}</strong>
-                    <span style="font-size:8px;opacity:0.5;">/${maxPts}</span>
-                    <span style="background:${sc}22;color:${sc};padding:0 4px;border-radius:3px;font-weight:700;font-size:9px;">${sq}</span>
+                  return `<span class="sub-chip">
+                    <span class="sub-chip-label">${labels[s.sous_type] || s.sous_type}:</span>
+                    <span class="sub-chip-value" style="color:${sc};">${noteReelle.toFixed(1)}</span>
+                    <span class="sub-chip-max">/${maxPts}</span>
+                    <span class="sub-chip-qual" style="background:${sc}22;color:${sc};">${sq}</span>
                   </span>`;
                 }).filter(Boolean).join('');
 
+                const hasSubs = subsHtml.length > 0;
+                const expandAttr = hasSubs
+                  ? `onclick="const n=this.nextElementSibling;n.classList.toggle('hidden');this.querySelector('.sc-expand')?.classList.toggle('open');"`
+                  : '';
+
                 return `
-                  <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.04); border-radius:6px; cursor:pointer; transition:background 0.15s;"
-                       onclick="this.nextElementSibling?.classList?.toggle('hidden')"
-                       onmouseover="this.style.background='var(--bg-hover)'"
-                       onmouseout="this.style.background='transparent'">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="color:var(--text-secondary); font-weight:600;">${esc(code)}</span>
-                      <span style="font-size:8px; color:var(--text-muted); opacity:0.6;">▼</span>
+                  <div class="sc-row" ${expandAttr}>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span class="sc-code">${esc(code)}</span>
+                      ${hasSubs ? '<span class="sc-expand">▼</span>' : ''}
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span class="note-badge" style="background:${aggCol}22; color:${aggCol}; font-size:11px; font-weight:800; letter-spacing:0.5px;">${aggQual}</span>
-                    </div>
+                    <span class="agg-badge" style="background:${aggCol}22;color:${aggCol};">${aggQual}</span>
                   </div>
-                   <div class="hidden" style="padding:6px 8px 8px 20px; background:rgba(0,0,0,0.08); border-radius:0 0 6px 6px; margin-top:-1px;">
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                      ${subsHtml}
-                    </div>
-                  </div>`;
+                  ${hasSubs ? `<div class="subs-container hidden">${subsHtml}</div>` : ''}`;
               }).join('')}
             </div>
           </div>`;
