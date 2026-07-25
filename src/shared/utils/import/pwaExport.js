@@ -29,17 +29,22 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
     return { ...resultat, error: `L'export PWA ne correspond pas à cette école (${meta.ecole_id} ≠ ${ecoleId})` };
   }
 
+  const fileName = filePath.split('/').pop().split('\\').pop();
+  const n3ClasseFallback = (() => {
+    const m = fileName.match(/^ELIMU_NOTES_N3_(.+)_\d{4}-\d{2}-\d{2}\.xlsx$/i);
+    return m ? m[1] : '';
+  })();
+
   for (const ws of workbook.worksheets) {
     if (ws.name === '_metadata') continue;
 
     const sheetType = detectSheetType(ws);
-    console.log('PWA import: sheet="' + ws.name + '" detected as "' + sheetType + '"');
     switch (sheetType) {
       case 'notes':
         await importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranchesPourEleve, utilisateurId);
         break;
       case 'notes_n3':
-        await importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId);
+        await importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, n3ClasseFallback);
         break;
       case 'absences':
         await importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId);
@@ -211,7 +216,7 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
   }
 }
 
-async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId) {
+async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, classeFallback) {
   const { CURRICULUM_TEMPLATES } = require('../../constants/curriculum');
   const matieresMap = CURRICULUM_TEMPLATES.N3.matieresFixes;
 
@@ -224,14 +229,11 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId) {
   const classeCache = {};
   let nbInserted = 0;
 
-  console.log('N3 import: starting with ' + lignes.length + ' data rows');
-
   for (const { row, rowNumber } of lignes) {
     try {
       const nom      = String(row.getCell(1).value || '').trim();
       const prenom   = String(row.getCell(2).value || '').trim();
       const matCell  = String(row.getCell(3).value || '').trim();
-      console.log('N3 row ' + rowNumber + ': nom="' + nom + '" prenom="' + prenom + '" matiere="' + matCell + '"');
       let matCode    = matCell.toUpperCase();
       let fullName   = matieresMap[matCode];
       if (!fullName) {
@@ -245,26 +247,18 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId) {
       const noteVal  = parseFloat(String(row.getCell(4).value || '').replace(',', '.'));
       const seq      = parseInt(String(row.getCell(5).value || '1').trim(), 10);
       const trim     = String(row.getCell(6).value || '').trim();
-      const classeNom = String(row.getCell(7).value || '').trim();
+      const classeNom = String(row.getCell(7).value || '').trim() || classeFallback;
 
-      if (!nom || !classeNom || isNaN(noteVal) || noteVal < 0) {
-        if (!nom) console.log('N3 row ' + rowNumber + ' skipped: empty nom');
-        else if (!classeNom) console.log('N3 row ' + rowNumber + ' skipped: empty classeNom');
-        else if (isNaN(noteVal)) console.log('N3 row ' + rowNumber + ' skipped: invalid note');
-        else if (noteVal < 0) console.log('N3 row ' + rowNumber + ' skipped: negative note');
-        continue;
-      }
+      if (!nom || !classeNom || isNaN(noteVal) || noteVal < 0) continue;
 
       if (!classeCache[classeNom]) {
         classeCache[classeNom] = get('SELECT id FROM classes WHERE nom_classe=? AND ecole_id=?', [classeNom, ecoleId]);
       }
       const classe = classeCache[classeNom];
       if (!classe) {
-        console.log('N3 row ' + rowNumber + ' skipped: class "' + classeNom + '" not found');
         resultat.avertissements.push(`N3 L${rowNumber}: Classe "${classeNom}" introuvable`);
         continue;
       }
-      console.log('N3 row ' + rowNumber + ': found class id=' + classe.id);
 
       const eleves = all(
         'SELECT id, nom, prenom FROM eleves WHERE classe_id=? AND annee_scolaire_id=? AND ecole_id=?',
