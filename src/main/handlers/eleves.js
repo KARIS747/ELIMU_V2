@@ -476,9 +476,16 @@ function register(ipcMain, deps) {
       }
 
       // ── Fusion des résultats N1/N2 et N3 ────────────────────────────────
-      nbEleves = tousEleves.length;
-      moyenne = nbEleves > 0
-        ? parseFloat((tousEleves.reduce((s, r) => s + (r.moyenne || 0), 0) / nbEleves).toFixed(2))
+      let nbWhere = 'annee_scolaire_id = ? AND ecole_id = ?';
+      const nbParams = [anneeId, ecoleId];
+      if (!isNaN(cid) && cid > 0) { nbWhere += ' AND classe_id = ?'; nbParams.push(cid); }
+      else if (niveau === 'Autre') { nbWhere += ' AND classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND (niveau_v2 IS NULL OR niveau_v2 NOT IN (\'N1\',\'N2\',\'N3\')))'; nbParams.push(ecoleId); }
+      else if (niveau) { nbWhere += ' AND classe_id IN (SELECT id FROM classes WHERE ecole_id = ? AND niveau_v2 = ?)'; nbParams.push(ecoleId, niveau); }
+      const nbRow = get(`SELECT COUNT(*) as count FROM eleves e WHERE ${nbWhere}`, nbParams);
+      nbEleves = nbRow?.count || 0;
+      const nbAvecNotes = tousEleves.length;
+      moyenne = nbAvecNotes > 0
+        ? parseFloat((tousEleves.reduce((s, r) => s + (r.moyenne || 0), 0) / nbAvecNotes).toFixed(2))
         : 0;
 
       top5 = [...tousEleves].sort((a, b) => (b.moyenne || 0) - (a.moyenne || 0)).slice(0, 5);
