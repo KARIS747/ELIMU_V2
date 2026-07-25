@@ -235,7 +235,17 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateur
     try {
       const nom      = String(row.getCell(1).value || '').trim();
       const prenom   = String(row.getCell(2).value || '').trim();
-      const matCode  = String(row.getCell(3).value || '').trim().toUpperCase();
+      const matCell  = String(row.getCell(3).value || '').trim();
+      let matCode    = matCell.toUpperCase();
+      let fullName   = matieresMap[matCode];
+      if (!fullName) {
+        const reverseMap = {};
+        for (const [code, name] of Object.entries(matieresMap)) {
+          reverseMap[name.toUpperCase()] = code;
+        }
+        matCode = reverseMap[matCell.toUpperCase()] || matCell.toUpperCase();
+        fullName = matieresMap[matCode] || matCell;
+      }
       const noteVal  = parseFloat(String(row.getCell(4).value || '').replace(',', '.'));
       const seq      = parseInt(String(row.getCell(5).value || '1').trim(), 10);
       const trim     = String(row.getCell(6).value || '').trim();
@@ -273,9 +283,8 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateur
         }
       }
 
-      const fullName = matieresMap[matCode];
       if (!fullName) {
-        resultat.erreurs.push(`N3 L${rowNumber}: Code matière "${matCode}" inconnu`);
+        resultat.erreurs.push(`N3 L${rowNumber}: Matière "${matCell}" inconnue`);
         resultat.nbErreurs++;
         continue;
       }
