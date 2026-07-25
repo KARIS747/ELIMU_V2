@@ -37,6 +37,9 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
       case 'notes':
         await importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranchesPourEleve, utilisateurId);
         break;
+      case 'notes_n3':
+        await importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateurId);
+        break;
       case 'absences':
         await importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId);
         break;
@@ -60,6 +63,8 @@ function detectSheetType(ws) {
   row.eachCell((cell) => { headerRow.push(String(cell.value || '').toLowerCase().trim()); });
 
   const h = headerRow.join(' ');
+  if (h.includes('nom') && h.includes('prenom') && h.includes('matiere') && h.includes('sequence'))
+    return 'notes_n3';
   if (h.includes('nom') && h.includes('prenom') && (h.includes('sous_competence') || h.includes('sous-competence')) && h.includes('ua'))
     return 'notes';
   if (h.includes('nom') && h.includes('prenom') && (h.includes('motif') || h.includes('justifie')))
@@ -205,6 +210,108 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
   }
 }
 
+async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateurId) {
+  const { CURRICULUM_TEMPLATES } = require('../../constants/curriculum');
+  const matieresMap = CURRICULUM_TEMPLATES.N3.matieresFixes;
+
+  const fileName = ws.workbook ? (ws.workbook.fileName || 'PWA') : 'PWA';
+  const importRecord = run(
+    `INSERT INTO imports (utilisateur_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
+     VALUES (?, ?, 'Partiel', ?, ?)`,
+    [utilisateurId || 1, fileName, anneeId, ecoleId]
+  );
+  const importId = importRecord.lastID;
+
+  const lignes = [];
+  ws.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    lignes.push({ row, rowNumber });
+  });
+
+  const classeCache = {};
+  let nbInserted = 0;
+
+  for (const { row, rowNumber } of lignes) {
+    try {
+      const nom      = String(row.getCell(1).value || '').trim();
+      const prenom   = String(row.getCell(2).value || '').trim();
+      const matCode  = String(row.getCell(3).value || '').trim().toUpperCase();
+      const noteVal  = parseFloat(String(row.getCell(4).value || '').replace(',', '.'));
+      const seq      = parseInt(String(row.getCell(5).value || '1').trim(), 10);
+      const trim     = String(row.getCell(6).value || '').trim();
+      const classeNom = String(row.getCell(7).value || '').trim();
+
+      if (!nom || !classeNom || isNaN(noteVal) || noteVal < 0) continue;
+
+      if (!classeCache[classeNom]) {
+        classeCache[classeNom] = get('SELECT id FROM classes WHERE nom_classe=? AND ecole_id=?', [classeNom, ecoleId]);
+      }
+      const classe = classeCache[classeNom];
+      if (!classe) {
+        resultat.avertissements.push(`N3 L${rowNumber}: Classe "${classeNom}" introuvable`);
+        continue;
+      }
+
+      const eleves = all(
+        'SELECT id, nom, prenom FROM eleves WHERE classe_id=? AND annee_scolaire_id=? AND ecole_id=?',
+        [classe.id, anneeId, ecoleId]
+      );
+
+      let eleve = trouverEleve(eleves, nom, prenom);
+      if (!eleve) {
+        try {
+          const inserted = run(
+            'INSERT INTO eleves (nom, prenom, classe_id, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?)',
+            [nom, prenom, classe.id, anneeId, ecoleId]
+          );
+          eleve = { id: inserted.lastID, nom, prenom };
+          eleves.push(eleve);
+        } catch (e) {
+          resultat.erreurs.push(`N3 L${rowNumber}: Impossible de créer élève "${nom} ${prenom}"`);
+          resultat.nbErreurs++;
+          continue;
+        }
+      }
+
+      const fullName = matieresMap[matCode];
+      if (!fullName) {
+        resultat.erreurs.push(`N3 L${rowNumber}: Code matière "${matCode}" inconnu`);
+        resultat.nbErreurs++;
+        continue;
+      }
+
+      let matiere = get('SELECT id FROM matieres WHERE nom_matiere=?', [fullName]);
+      if (!matiere) {
+        const r = run('INSERT INTO matieres (nom_matiere, coefficient) VALUES (?, 1)', [fullName]);
+        matiere = { id: r.lastID };
+      }
+
+      const trimNum = parseInt(trim.replace(/\D/g, ''), 10) || 1;
+      const periode = 'Trimestre ' + trimNum;
+
+      run(
+        `INSERT OR REPLACE INTO notes (eleve_id, matiere_id, note, periode, sequence, import_id, source, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, 'PWA', ?, ?)`,
+        [eleve.id, matiere.id, noteVal, periode, seq, importId, anneeId, ecoleId]
+      );
+      nbInserted++;
+    } catch (rowErr) {
+      resultat.erreurs.push(`N3 L${rowNumber}: ${rowErr.message}`);
+      resultat.nbErreurs++;
+    }
+  }
+
+  resultat.nbNotes += nbInserted;
+
+  if (importId) {
+    const statut = resultat.nbErreurs === 0 ? 'Succès' : nbInserted > 0 ? 'Partiel' : 'Échec';
+    run(
+      `UPDATE imports SET statut=?, nb_importes=?, nb_erreurs=?, message=? WHERE id=?`,
+      [statut, nbInserted, resultat.nbErreurs, `${nbInserted} note(s) N3 importée(s), ${resultat.nbErreurs} erreur(s)`, importId]
+    );
+  }
+}
+
 async function importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId) {
   const lignes = [];
   ws.eachRow((row, rowNumber) => {
@@ -261,4 +368,4 @@ async function importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId) {
 async function importPwaElevesSheet(ws, resultat, ecoleId, anneeId, genererTranchesPourEleve) {
 }
 
-module.exports = { importPwaExport, importPwaNotesSheet, importPwaAbsencesSheet, importPwaElevesSheet, detectSheetType };
+module.exports = { importPwaExport, importPwaNotesSheet, importPwaNotesN3Sheet, importPwaAbsencesSheet, importPwaElevesSheet, detectSheetType };
