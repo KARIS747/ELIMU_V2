@@ -374,6 +374,7 @@ function register(ipcMain, deps) {
     if (!(await checkAccess(['admin', 'secretaire']))) return { success: false, error: 'Accès non autorisé' };
     try {
       if (!url || !apiKey) return { success: false, error: 'URL ou clé API manquante' };
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       
       let baseUrl = url.trim().replace(/\/$/, '');
       if (baseUrl.endsWith('/api/sync')) {
