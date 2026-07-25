@@ -380,6 +380,9 @@ function register(ipcMain, deps) {
       if (baseUrl.endsWith('/api/sync')) {
         baseUrl = baseUrl.replace(/\/api\/sync$/, '');
       }
+      if (!/^https?:\/\//i.test(baseUrl)) {
+        baseUrl = 'https://' + baseUrl;
+      }
       
       const targetUrl = `${baseUrl}/api/sync`;
       
