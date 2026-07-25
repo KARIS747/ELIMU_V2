@@ -38,7 +38,7 @@ async function importPwaExport(filePath, utilisateurId, anneeId = null, ecoleId 
         await importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranchesPourEleve, utilisateurId);
         break;
       case 'notes_n3':
-        await importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateurId);
+        await importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId);
         break;
       case 'absences':
         await importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId);
@@ -210,17 +210,9 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
   }
 }
 
-async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateurId) {
+async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId) {
   const { CURRICULUM_TEMPLATES } = require('../../constants/curriculum');
   const matieresMap = CURRICULUM_TEMPLATES.N3.matieresFixes;
-
-  const fileName = ws.workbook ? (ws.workbook.fileName || 'PWA') : 'PWA';
-  const importRecord = run(
-    `INSERT INTO imports (utilisateur_id, fichier_nom, statut, annee_scolaire_id, ecole_id)
-     VALUES (?, ?, 'Partiel', ?, ?)`,
-    [utilisateurId || 1, fileName, anneeId, ecoleId]
-  );
-  const importId = importRecord.lastID;
 
   const lignes = [];
   ws.eachRow((row, rowNumber) => {
@@ -299,9 +291,9 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateur
       const periode = 'Trimestre ' + trimNum;
 
       run(
-        `INSERT OR REPLACE INTO notes (eleve_id, matiere_id, note, periode, sequence, import_id, source, annee_scolaire_id, ecole_id)
-         VALUES (?, ?, ?, ?, ?, ?, 'PWA', ?, ?)`,
-        [eleve.id, matiere.id, noteVal, periode, seq, importId, anneeId, ecoleId]
+        `INSERT OR REPLACE INTO notes (eleve_id, matiere_id, note, periode, sequence, source, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, 'PWA', ?, ?)`,
+        [eleve.id, matiere.id, noteVal, periode, seq, anneeId, ecoleId]
       );
       nbInserted++;
     } catch (rowErr) {
@@ -311,14 +303,6 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, utilisateur
   }
 
   resultat.nbNotes += nbInserted;
-
-  if (importId) {
-    const statut = resultat.nbErreurs === 0 ? 'Succès' : nbInserted > 0 ? 'Partiel' : 'Échec';
-    run(
-      `UPDATE imports SET statut=?, nb_importes=?, nb_erreurs=?, message=? WHERE id=?`,
-      [statut, nbInserted, resultat.nbErreurs, `${nbInserted} note(s) N3 importée(s), ${resultat.nbErreurs} erreur(s)`, importId]
-    );
-  }
 }
 
 async function importPwaAbsencesSheet(ws, resultat, ecoleId, anneeId) {
