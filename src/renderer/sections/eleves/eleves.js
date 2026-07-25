@@ -587,13 +587,13 @@ async function rafraichirProfil(eleveId, title, content) {
         }
       });
 
-      section.innerHTML = Object.keys(parUA).sort().map(ua => {
-        const comps = parUA[ua];
-        return `
-          <div class="ua-card">
-            <div class="ua-title">${esc(ua)}</div>
-            <div>
-              ${Object.keys(comps).sort().map(code => {
+      section.innerHTML = `<div class="ua-grid">${
+        Object.keys(parUA).sort().map(ua => {
+          const comps = parUA[ua];
+          return `
+            <div class="ua-card">
+              <div class="ua-title">${esc(ua)}</div>
+              <div>${Object.keys(comps).sort().map(code => {
                 const { agg, subs } = comps[code];
                 const aggNote = agg ? agg.note : null;
                 const aggQual = aggNote !== null ? window.curriculum.getNoteToCode(aggNote) : '—';
@@ -630,10 +630,11 @@ async function rafraichirProfil(eleveId, title, content) {
                     <span class="agg-badge" style="background:${aggCol}22;color:${aggCol};">${aggQual}</span>
                   </div>
                   ${hasSubs ? `<div class="subs-container hidden">${subsHtml}</div>` : ''}`;
-              }).join('')}
-            </div>
-          </div>`;
-      }).join('');
+                }).join('')}
+              </div>
+            </div>`;
+        }).join('')
+      }</div>`;
     }
   };
 
