@@ -768,6 +768,11 @@ function register(ipcMain, deps) {
         const subNotesByGroup = {};
 
         for (const n of notes) {
+          if (n.note === null || n.note === undefined || typeof n.note !== 'number' || isNaN(n.note) || n.note < 0) {
+            result.erreurs.push('Note invalide (NULL/NaN) pour eleve ' + n.eleve_external_id + ' (UA ' + n.ua + ', ' + n.sous_competence_code + ')');
+            continue;
+          }
+
           const eleve = get('SELECT id, classe_id FROM eleves WHERE id = ? AND ecole_id = ?', [n.eleve_external_id, ecoleId]);
           if (!eleve) {
             result.erreurs.push('Eleve ID ' + n.eleve_external_id + ' introuvable');
@@ -819,6 +824,11 @@ function register(ipcMain, deps) {
 
         // ══ N3 Notes ════════════════════════════════════════
         for (const n of notesN3) {
+          if (n.note === null || n.note === undefined || typeof n.note !== 'number' || isNaN(n.note) || n.note < 0) {
+            result.erreurs.push('Note N3 invalide (NULL/NaN) pour eleve ' + n.eleve_external_id);
+            continue;
+          }
+
           const eleve = get('SELECT id FROM eleves WHERE id = ? AND ecole_id = ?', [n.eleve_external_id, ecoleId]);
           if (!eleve) {
             result.erreurs.push('Eleve ID ' + n.eleve_external_id + ' introuvable (N3)');
