@@ -1953,6 +1953,20 @@ tbody td { padding: 11px 16px; color: var(--text-secondary); font-size: 13px; }
   .fin-tab-btn { flex: 1; min-width: 70px; text-align: center; padding: 8px 8px; font-size: 10px; }
 }
 
+/* ── Dropzones import ── */
+#import-liste-dropzone:hover {
+  border-color: var(--green-fifa) !important;
+  background: rgba(0, 230, 118, 0.04) !important;
+}
+#import-abs-dropzone:hover {
+  border-color: var(--yellow-fifa) !important;
+  background: rgba(255, 183, 77, 0.04) !important;
+}
+#import-profs-dropzone:hover {
+  border-color: var(--purple-fifa) !important;
+  background: rgba(168, 85, 247, 0.04) !important;
+}
+
 /* ── Paramètres : tabs scrollables ── */
 @media (max-width: 768px) {
   [style*="flex-wrap:nowrap"] {

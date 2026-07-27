@@ -550,11 +550,9 @@
           </div>
         </label>
       </div>
-      <div id="import-liste-dropzone"
-           style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
-                  text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);"
-           onmouseenter="this.style.borderColor='var(--green-fifa)';this.style.background='rgba(0,230,118,0.04)'"
-           onmouseleave="this.style.borderColor='var(--border-color)';this.style.background='transparent'">
+       <div id="import-liste-dropzone"
+            style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
+                   text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);">
         <div style="font-size:28px; margin-bottom:6px;">📄</div>
         <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:2px;"
              data-i18n="classes.dropzone_label">
@@ -567,8 +565,7 @@
       <div id="import-liste-result" class="backup-info" style="display:none; margin-bottom:14px; font-size:13px; line-height:1.8;"></div>
       <div style="display:flex; gap:10px; justify-content:flex-end;
                   padding-top:16px; border-top:1px solid var(--border-color);">
-        <button type="button" class="btn btn-secondary"
-                onclick="document.getElementById('modal-import-liste').style.display='none'"
+        <button type="button" class="btn btn-secondary" id="modal-import-liste-cancel"
                 data-i18n="common.cancel">Annuler</button>
         <button type="button" id="btn-import-liste-ok" class="btn btn-primary" disabled
                 data-i18n="classes.import_list_btn">✅ Importer la liste</button>
@@ -611,9 +608,7 @@
       </div>
       <div id="import-abs-dropzone"
            style="border:2px dashed var(--border-color); border-radius:12px; padding:24px;
-                  text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);"
-           onmouseenter="this.style.borderColor='var(--yellow-fifa)';this.style.background='rgba(255,183,77,0.04)'"
-           onmouseleave="this.style.borderColor='var(--border-color)';this.style.background='transparent'">
+                  text-align:center; cursor:pointer; margin-bottom:14px; transition:var(--transition);">
         <div style="font-size:28px; margin-bottom:6px;"></div>
         <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:2px;"
              data-i18n="classes.import_abs_dropzone">Cliquez pour choisir le fichier CSV</div>

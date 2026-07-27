@@ -4,6 +4,16 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// ═══════════════════════════════════════════════════════════
+// THÈME — Appliqué avant le premier rendu (évite le flash)
+// ═══════════════════════════════════════════════════════════
+try {
+  const saved = localStorage.getItem('elimu-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+} catch (e) {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
+
 contextBridge.exposeInMainWorld('elimuAPI', {
 
   // ==========================================

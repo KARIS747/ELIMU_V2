@@ -735,11 +735,15 @@ async function lancerMigration() {
             <p style="color:var(--text-muted); font-size:16px; margin-bottom:32px;">
               <strong>${result.nbCopies}</strong> élèves ont été transférés avec succès vers la nouvelle année scolaire.
             </p>
-            <button class="btn btn-primary" style="padding:12px 32px; font-size:14px;" onclick="document.getElementById('modal-preparer-annee').style.display='none'; location.reload();">
+              <button class="btn btn-primary" id="btn-terminer-migration" style="padding:12px 32px; font-size:14px;">
               Terminer & Recharger
             </button>
           </div>
         `;
+        document.getElementById('btn-terminer-migration')?.addEventListener('click', () => {
+          document.getElementById('modal-preparer-annee').style.display = 'none';
+          location.reload();
+        });
       }
       if (footer) footer.style.display = 'none';
 

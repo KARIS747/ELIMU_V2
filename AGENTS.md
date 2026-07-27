@@ -424,6 +424,7 @@ L'enseignant le saisit une seule fois lors de la première connexion PWA.
 | Date | Changement | Fichiers |
 |------|-----------|----------|
 | 27 Juillet 2026 | **Affichage code école dans l'UI Desktop** — `ecole_id` UUID désormais visible dans Paramètres > Général, modale création enseignant, détail compte, et fiche d'accès PDF | `parametres/modules/general.js`, `parametres/parametres.html`, `professeurs/professeurs.html`, `professeurs/professeurs.js`, `handlers/professeurs.js` |
+| 27 Juillet 2026 | **Correction CSP + police corrompue** — script thème inline déplacé dans preload.js, hash CSP supprimé, police rajdhani-700.woff2 remplacée (HTML→vrai woff2), tous les inline event handlers (onclick/onmouseenter/onmouseleave) remplacés par addEventListener + CSS hover | `index.html`, `preload.js`, `assets/css/style.css`, `assets/fonts/rajdhani-700.woff2`, `classes/classes.html`, `classes/classes.js`, `eleves/eleves.js`, `parametres/modules/annees.js`, `professeurs/professeurs.html` |
 
 ---
 

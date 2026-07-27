@@ -170,6 +170,9 @@ function attacherEvenements() {
   document.getElementById('modal-import-liste-close')?.addEventListener('click', () => {
     if (modalImport) modalImport.style.display = 'none';
   });
+  document.getElementById('modal-import-liste-cancel')?.addEventListener('click', () => {
+    if (modalImport) modalImport.style.display = 'none';
+  });
   modalImport?.addEventListener('click', e => {
     if (e.target === modalImport) modalImport.style.display = 'none';
   });

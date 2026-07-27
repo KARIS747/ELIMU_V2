@@ -617,12 +617,9 @@ async function rafraichirProfil(eleveId, title, content) {
                 }).filter(Boolean).join('');
 
                 const hasSubs = subsHtml.length > 0;
-                const expandAttr = hasSubs
-                  ? `onclick="const n=this.nextElementSibling;n.classList.toggle('hidden');this.querySelector('.sc-expand')?.classList.toggle('open');"`
-                  : '';
 
                 return `
-                  <div class="sc-row" ${expandAttr}>
+                  <div class="sc-row${hasSubs ? ' sc-has-subs' : ''}" data-code="${esc(code)}">
                     <div style="display:flex;align-items:center;gap:10px;">
                       <span class="sc-code">${esc(code)}</span>
                       ${hasSubs ? '<span class="sc-expand">▼</span>' : ''}
@@ -635,7 +632,16 @@ async function rafraichirProfil(eleveId, title, content) {
             </div>`;
         }).join('')
       }</div>`;
-    }
+
+    content.querySelectorAll('.sc-has-subs').forEach(el => {
+      el.addEventListener('click', () => {
+        const next = el.nextElementSibling;
+        if (next) {
+          next.classList.toggle('hidden');
+          el.querySelector('.sc-expand')?.classList.toggle('open');
+        }
+      });
+    });
   };
 
   document.getElementById('profil-periode')?.addEventListener('change', renderNotes);
