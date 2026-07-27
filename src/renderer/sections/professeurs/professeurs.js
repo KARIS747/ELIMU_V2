@@ -258,6 +258,14 @@ async function ouvrirDetailCompte(profId) {
       ? new Date(p.date_creation_compte).toLocaleDateString() : '—';
     document.getElementById('view-prof-impact').textContent = detail.totalEleves || 0;
 
+    // Code ecole
+    try {
+      const params = await window.elimuAPI.getParametres();
+      document.getElementById('view-prof-ecole-code').textContent = (params && params.ecole_id) ? params.ecole_id : '—';
+    } catch (e) {
+      document.getElementById('view-prof-ecole-code').textContent = '—';
+    }
+
     // Classes
     const classesList = document.getElementById('view-prof-classes-list');
     classesList.innerHTML = (detail.classes || []).map(c => `
@@ -469,8 +477,12 @@ async function ouvrirModaleProfesseur(profId = null) {
 
   await _remplirClassesCheckboxes([]);
 
+  const ecoleCodeEl = document.getElementById('ecole-code-display');
+  const ecoleBlock = document.getElementById('ecole-code-block');
+
   if (profId) {
     title.textContent = t('profs.modal_edit');
+    if (ecoleBlock) ecoleBlock.style.display = 'none';
     try {
       const detail = await window.elimuAPI.getProfesseurDetail(profId);
       if (detail?.professeur) {
@@ -511,6 +523,18 @@ async function ouvrirModaleProfesseur(profId = null) {
     }
   } else {
     title.textContent = t('profs.modal_add');
+    // Charger et afficher le code ecole
+    if (ecoleCodeEl && ecoleBlock) {
+      try {
+        const params = await window.elimuAPI.getParametres();
+        if (params && params.ecole_id) {
+          ecoleCodeEl.textContent = params.ecole_id;
+          ecoleBlock.style.display = 'block';
+        }
+      } catch (e) {
+        console.error('Erreur chargement code ecole:', e);
+      }
+    }
   }
 
   modal.style.display = 'flex';

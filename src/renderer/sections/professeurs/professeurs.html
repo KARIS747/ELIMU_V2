@@ -349,6 +349,16 @@
              data-i18n="profs.password_single_view">Notez-le : il ne sera plus affiche apres fermeture.</div>
       </div>
 
+      <!-- Code ecole (connexion PWA) -->
+      <div id="ecole-code-block" style="display:none; background:rgba(61,142,248,0.06); border:1px solid rgba(61,142,248,0.2); border-radius:12px; padding:14px; margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:700; color:var(--blue-fifa); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>Code ecole (a communiquer a l'enseignant)</span>
+        </div>
+        <div id="ecole-code-display" style="font-family:monospace; font-size:18px; font-weight:700; color:var(--blue-fifa); letter-spacing:1px; word-break:break-all;">--</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">L'enseignant saisit ce code dans la PWA pour se connecter.</div>
+      </div>
+
       <!-- Identite -->
       <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:20px;">
         <div style="font-size:11px; font-weight:700; color:var(--purple-fifa); text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; display:flex; align-items:center; gap:8px;">
@@ -502,6 +512,10 @@
               <div style="font-size:13px;">
                 <span style="color:var(--text-muted);" data-i18n="profs.impact_label">Eleves impactes</span> :
                 <strong id="view-prof-impact" style="color:var(--text-primary);">0</strong>
+              </div>
+              <div style="font-size:13px;">
+                <span style="color:var(--text-muted);">Code ecole</span> :
+                <strong id="view-prof-ecole-code" style="color:var(--blue-fifa); font-family:monospace; font-size:13px;">--</strong>
               </div>
             </div>
           </div>

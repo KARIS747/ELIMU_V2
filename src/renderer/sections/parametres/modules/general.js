@@ -164,6 +164,18 @@ function remplirFormulaireGeneral() {
   setVal('etablissement-adresse',     parametres.adresse);
   setVal('etablissement-tel',         parametres.telephone);
   setVal('etablissement-email',       parametres.email);
+
+  const ecoleCodeEl = document.getElementById('ecole-code-val');
+  if (ecoleCodeEl && parametres.ecole_id) {
+    ecoleCodeEl.textContent = parametres.ecole_id;
+  }
+
+  document.getElementById('btn-copy-ecole-code')?.addEventListener('click', () => {
+    if (parametres.ecole_id) {
+      navigator.clipboard.writeText(parametres.ecole_id);
+      showToast('Code ecole copie !', 'success');
+    }
+  });
 }
 
 function attacherEvenementsGeneral() {

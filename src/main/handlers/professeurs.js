@@ -484,6 +484,10 @@ function register(ipcMain, deps) {
       doc.font('Helvetica').text(prof.nom_utilisateur || '—');
       doc.moveDown(0.4);
 
+      doc.font('Helvetica-Bold').text('Code ecole : ');
+      doc.font('Helvetica').text(ecoleId || '—');
+      doc.moveDown(0.4);
+
       doc.font('Helvetica-Bold').text('Mot de passe : ');
       doc.font('Helvetica').text(passwordOverride || '—');
       doc.moveDown(0.4);
