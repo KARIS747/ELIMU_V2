@@ -401,6 +401,16 @@ Cet UUID est utilisé pour isoler toutes les données de l'école dans la Base B
 - Préservé entre les redémarrages, même si le nom de l'école change
 - Transmis dans les syncs Desktop→PWA au lieu de l'ancien dérivé du nom
 
+### 14.6 Où le directeur trouve le code école (depuis le 27 Juillet 2026)
+Le `ecole_id` (UUID) est désormais affiché à 3 endroits dans le Desktop :
+1. **Paramètres > Général** — bloc "Code établissement" avec bouton Copier
+2. **Création d'un compte enseignant** — encadré bleu sous le mot de passe généré
+3. **Détail du compte enseignant** — dans la section "Compte PWA"
+4. **Fiche d'accès PDF imprimée** — ligne "Code ecole" sous l'identifiant
+
+Le directeur copie le code et le communique aux enseignants (oral, SMS, fiche imprimée).
+L'enseignant le saisit une seule fois lors de la première connexion PWA.
+
 ### 14.4 Tables isolées
 `utilisateurs`, `professeurs`, `classes`, `eleves`, `notes`, `absences`, `parents`,
 `sanctions`, `imports`, `audit_log`, `heures_absence`, `frais_types`, `tranches`, `paiements`
@@ -409,6 +419,12 @@ Cet UUID est utilisé pour isoler toutes les données de l'école dans la Base B
 - Créer 2 écoles fictives → vérifier qu'aucune donnée ne fuit
 - Confirmer que le `ecole_id` du JWT/du Desktop est toujours utilisé, jamais celui du client
 
+## 15. HISTORIQUE DES MODIFICATIONS
+
+| Date | Changement | Fichiers |
+|------|-----------|----------|
+| 27 Juillet 2026 | **Affichage code école dans l'UI Desktop** — `ecole_id` UUID désormais visible dans Paramètres > Général, modale création enseignant, détail compte, et fiche d'accès PDF | `parametres/modules/general.js`, `parametres/parametres.html`, `professeurs/professeurs.html`, `professeurs/professeurs.js`, `handlers/professeurs.js` |
+
 ---
 
-*Document généré le 20 Juillet 2026 — à mettre à jour après chaque modification significative.*
+*Document généré le 20 Juillet 2026 — mis à jour le 27 Juillet 2026*
