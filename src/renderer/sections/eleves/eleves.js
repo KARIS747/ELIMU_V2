@@ -642,6 +642,7 @@ async function rafraichirProfil(eleveId, title, content) {
         }
       });
     });
+    }
   };
 
   document.getElementById('profil-periode')?.addEventListener('change', renderNotes);
