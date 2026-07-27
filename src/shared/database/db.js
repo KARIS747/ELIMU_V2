@@ -61,7 +61,15 @@ async function initializeDatabase(customPath = null) {
   db.pragma('journal_mode = WAL');       // Write-Ahead Logging
 
   // Rattrapage colonnes manquantes (execute meme si version deja a jour)
-  try { db.exec("ALTER TABLE classes ADD COLUMN niveau_v2 TEXT"); } catch (e) { }
+  try {
+    db.exec("ALTER TABLE classes ADD COLUMN niveau_v2 TEXT");
+    console.log('   → colonne niveau_v2 ajoutée à classes');
+  } catch (e) {
+    // Soit la colonne existe déjà, soit autre erreur
+    if (e.message && !e.message.includes('duplicate column')) {
+      console.warn('   → ALTER TABLE niveau_v2 ignoré:', e.message);
+    }
+  }
 
   // --- OPTIMISATION : Vérification de la version du schéma ---
   let installedVersion = 0;

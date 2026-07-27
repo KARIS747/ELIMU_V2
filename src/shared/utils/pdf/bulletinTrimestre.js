@@ -1269,7 +1269,12 @@ function exportBulletinClassePDF(elevesIds, periode, outputPath, anneeId, lang =
     try {
       let isQual = false;
       if (ids.length > 0) {
-        const firstEl = get('SELECT niveau_v2 FROM eleves WHERE id = ?', [ids[0]]);
+        const firstEl = get(`
+          SELECT c.niveau_v2
+          FROM eleves e
+          JOIN classes c ON c.id = e.classe_id
+          WHERE e.id = ?
+        `, [ids[0]]);
         if (firstEl && (firstEl.niveau_v2 === 'N1' || firstEl.niveau_v2 === 'N2')) {
           isQual = true;
         }
