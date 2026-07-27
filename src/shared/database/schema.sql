@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS classes (
     systeme_educatif        TEXT DEFAULT 'francophone' CHECK(systeme_educatif IN ('francophone', 'anglophone')),
     matieres_json           TEXT DEFAULT '[]',
     professeur_principal_id INTEGER REFERENCES professeurs(id) ON DELETE SET NULL,
+    niveau_v2               TEXT,
     ecole_id                TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_classes_ecole ON classes(ecole_id);

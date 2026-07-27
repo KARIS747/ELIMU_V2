@@ -356,6 +356,10 @@ async function initializeDatabase(customPath = null) {
     console.warn("Impossible de mettre à jour la version du schéma:", e.message);
   }
 
+  // Rattrapage : certaines colonnes ajoutees par migration peuvent manquer
+  // si la base etait deja a jour au lancement (version >= CURRENT_SCHEMA_VERSION).
+  try { db.exec("ALTER TABLE classes ADD COLUMN niveau_v2 TEXT"); } catch (e) { }
+
   console.log('✅ Schéma de base de données appliqué et à jour');
   return db;
 }
