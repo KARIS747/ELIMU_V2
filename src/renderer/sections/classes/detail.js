@@ -81,7 +81,7 @@ export async function ouvrirDetail(classeId) {
               <div class="eleve-avatar-sm">${initiales}</div>
               <div style="flex:1;">
                 <div style="font-weight:600;font-size:13.5px;color:var(--text-primary);">
-                  ${esc(eleve.prenom)} ${esc(eleve.nom)}
+                  ${esc(eleve.nom)} ${esc(eleve.prenom)}
                 </div>
               </div>
               <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;

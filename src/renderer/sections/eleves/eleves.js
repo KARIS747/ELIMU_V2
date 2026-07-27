@@ -183,7 +183,7 @@ function afficherEleves(eleves) {
         </div>
         ${niveauBadge}
         <div class="card-avatar">${initiales}</div>
-        <div class="card-name">${esc(eleve.prenom)} ${esc(eleve.nom)}</div>
+        <div class="card-name">${esc(eleve.nom)} ${esc(eleve.prenom)}</div>
         <div class="card-class">${esc(eleve.nom_classe || t('eleves.card_no_class'))}</div>
         <div style="display:flex;justify-content:center;gap:2px;margin-bottom:6px;">${etoiles}</div>
         <div class="card-actions">
@@ -408,7 +408,7 @@ async function rafraichirProfil(eleveId, title, content) {
   }
 
   const { eleve, notes: toutesNotes } = detail;
-  if (title) title.textContent = `${eleve.prenom} ${eleve.nom}`;
+  if (title) title.textContent = `${eleve.nom} ${eleve.prenom}`;
 
   // ── Calcul de la moyenne générale ───────────────────────────────
   const estQualitatifProfil = eleve.niveau_v2 === 'N1' || eleve.niveau_v2 === 'N2';
@@ -486,7 +486,7 @@ async function rafraichirProfil(eleveId, title, content) {
           ${initiales}
         </div>
         <div style="font-weight:700;font-size:14px;color:var(--text-primary);">
-          ${esc(eleve.prenom)} ${esc(eleve.nom)}
+          ${esc(eleve.nom)} ${esc(eleve.prenom)}
         </div>
         <div style="font-size:10px;color:var(--text-muted);margin:4px 0 8px;
                     text-transform:uppercase;letter-spacing:0.8px;">
@@ -657,14 +657,14 @@ function fermerProfil() {
 
 async function supprimerEleve(id) {
   const eleve = tousLesEleves.find(e => e.id === id);
-  if (!confirm(t('eleves.delete_confirm').replace('{name}', `${eleve?.prenom} ${eleve?.nom}`))) return;
+  if (!confirm(t('eleves.delete_confirm').replace('{name}', `${eleve?.nom} ${eleve?.prenom}`))) return;
 
   const result = await window.elimuAPI.deleteEleve(id);
   if (result?.error) {
     showToast(t('common.error') + ' : ' + result.error, 'error');
   } else {
     showToast(t('eleves.delete_success'), 'success');
-    window.elimuAPI.logAudit('DELETE_ELEVE', `Élève supprimé : ${eleve?.prenom} ${eleve?.nom} (ID: ${id})`, _state?.user?.id);
+    window.elimuAPI.logAudit('DELETE_ELEVE', `Élève supprimé : ${eleve?.nom} ${eleve?.prenom} (ID: ${id})`, _state?.user?.id);
     // ★ SYNCHRONISATION après suppression
     await syncApresModification();
   }
