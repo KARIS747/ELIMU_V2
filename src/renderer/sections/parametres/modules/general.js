@@ -165,14 +165,20 @@ function remplirFormulaireGeneral() {
   setVal('etablissement-tel',         parametres.telephone);
   setVal('etablissement-email',       parametres.email);
 
+  const codeEcole = parametres.code_ecole || parametres.ecole_id || '—';
   const ecoleCodeEl = document.getElementById('ecole-code-val');
-  if (ecoleCodeEl && parametres.ecole_id) {
-    ecoleCodeEl.textContent = parametres.ecole_id;
+  if (ecoleCodeEl) {
+    ecoleCodeEl.textContent = codeEcole;
+  }
+  const ecoleUuidEl = document.getElementById('ecole-uuid-val');
+  if (ecoleUuidEl && parametres.ecole_id) {
+    ecoleUuidEl.textContent = parametres.ecole_id;
   }
 
   document.getElementById('btn-copy-ecole-code')?.addEventListener('click', () => {
-    if (parametres.ecole_id) {
-      navigator.clipboard.writeText(parametres.ecole_id);
+    const val = document.getElementById('ecole-code-val')?.textContent;
+    if (val && val !== '—') {
+      navigator.clipboard.writeText(val);
       showToast('Code ecole copie !', 'success');
     }
   });

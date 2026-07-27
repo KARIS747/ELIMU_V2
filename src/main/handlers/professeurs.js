@@ -233,14 +233,15 @@ function register(ipcMain, deps) {
           if (syncUrl && apiKey) {
               makeRequest(
                 syncUrl.replace(/\/$/, '') + '/api/sync/push-from-desktop',
-                'POST',
-                {
-                  ecole_id: ecoleId,
-                  teachers: [{ username, password: rawPassword, nom_complet: (prenom + ' ' + nom).trim(), actif: 1, ecole_id: ecoleId, classes_ids: classeIds || [], telephone: telephone || '' }],
-                  classes: [],
-                  students: [],
-                },
-                { 'x-api-key': apiKey }
+                  'POST',
+                  {
+                    ecole_id: ecoleId,
+                    code_ecole: (get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || ''),
+                    teachers: [{ username, password: rawPassword, nom_complet: (prenom + ' ' + nom).trim(), actif: 1, ecole_id: ecoleId, classes_ids: classeIds || [], telephone: telephone || '' }],
+                    classes: [],
+                    students: [],
+                  },
+                  { 'x-api-key': apiKey }
               ).then((r) => {
               if (r.status === 200) {
                 logger.info('Auto-sync PWA reussi pour ' + username);
@@ -433,6 +434,7 @@ function register(ipcMain, deps) {
     if (!(await checkAccess())) return { success: false, error: 'Acces non autorise' };
     try {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const codeEcole = get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || ecoleId;
       const pid = parseInt(id);
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
@@ -485,7 +487,7 @@ function register(ipcMain, deps) {
       doc.moveDown(0.4);
 
       doc.font('Helvetica-Bold').text('Code ecole : ');
-      doc.font('Helvetica').text(ecoleId || '—');
+      doc.font('Helvetica').text(codeEcole || '—');
       doc.moveDown(0.4);
 
       doc.font('Helvetica-Bold').text('Mot de passe : ');
@@ -661,9 +663,11 @@ function register(ipcMain, deps) {
         ecole_id: ecoleId,
       }));
 
+      const codeEcole = get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || '';
       const payload = {
         annee_scolaire: anneeLibelle,
         ecole_id: ecoleId,
+        code_ecole: codeEcole,
         teachers, classes, students
       };
 

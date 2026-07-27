@@ -193,6 +193,17 @@ app.whenReady().then(async () => {
     }
     currentEcoleId = ecoleId;
 
+    // Générer ou récupérer le code court (6 caractères, lisible par des humains)
+    let codeEcole = get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur;
+    if (!codeEcole) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      codeEcole = '';
+      for (let i = 0; i < 6; i++) {
+        codeEcole += chars[Math.floor(Math.random() * chars.length)];
+      }
+      run("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES ('code_ecole', ?)", [codeEcole]);
+    }
+
     // S'assurer que l'école est enregistrée dans la table ecoles
     const ecoleExistante = get("SELECT ecole_id FROM ecoles WHERE ecole_id = ?", [ecoleId]);
     if (!ecoleExistante) {

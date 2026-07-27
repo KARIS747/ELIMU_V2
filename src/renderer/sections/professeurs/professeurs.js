@@ -261,7 +261,7 @@ async function ouvrirDetailCompte(profId) {
     // Code ecole
     try {
       const params = await window.elimuAPI.getParametres();
-      document.getElementById('view-prof-ecole-code').textContent = (params && params.ecole_id) ? params.ecole_id : '—';
+      document.getElementById('view-prof-ecole-code').textContent = (params && (params.code_ecole || params.ecole_id)) ? (params.code_ecole || params.ecole_id) : '—';
     } catch (e) {
       document.getElementById('view-prof-ecole-code').textContent = '—';
     }
@@ -527,8 +527,8 @@ async function ouvrirModaleProfesseur(profId = null) {
     if (ecoleCodeEl && ecoleBlock) {
       try {
         const params = await window.elimuAPI.getParametres();
-        if (params && params.ecole_id) {
-          ecoleCodeEl.textContent = params.ecole_id;
+        if (params && (params.code_ecole || params.ecole_id)) {
+          ecoleCodeEl.textContent = params.code_ecole || params.ecole_id;
           ecoleBlock.style.display = 'block';
         }
       } catch (e) {
