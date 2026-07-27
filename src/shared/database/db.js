@@ -60,6 +60,9 @@ async function initializeDatabase(customPath = null) {
   db.pragma('synchronous = NORMAL');
   db.pragma('journal_mode = WAL');       // Write-Ahead Logging
 
+  // Rattrapage colonnes manquantes (execute meme si version deja a jour)
+  try { db.exec("ALTER TABLE classes ADD COLUMN niveau_v2 TEXT"); } catch (e) { }
+
   // --- OPTIMISATION : Vérification de la version du schéma ---
   let installedVersion = 0;
   try {
@@ -355,10 +358,6 @@ async function initializeDatabase(customPath = null) {
   } catch (e) {
     console.warn("Impossible de mettre à jour la version du schéma:", e.message);
   }
-
-  // Rattrapage : certaines colonnes ajoutees par migration peuvent manquer
-  // si la base etait deja a jour au lancement (version >= CURRENT_SCHEMA_VERSION).
-  try { db.exec("ALTER TABLE classes ADD COLUMN niveau_v2 TEXT"); } catch (e) { }
 
   console.log('✅ Schéma de base de données appliqué et à jour');
   return db;
