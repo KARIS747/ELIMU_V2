@@ -13,6 +13,10 @@
     "docs": {
       "path": "docs",
       "description": "Documentation technique (formules de calcul des notes N1/N2)"
+    },
+    "memory": {
+      "path": "../memory",
+      "description": "Mémoire des sessions précédentes"
     }
   },
   "command": {

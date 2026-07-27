@@ -16,7 +16,9 @@
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --win --linux",
-    "test": "jest"
+    "test": "jest tests/unit",
+    "test:all": "jest",
+    "test:integration": "jest tests/integration"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
