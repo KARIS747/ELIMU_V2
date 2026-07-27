@@ -55,5 +55,12 @@
   <div class="tagline">Gestion Scolaire d'Excellence</div>
   <div class="loader"></div>
   <div class="status" id="status">Initialisation...</div>
+  <script>
+    if (window.splashAPI) {
+      window.splashAPI.onStatus((status) => {
+        document.getElementById('status').innerText = status;
+      });
+    }
+  </script>
 </body>
 </html>

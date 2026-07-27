@@ -9,44 +9,60 @@ const { get, run, all } = require('../database/db'); // all est maintenant synch
 const BCRYPT_ROUNDS = 10;
 
 // ============================================================
-// PROTECTION BRUTE FORCE
+// PROTECTION BRUTE FORCE (persistée en DB)
 // ============================================================
 const MAX_ATTEMPTS   = 5;
 const BLOCK_DURATION = 5 * 60 * 1000;
-const failedAttempts = new Map();
+
+function migrateLoginAttempts() {
+  try {
+    run(`CREATE TABLE IF NOT EXISTS login_attempts (
+      username TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 1,
+      first_attempt INTEGER NOT NULL,
+      last_attempt INTEGER NOT NULL,
+      PRIMARY KEY (username)
+    )`);
+  } catch (e) {
+    /* table existe deja */
+  }
+}
+
+function nettoyerAnciennesTentatives() {
+  const seuil = Date.now() - BLOCK_DURATION;
+  run('DELETE FROM login_attempts WHERE first_attempt < ?', [seuil]);
+}
 
 function isBlocked(username) {
-  const record = failedAttempts.get(username);
-  if (!record) return false;
-  if (Date.now() - record.firstAttempt > BLOCK_DURATION) {
-    failedAttempts.delete(username);
-    return false;
-  }
-  return record.count >= MAX_ATTEMPTS;
+  migrateLoginAttempts();
+  nettoyerAnciennesTentatives();
+  const row = get('SELECT count, first_attempt FROM login_attempts WHERE username = ?', [username]);
+  if (!row) return false;
+  return row.count >= MAX_ATTEMPTS;
 }
 
 function recordFailedAttempt(username) {
+  migrateLoginAttempts();
   const now = Date.now();
-  const record = failedAttempts.get(username);
-  if (!record) {
-    failedAttempts.set(username, { count: 1, firstAttempt: now });
+  const row = get('SELECT count, first_attempt FROM login_attempts WHERE username = ?', [username]);
+  if (!row) {
+    run('INSERT INTO login_attempts (username, count, first_attempt, last_attempt) VALUES (?, 1, ?, ?)', [username, now, now]);
   } else {
-    record.count++;
+    run('UPDATE login_attempts SET count = count + 1, last_attempt = ? WHERE username = ?', [now, username]);
   }
 }
 
 function resetAttempts(username) {
-  failedAttempts.delete(username);
+  migrateLoginAttempts();
+  run('DELETE FROM login_attempts WHERE username = ?', [username]);
 }
 
 function getRemainingAttempts(username) {
-  const record = failedAttempts.get(username);
-  if (!record) return MAX_ATTEMPTS;
-  if (Date.now() - record.firstAttempt > BLOCK_DURATION) {
-    failedAttempts.delete(username);
-    return MAX_ATTEMPTS;
-  }
-  return Math.max(0, MAX_ATTEMPTS - record.count);
+  migrateLoginAttempts();
+  nettoyerAnciennesTentatives();
+  const row = get('SELECT count FROM login_attempts WHERE username = ?', [username]);
+  if (!row) return MAX_ATTEMPTS;
+  return Math.max(0, MAX_ATTEMPTS - row.count);
 }
 
 // ============================================================

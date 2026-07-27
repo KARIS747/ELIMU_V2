@@ -73,7 +73,8 @@ function createSplashScreen() {
     backgroundColor: '#1a1e2c',
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'splash-preload.js')
     }
   });
 
@@ -83,10 +84,7 @@ function createSplashScreen() {
 
 function updateSplashStatus(status) {
   if (splashWindow && !splashWindow.isDestroyed()) {
-    splashWindow.webContents.executeJavaScript(`
-      if(document.getElementById('status')) 
-        document.getElementById('status').innerText = "${status}";
-    `).catch(() => {});
+    splashWindow.webContents.send('splash:status', status);
   }
 }
 
