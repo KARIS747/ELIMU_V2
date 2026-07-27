@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - run: node scripts/obfuscate.js
       - run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

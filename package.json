@@ -13,9 +13,9 @@
     "dev": "electron . --inspect",
     "postinstall": "electron-builder install-app-deps",
     "obfuscate": "node scripts/obfuscate.js",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
-    "build:all": "electron-builder --win --linux",
+    "build:win": "node scripts/obfuscate.js && electron-builder --win",
+    "build:linux": "node scripts/obfuscate.js && electron-builder --linux",
+    "build:all": "node scripts/obfuscate.js && electron-builder --win --linux",
     "test": "jest tests/unit",
     "test:all": "jest",
     "test:integration": "jest tests/integration"
