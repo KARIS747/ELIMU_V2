@@ -1286,7 +1286,7 @@ function exportBulletinClassePDF(elevesIds, periode, outputPath, anneeId, lang =
       for (const id of ids) {
         const data = prepareBulletinTrimestreData(id, periode, lang, anneeId);
         if (data) {
-          if (count > 0) doc.addPage({ margin: isQual ? 23 : 30 });
+          if (count > 0) doc.addPage();
           drawBulletinTrimestre(doc, data, lang);
         }
         count++;
