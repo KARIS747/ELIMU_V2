@@ -660,6 +660,15 @@ async function sauvegarderProfesseur() {
 
       showToast(t('profs.save_success_add').replace('{username}', res.username), 'success');
 
+      // Afficher le chemin du PDF généré automatiquement
+      if (res.pdfPath) {
+        const nomFichier = res.pdfPath.split(/[/\\]/).pop();
+        setTimeout(() => {
+          showToast(`📄 Fiche PDF generee : ${nomFichier}`, 'info', 10000);
+          showToast(`📁 Dossier : ${res.pdfPath.replace(nomFichier, '')}`, 'info', 10000);
+        }, 2000);
+      }
+
       // Desactiver le formulaire pour forcer la lecture du mot de passe
       document.querySelectorAll('#form-prof input, #form-prof button').forEach(el => { if (el !== pwBlock && el.id !== 'btn-prof-cancel' && el.id !== 'modal-prof-close') el.disabled = true; });
       btnSave.disabled = true;

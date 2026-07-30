@@ -10,7 +10,7 @@ const { hasRole } = require('../../shared/security/access');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const { dialog } = require('electron');
+const { dialog, app } = require('electron');
 const crypto = require('crypto');
 
 const BCRYPT_ROUNDS = 10;
@@ -256,7 +256,68 @@ function register(ipcMain, deps) {
           logger.warn('Auto-sync PWA ignoré (non configure):', syncErr.message);
         }
 
-        return { success: true, id: profId, username, password: rawPassword };
+        // ── Auto-générer la fiche PDF dans Téléchargements/ELIMU/ ──
+        let pdfPath = null;
+        try {
+          const downloadDir = app.getPath('downloads');
+          const pdfDir = path.join(downloadDir, 'ELIMU');
+          if (!fs.existsSync(pdfDir)) {
+            fs.mkdirSync(pdfDir, { recursive: true });
+          }
+          pdfPath = path.join(pdfDir, `fiche_acces_${username}.pdf`);
+
+          const doc = new PDFDocument({ size: 'A5', margin: 18 });
+          const stream = fs.createWriteStream(pdfPath);
+          doc.pipe(stream);
+
+          // En-tête
+          doc.fontSize(16).font('Helvetica-Bold')
+             .text('ELIMU - Acces Enseignant', { align: 'center' });
+          doc.moveDown(0.5);
+
+          // Encadré code école
+          const codeEcole = get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || ecoleId || '---';
+          const boxY = doc.y;
+          doc.roundedRect(18, boxY, 174, 36, 6).fillAndStroke('#e8f4fd', '#2d6ef8');
+          doc.fillColor('#1a1a2e').fontSize(9).font('Helvetica').text('Code ecole', 28, boxY + 4, { width: 154, align: 'center' });
+          doc.font('Helvetica-Bold').fontSize(22).fillColor('#2d6ef8')
+             .text(codeEcole, 28, boxY + 14, { width: 154, align: 'center' });
+          doc.fillColor('#000000');
+          doc.moveDown(2.2);
+
+          // Informations
+          doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333').text('Nom complet : ');
+          doc.font('Helvetica').fillColor('#000000').text((prenom || '') + ' ' + (nom || ''));
+          doc.moveDown(0.3);
+
+          doc.font('Helvetica-Bold').fillColor('#333333').text('Identifiant : ');
+          doc.font('Helvetica').fillColor('#000000').text(username);
+          doc.moveDown(0.3);
+
+          doc.font('Helvetica-Bold').fillColor('#333333').text('Mot de passe : ');
+          doc.font('Helvetica').fillColor('#000000').text(rawPassword);
+          doc.moveDown(0.3);
+
+          if (data.matiere_principale) {
+            doc.font('Helvetica-Bold').fillColor('#333333').text('Matiere : ');
+            doc.font('Helvetica').fillColor('#000000').text(data.matiere_principale);
+            doc.moveDown(0.3);
+          }
+
+          // Séparateur + note
+          doc.moveTo(18, doc.y).lineTo(192, doc.y).stroke('#dddddd');
+          doc.moveDown(0.4);
+          doc.fontSize(7).font('Helvetica-Oblique').fillColor('#999999')
+             .text('Ce mot de passe ne sera plus affiche apres fermeture de cette fenetre. Conservez ce document en lieu sur.', { align: 'center' });
+
+          doc.end();
+          await new Promise(resolve => stream.on('finish', resolve));
+          logger.info('Fiche PDF auto-generee: ' + pdfPath);
+        } catch (pdfErr) {
+          logger.warn('Auto-generation PDF echouee:', pdfErr.message);
+        }
+
+        return { success: true, id: profId, username, password: rawPassword, pdfPath };
 
       } catch (err) {
         run('ROLLBACK');
