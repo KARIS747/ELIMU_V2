@@ -7,8 +7,8 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </div>
         <div>
-          <div id="dash-greeting" class="dash-greeting" data-i18n="dashboard.greeting">Bonjour</div>
-          <div class="dash-subtitle" data-i18n="dashboard.subtitle">Vue d'ensemble de l'établissement</div>
+          <div id="dash-greeting" class="dash-greeting">Bonjour</div>
+          <div class="dash-subtitle">Vue d'ensemble de l'établissement</div>
         </div>
       </div>
     </div>
@@ -19,26 +19,26 @@
         <select class="dash-select" id="dash-classe-select" style="width:200px">
         </select>
         <select class="dash-select" id="dash-periode" style="width:145px">
-          <option value="Tous" data-i18n="dashboard.all_trimesters">Tous trimestres</option>
-          <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
-          <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
-          <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          <option value="Tous">Tous trimestres</option>
+          <option value="Trimestre 1">Trimestre 1</option>
+          <option value="Trimestre 2">Trimestre 2</option>
+          <option value="Trimestre 3">Trimestre 3</option>
         </select>
         <select class="dash-select" id="dash-sequence" style="width:130px">
-          <option value="0" data-i18n="dashboard.all_sequences">Toutes séq.</option>
-          <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
-          <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+          <option value="0">Toutes séq.</option>
+          <option value="1">Séquence 1</option>
+          <option value="2">Séquence 2</option>
         </select>
-        <button class="dash-btn dash-btn-secondary" id="dash-refresh" data-i18n-title="common.refresh" title="Actualiser">
+        <button class="dash-btn dash-btn-secondary" id="dash-refresh" title="Actualiser">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
       <div class="dash-pwa-actions" id="dash-pwa-actions">
-        <button class="dash-btn dash-btn-primary" id="dash-sync-pwa" style="display:none" title="Synchroniser les comptes et eleves vers la PWA">
+        <button class="dash-btn dash-btn-primary" id="dash-sync-pwa" style="display:none">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           Push PWA
         </button>
-        <button class="dash-btn dash-btn-secondary" id="dash-pull-pwa" style="display:none" title="Recuperer les notes et absences depuis la PWA">
+        <button class="dash-btn dash-btn-secondary" id="dash-pull-pwa" style="display:none">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
           Pull PWA
         </button>
@@ -60,7 +60,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate" id="kpi-eleves">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.kpi_students">Élèves inscrits</div>
+        <div class="dash-kpi-label">Élèves inscrits</div>
       </div>
     </div>
 
@@ -70,7 +70,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate" id="kpi-garcons">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.garcons">Garçons</div>
+        <div class="dash-kpi-label">Garçons</div>
       </div>
     </div>
 
@@ -80,7 +80,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate" id="kpi-filles">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.filles">Filles</div>
+        <div class="dash-kpi-label">Filles</div>
       </div>
     </div>
 
@@ -90,7 +90,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate" id="kpi-moyenne">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.kpi_average">Moyenne générale</div>
+        <div class="dash-kpi-label">Moyenne générale</div>
       </div>
     </div>
 
@@ -100,7 +100,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate" id="kpi-top">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.kpi_top">Meilleur élève</div>
+        <div class="dash-kpi-label">Meilleur élève</div>
       </div>
     </div>
 
@@ -110,7 +110,7 @@
       </div>
       <div class="dash-kpi-body">
         <div class="dash-kpi-value kpi-animate alert-pulse" id="kpi-alertes">—</div>
-        <div class="dash-kpi-label" data-i18n="dashboard.kpi_alerts">Élèves en alerte</div>
+        <div class="dash-kpi-label">Élèves en alerte</div>
       </div>
     </div>
   </div>
@@ -118,8 +118,8 @@
   <div class="dash-grid-2">
     <div class="dash-card chart-container">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.performance">Performance Globale</div>
-        <span class="dash-badge dash-badge-blue" id="dash-niveau-label" data-i18n="dashboard.establishment">Établissement</span>
+        <div class="dash-card-title">Performance Globale</div>
+        <span class="dash-badge dash-badge-blue" id="dash-niveau-label">Établissement</span>
       </div>
       <div class="dash-gauge-wrap">
         <canvas id="gauge-chart" width="300" height="220"></canvas>
@@ -133,7 +133,7 @@
 
     <div class="dash-card chart-container">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.radar_title">Forces par Matière</div>
+        <div class="dash-card-title">Forces par Matière</div>
       </div>
       <div class="dash-forces-wrap" id="forces-container">
         <canvas id="radar-chart"></canvas>
@@ -144,8 +144,8 @@
   <div class="dash-grid-2">
     <div class="dash-card">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.top5_title">Classement Top 5</div>
-        <span class="dash-badge dash-badge-amber" data-i18n="dashboard.this_trimester">Ce trimestre</span>
+        <div class="dash-card-title">Classement Top 5</div>
+        <span class="dash-badge dash-badge-amber">Ce trimestre</span>
       </div>
       <div id="top5-container">
         <div class="dash-loader"><div class="dash-spinner"></div></div>
@@ -154,7 +154,7 @@
 
     <div class="dash-card">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.alerts_title">Élèves à Surveiller</div>
+        <div class="dash-card-title">Élèves à Surveiller</div>
         <span class="dash-badge dash-badge-red" id="alertes-count">0</span>
       </div>
       <div id="alertes-container">
@@ -166,8 +166,8 @@
   <div class="dash-grid-2">
     <div class="dash-card">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.abs_top_assiduous_title">Élèves les plus Assidus</div>
-        <span class="dash-badge dash-badge-green" data-i18n="dashboard.abs_badge_discipline">Discipline</span>
+        <div class="dash-card-title">Élèves les plus Assidus</div>
+        <span class="dash-badge dash-badge-green">Discipline</span>
       </div>
       <div id="abs-assidus-container">
         <div class="dash-loader"><div class="dash-spinner"></div></div>
@@ -176,8 +176,8 @@
 
     <div class="dash-card">
       <div class="dash-card-header">
-        <div class="dash-card-title" data-i18n="dashboard.abs_top_absent_title">Plus d'Absences</div>
-        <span class="dash-badge dash-badge-red" data-i18n="dashboard.abs_badge_alerte">Alerte</span>
+        <div class="dash-card-title">Plus d'Absences</div>
+        <span class="dash-badge dash-badge-red">Alerte</span>
       </div>
       <div id="abs-top-container">
         <div class="dash-loader"><div class="dash-spinner"></div></div>
@@ -187,12 +187,12 @@
 
   <div class="dash-card chart-container">
     <div class="dash-card-header">
-      <div class="dash-card-title" data-i18n="dashboard.evolution_title">Évolution des Moyennes</div>
-      <span class="dash-evolution-subtitle" data-i18n="dashboard.evolution_subtitle">Moyenne pondérée par trimestre / séquence</span>
+      <div class="dash-card-title">Évolution des Moyennes</div>
+      <span class="dash-evolution-subtitle">Moyenne pondérée par trimestre / séquence</span>
     </div>
     <div class="dash-evolution-wrap">
       <canvas id="evolution-chart"></canvas>
-      <div id="evolution-empty" class="dash-evolution-empty" data-i18n="dashboard.evolution_empty">
+      <div id="evolution-empty" class="dash-evolution-empty">
         Aucune donnée d'évolution disponible
       </div>
     </div>
