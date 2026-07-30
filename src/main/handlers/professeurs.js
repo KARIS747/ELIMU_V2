@@ -748,6 +748,11 @@ function register(ipcMain, deps) {
         logger.info('Auto-bootstrap PWA : nouvelle cle API sauvegardee pour cette ecole');
       }
 
+      if (result.status !== 200) {
+        const errMsg = responseData.error || 'HTTP ' + result.status;
+        return { success: false, error: translatePwaError(new Error(errMsg)) };
+      }
+
       logger.info('Sync PWA termine:', result.status, JSON.stringify(responseData));
       await logAudit(getCurrentUserId(), 'SYNC_TO_PWA',
         'Synchronisation vers PWA: ' + (responseData.teachers || 0) + ' enseignants, ' +
@@ -756,7 +761,7 @@ function register(ipcMain, deps) {
       return responseData;
     } catch (e) {
       logger.error('Erreur sync PWA:', e);
-      return { success: false, error: e.message };
+      return { success: false, error: translatePwaError(e) };
     }
   });
 
@@ -817,7 +822,8 @@ function register(ipcMain, deps) {
       }
 
       if (response.status !== 200) {
-        return { success: false, error: 'Erreur serveur PWA: ' + (responseData.error || 'HTTP ' + response.status) };
+        const errMsg = responseData.error || 'HTTP ' + response.status;
+        return { success: false, error: translatePwaError(new Error(errMsg)) };
       }
 
       const payload = responseData;
@@ -988,9 +994,29 @@ function register(ipcMain, deps) {
       }
     } catch (e) {
       logger.error('Erreur pull PWA:', e);
-      return { success: false, error: e.message };
+      return { success: false, error: translatePwaError(e) };
     }
   });
+}
+
+// ── Traduction erreurs PWA ─────────────────────────────────────────────
+
+function translatePwaError(err) {
+  const msg = (err && err.message) || String(err || '');
+  if (msg.includes('TIMEOUT')) return 'Le serveur PWA ne repond pas. Verifiez votre connexion internet et que le serveur PWA est en marche.';
+  if (msg.includes('ECONNREFUSED')) return 'Connexion refusee par le serveur PWA. Verifiez que l\'adresse du serveur est correcte et que le serveur est bien lance.';
+  if (msg.includes('ECONNRESET') || msg.includes('socket hang up')) return 'Connexion interrompue. Verifiez votre reseau et reessayez.';
+  if (msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')) return 'Impossible de joindre le serveur PWA. Verifiez l\'URL et votre connexion internet.';
+  if (msg.includes('EHOSTUNREACH') || msg.includes('ENETUNREACH')) return 'Le serveur PWA est inaccessible. Verifiez votre reseau.';
+  if (msg.includes('ETIMEDOUT')) return 'Delai d\'attente depasse. Le serveur PWA met trop de temps a repondre. Reessayez plus tard.';
+  if (msg.includes('getaddrinfo')) return 'Nom d\'hote introuvable. Verifiez l\'URL du serveur PWA dans Parametres.';
+  if (msg.includes('415') || msg.includes('Unsupported Media Type')) return 'Le serveur PWA a rejete la requete. Mettez a jour le serveur PWA.';
+  if (msg.includes('401') || msg.includes('Unauthorized')) return 'Cle API PWA invalide. Verifiez la cle dans Parametres et regenerez-la si necessaire.';
+  if (msg.includes('403') || msg.includes('Forbidden')) return 'Acces refuse par le serveur PWA. Verifiez les droits de votre cle API.';
+  if (msg.includes('500') || msg.includes('Internal Server Error')) return 'Erreur interne du serveur PWA. Contactez votre administrateur.';
+  if (msg.includes('502') || msg.includes('Bad Gateway')) return 'Le serveur PWA a rencontre une erreur de passerelle. Reessayez plus tard.';
+  if (msg.includes('503') || msg.includes('Service Unavailable')) return 'Le serveur PWA est temporairement indisponible. Reessayez plus tard.';
+  return 'Erreur de synchronisation PWA: ' + msg + '. Verifiez votre connexion internet et la configuration dans Parametres.';
 }
 
 // ── Sync PWA ────────────────────────────────────────────────────────────
