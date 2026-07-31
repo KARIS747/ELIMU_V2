@@ -8,6 +8,10 @@
     "email": "karisdev369@gmail.com"
   },
   "license": "SEE LICENSE IN build-resources/license.txt",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "electron . --inspect",
@@ -51,7 +55,7 @@
       {
         "provider": "github",
         "owner": "KARIS747",
-        "repo": "ELIMU-APP",
+        "repo": "ELIMU_V2",
         "private": false,
         "releaseType": "release"
       }
