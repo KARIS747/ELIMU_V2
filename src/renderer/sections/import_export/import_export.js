@@ -299,7 +299,7 @@ async function chargerResumeConfig() {
         </div>
         <div style="background:var(--bg-secondary); padding:8px; border-radius:6px;">
           <div style="color:var(--text-muted);">${t('ie.config_weight_label')}</div>
-          <div style="color:var(--text-primary); font-weight:600;">Seq1 ${cfg.calc_poids_seq1||40}% / Seq2 ${cfg.calc_poids_seq2||60}%</div>
+          <div style="color:var(--text-primary); font-weight:600;">Seq1 ${cfg.calc_poids_seq1||50}% / Seq2 ${cfg.calc_poids_seq2||50}%</div>
         </div>
         <div style="background:var(--bg-secondary); padding:8px; border-radius:6px;">
           <div style="color:var(--text-muted);">${t('ie.config_region_label')}</div>

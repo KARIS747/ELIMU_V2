@@ -38,8 +38,8 @@ function prepareBulletinRecapData(eleveId, lang = 'fr', anneeId = null) {
     return prepareRecapQualitatif(eleve, cfg, lang, anneeId);
   }
 
-  const poids1 = parseFloat(cfg.calc_poids_seq1 || 40) / 100;
-  const poids2 = parseFloat(cfg.calc_poids_seq2 || 60) / 100;
+  const poids1 = parseFloat(cfg.calc_poids_seq1 || 50) / 100;
+  const poids2 = parseFloat(cfg.calc_poids_seq2 || 50) / 100;
 
   const PERIODES = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
 

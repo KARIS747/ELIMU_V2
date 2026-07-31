@@ -54,8 +54,8 @@ function remplirFormulaireBulletin() {
   set('bul-modele',                    c.style_modele || 'officiel');
   set('bul-pied-texte',                c.pied_texte);
   set('bul-notation-type',             c.notation_type || 'numerique');
-  set('bul-poids-seq1',                c.calc_poids_seq1 || '40');
-  set('bul-poids-seq2',                c.calc_poids_seq2 || '60');
+  set('bul-poids-seq1',                c.calc_poids_seq1 || '50');
+  set('bul-poids-seq2',                c.calc_poids_seq2 || '50');
 
   set('bul-delegation-regionale',      c.delegation_regionale);
   set('bul-delegation-departementale', c.delegation_departementale);
@@ -226,8 +226,8 @@ function mettreAJourApercuNotation() {
 function getConfigBulletin() {
   const chk = (id) => document.getElementById(id)?.checked ? '1' : '0';
   const val = (id) => document.getElementById(id)?.value || '';
-  const poids1 = parseInt(val('bul-poids-seq1')) || 40;
-  const poids2 = parseInt(val('bul-poids-seq2')) || 60;
+  const poids1 = parseInt(val('bul-poids-seq1')) || 50;
+  const poids2 = parseInt(val('bul-poids-seq2')) || 50;
 
   return {
     etab_nom:                    val('bul-etab-nom'),

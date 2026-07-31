@@ -93,8 +93,8 @@ function prepareBulletinTrimestreData(eleveId, periode, lang = 'fr', anneeId = n
   }
 
   // --- CAS N3 (Quantitatif Classique) ---
-  const poids1 = parseFloat(cfg.calc_poids_seq1 || 40) / 100;
-  const poids2 = parseFloat(cfg.calc_poids_seq2 || 60) / 100;
+  const poids1 = parseFloat(cfg.calc_poids_seq1 || 50) / 100;
+  const poids2 = parseFloat(cfg.calc_poids_seq2 || 50) / 100;
 
   const configClasseMats = parseMatieresClasse(eleve.matieres_json_classe);
   const configClasseMap = new Map(configClasseMats.map(m => [m.nom, m]));
