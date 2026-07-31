@@ -17,13 +17,14 @@ const {
   drawAdminHeader
 } = require('./helpers');
 const { getDocTranslator } = require('./locales');
+const { CURRICULUM_TEMPLATES, getUAsForPeriode } = require('../../constants/curriculum');
 
 /**
  * Prépare les données pour un bulletin récapitulatif annuel
  */
-function prepareBulletinRecapData(eleveId, lang = 'fr') {
+function prepareBulletinRecapData(eleveId, lang = 'fr', anneeId = null) {
   const eleve = get(`
-    SELECT e.*, c.nom_classe, c.id AS classe_id, c.matieres_json AS matieres_json_classe
+    SELECT e.*, c.nom_classe, c.id AS classe_id, c.matieres_json AS matieres_json_classe, c.niveau_v2
     FROM eleves e
     LEFT JOIN classes c ON c.id = e.classe_id
     WHERE e.id = ?
@@ -31,6 +32,12 @@ function prepareBulletinRecapData(eleveId, lang = 'fr') {
   if (!eleve) return null;
 
   const cfg = loadConfig();
+
+  // ── CAS N1 / N2 (Qualitatif — compétences) ─────────────────────────────
+  if (eleve.niveau_v2 === 'N1' || eleve.niveau_v2 === 'N2') {
+    return prepareRecapQualitatif(eleve, cfg, lang, anneeId);
+  }
+
   const poids1 = parseFloat(cfg.calc_poids_seq1 || 40) / 100;
   const poids2 = parseFloat(cfg.calc_poids_seq2 || 60) / 100;
 
@@ -108,6 +115,145 @@ function prepareBulletinRecapData(eleveId, lang = 'fr') {
     eleve, cfg, notesByPeriode, moyParTrimestre, moyAnnuelle,
     rangAnnuel, nbElevesClasse, absParTrimestre, totalAbsences
   };
+}
+
+/**
+ * Prépare les données N1/N2 (qualitatif) : moyenne /20 par compétence et par
+ * trimestre, en réutilisant la même logique de calcul que bulletinTrimestre.js
+ */
+function prepareRecapQualitatif(eleve, cfg, lang = 'fr', anneeId = null) {
+  const lvl = eleve.niveau_v2;
+  const tmpl = CURRICULUM_TEMPLATES[lvl];
+  const PERIODES = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+  const eid = anneeId || eleve.annee_scolaire_id;
+
+  // Moyenne /20 par compétence pour un trimestre donné (même calcul que le bulletin trimestriel)
+  const calcMoyCompParTrimestre = (periode) => {
+    const lesUA = getUAsForPeriode(periode);
+    const placeholders = lesUA.map(() => '?').join(',');
+    const rows = all(`
+      SELECT sous_competence_code, sous_type, note
+      FROM notes
+      WHERE eleve_id = ? AND ua IN (${placeholders}) AND annee_scolaire_id = ? AND sous_type IS NOT NULL
+    `, [eleve.id, ...lesUA, eid]);
+
+    const mapNote = new Map();
+    rows.forEach(r => mapNote.set(`${r.sous_competence_code}|${r.sous_type}`, r.note));
+
+    const comps = [];
+    for (const [compCode, comp] of Object.entries(tmpl.competences)) {
+      let compObtained = 0;
+      let compMax = 0;
+      for (const [scCode, sc] of Object.entries(comp.sousCompetences)) {
+        let scObtained = 0;
+        let scMax = 0;
+        for (const type of ['orale', 'ecrite', 'pratique', 'savoirEtre']) {
+          const maxPt = sc[type] || 0;
+          if (maxPt <= 0) continue;
+          const raw = mapNote.get(`${scCode}|${type}`);
+          if (raw !== null && raw !== undefined) {
+            scObtained += (raw / 20) * maxPt;
+            scMax += maxPt;
+          }
+        }
+        if (scMax > 0) {
+          const scAvgOn20 = (scObtained / scMax) * 20;
+          compObtained += (scAvgOn20 / 20) * sc.total;
+          compMax += sc.total;
+        }
+      }
+      comps.push({
+        code: compCode,
+        nom: comp.nom,
+        moy: compMax > 0 ? Math.round((compObtained / compMax) * 20 * 100) / 100 : null
+      });
+    }
+    return comps;
+  };
+
+  const notesByPeriode = {};
+  for (const p of PERIODES) {
+    const comps = calcMoyCompParTrimestre(p);
+    notesByPeriode[p] = comps.filter(c => c.moy !== null).map(c => ({ nom: c.nom, coef: 1, moy: c.moy }));
+  }
+
+  const moyParTrimestre = {};
+  for (const p of PERIODES) {
+    moyParTrimestre[p] = calcMoyGenerale(notesByPeriode[p]);
+  }
+
+  const moys = PERIODES.map(p => moyParTrimestre[p]).filter(m => m !== null);
+  const moyAnnuelle = moys.length > 0
+    ? Math.round(moys.reduce((s, m) => s + m, 0) / moys.length * 100) / 100
+    : null;
+
+  let rangAnnuel = null, nbElevesClasse = 0;
+  const tousEleves = all(`SELECT id FROM eleves WHERE classe_id = ?`, [eleve.classe_id]);
+  nbElevesClasse = tousEleves.length;
+
+  const moyennesEleves = [];
+  for (const el of tousEleves) {
+    let total = 0, count = 0;
+    for (const p of PERIODES) {
+      const comps = calcMoyCompParTrimestreForEleve(el.id, p, tmpl, eid);
+      const moy = calcMoyGenerale(comps);
+      if (moy !== null) { total += moy; count++; }
+    }
+    moyennesEleves.push({ id: el.id, moy: count > 0 ? total / count : null });
+  }
+  moyennesEleves.sort((a, b) => (b.moy || 0) - (a.moy || 0));
+  const pos = moyennesEleves.findIndex(el => el.id === eleve.id);
+  if (pos >= 0) rangAnnuel = pos + 1;
+
+  const absRows = all(`SELECT periode, heures FROM heures_absence WHERE eleve_id = ?`, [eleve.id]);
+  const absParTrimestre = { 'Trimestre 1': 0, 'Trimestre 2': 0, 'Trimestre 3': 0 };
+  absRows.forEach(r => { absParTrimestre[r.periode] = r.heures; });
+  const totalAbsences = Object.values(absParTrimestre).reduce((s, h) => s + h, 0);
+
+  return {
+    eleve, cfg, notesByPeriode, moyParTrimestre, moyAnnuelle,
+    rangAnnuel, nbElevesClasse, absParTrimestre, totalAbsences, qualitatif: true
+  };
+}
+
+/** Version sans dépendance à l'objet eleve pour le calcul du rang */
+function calcMoyCompParTrimestreForEleve(eleveId, periode, tmpl, eid) {
+  const lesUA = getUAsForPeriode(periode);
+  const placeholders = lesUA.map(() => '?').join(',');
+  const rows = all(`
+    SELECT sous_competence_code, sous_type, note
+    FROM notes
+    WHERE eleve_id = ? AND ua IN (${placeholders}) AND annee_scolaire_id = ? AND sous_type IS NOT NULL
+  `, [eleveId, ...lesUA, eid]);
+
+  const mapNote = new Map();
+  rows.forEach(r => mapNote.set(`${r.sous_competence_code}|${r.sous_type}`, r.note));
+
+  const comps = [];
+  for (const [compCode, comp] of Object.entries(tmpl.competences)) {
+    let compObtained = 0;
+    let compMax = 0;
+    for (const [scCode, sc] of Object.entries(comp.sousCompetences)) {
+      let scObtained = 0;
+      let scMax = 0;
+      for (const type of ['orale', 'ecrite', 'pratique', 'savoirEtre']) {
+        const maxPt = sc[type] || 0;
+        if (maxPt <= 0) continue;
+        const raw = mapNote.get(`${scCode}|${type}`);
+        if (raw !== null && raw !== undefined) {
+          scObtained += (raw / 20) * maxPt;
+          scMax += maxPt;
+        }
+      }
+      if (scMax > 0) {
+        const scAvgOn20 = (scObtained / scMax) * 20;
+        compObtained += (scAvgOn20 / 20) * sc.total;
+        compMax += sc.total;
+      }
+    }
+    comps.push({ nom: comp.nom, coef: 1, moy: compMax > 0 ? Math.round((compObtained / compMax) * 20 * 100) / 100 : null });
+  }
+  return comps;
 }
 
 /**
@@ -194,7 +340,7 @@ function drawBulletinRecap(doc, data, lang = 'fr') {
   const colMat = pageW * 0.38, colT = (pageW - colMat) / 4;
   const headH = 22, rowH = 18;
   doc.rect(LEFT, y, pageW, headH).fill(coulPrimaire);
-  const headers = [t('subject') + 's', t('quarter') + ' 1', t('quarter') + ' 2', t('quarter') + ' 3', t('col_annual_avg')];
+  const headers = [data.qualitatif ? t('col_competences') : t('subject') + 's', t('quarter') + ' 1', t('quarter') + ' 2', t('quarter') + ' 3', t('col_annual_avg')];
   const widths = [colMat, colT, colT, colT, colT];
   let cx = LEFT;
   headers.forEach((h, i) => {
@@ -213,7 +359,7 @@ function drawBulletinRecap(doc, data, lang = 'fr') {
     doc.rect(LEFT, y, pageW, rowH).fill(bg);
     doc.rect(LEFT, y, 2.5, rowH).fill('#cccccc');
     cx = LEFT;
-    doc.fillColor('#111').font('Helvetica').fontSize(7.5).text(nom, cx + 5, y + (rowH - 7) / 2, { width: colMat - 8, ellipsis: true });
+    doc.fillColor('#111').font('Helvetica').fontSize(7.5).text(nom, cx + 5, y + (rowH - 7) / 2, { width: colMat - 8, height: rowH - 2, ellipsis: true });
     cx += colMat;
     PERIODES.forEach(p => {
       doc.moveTo(cx, y).lineTo(cx, y + rowH).strokeColor('#dde3ec').lineWidth(0.4).stroke();
@@ -315,7 +461,7 @@ function drawBulletinRecap(doc, data, lang = 'fr') {
 function exportBulletinRecap(eleveId, outputPath, onProgress, anneeId, lang = 'fr') {
   return new Promise((resolve, reject) => {
     try {
-      const data = prepareBulletinRecapData(eleveId, lang);
+      const data = prepareBulletinRecapData(eleveId, lang, anneeId);
       if (!data) return resolve({ success: false, error: 'Données élève non trouvées' });
       const doc = new PDFDocument({ margin: 30, size: 'A4' });
       const stream = require('fs').createWriteStream(outputPath);
@@ -339,7 +485,7 @@ function exportRecapClassePDF(elevesIds, outputPath, anneeId, lang = 'fr', onPro
       doc.pipe(stream);
       let count = 0;
       for (const id of elevesIds) {
-        const data = prepareBulletinRecapData(id, lang);
+        const data = prepareBulletinRecapData(id, lang, anneeId);
         if (data) {
           if (count > 0) doc.addPage();
           drawBulletinRecap(doc, data, lang);
