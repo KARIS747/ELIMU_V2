@@ -362,6 +362,21 @@ npx electron .
 node scripts/seed_test_data.js clean
 ```
 
+### 🔴 Piège better-sqlite3 (Node vs Electron ABI)
+
+`better-sqlite3` est un module natif. Le `postinstall` (`electron-builder install-app-deps`) le compile pour **Electron** (ABI 125), mais les tests tournent sous **Node 24** (ABI 137). Il est IMPOSSIBLE d'avoir les deux en même temps en local.
+
+```bash
+# Pour lancer l'app (Electron) :
+npm run rebuild:electron
+
+# Pour lancer les tests (Node) :
+npm run rebuild:node
+```
+
+- Ne JAMAIS `require('better-sqlite3')` seul pour vérifier l'ABI : le binaire natif n'est chargé qu'à l'instanciation `new Database(...)`.
+- Dans le CI, chaque job est isolé : `npm rebuild better-sqlite3` dans le job `test` (après `npm ci`), et le `postinstall` compile pour Electron automatiquement dans le job `build`.
+
 Pas de framework de tests unitaires automatisés. La vérification se fait :
 - Visuellement dans le profil élève (sections N1/N2/N3)
 - En inspectant la DB avec `SELECT * FROM notes`

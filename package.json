@@ -20,6 +20,8 @@
     "build:win": "node scripts/obfuscate.js && electron-builder --win",
     "build:linux": "node scripts/obfuscate.js && electron-builder --linux",
     "build:all": "node scripts/obfuscate.js && electron-builder --win --linux",
+    "rebuild:electron": "electron-builder install-app-deps",
+    "rebuild:node": "npm rebuild better-sqlite3",
     "test": "jest tests/unit",
     "test:all": "jest",
     "test:integration": "jest tests/integration"
