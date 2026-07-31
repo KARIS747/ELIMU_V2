@@ -86,6 +86,16 @@ describe('getWeightsForSousCompetence', () => {
     expect(w).toEqual({ orale: 6, ecrite: 7, pratique: 20, savoirEtre: 7 });
   });
 
+  test('N2 1C : ecrite = 6 (corrigé de 8 → 6), orale=10, pratique=2, savoirEtre=0', () => {
+    const w = getWeightsForSousCompetence('N2', '1C');
+    expect(w).toEqual({ orale: 10, ecrite: 6, pratique: 2, savoirEtre: 0 });
+  });
+
+  test('N1 1C : inchangé (ecrite=5, pratique=3, savoirEtre=2)', () => {
+    const w = getWeightsForSousCompetence('N1', '1C');
+    expect(w).toEqual({ orale: 10, ecrite: 5, pratique: 3, savoirEtre: 2 });
+  });
+
   test('retourne null pour un code invalide', () => {
     expect(getWeightsForSousCompetence('N1', 'ZZ')).toBeNull();
   });

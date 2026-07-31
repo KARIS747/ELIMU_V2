@@ -155,7 +155,7 @@ const N1_POIDS = {
 const N2_POIDS = {
   '1A': { orale:12, ecrite:15, pratique:0, savoirEtre:3 },
   '1B': { orale:12, ecrite:15, pratique:0, savoirEtre:3 },
-  '1C': { orale:10, ecrite:8, pratique:2, savoirEtre:0 },
+  '1C': { orale:10, ecrite:6, pratique:2, savoirEtre:0 },
   '2A': { orale:8, ecrite:28, pratique:0, savoirEtre:4 },
   '2B': { orale:6, ecrite:7, pratique:20, savoirEtre:7 },
   '3A': { orale:3, ecrite:8, pratique:5, savoirEtre:4 },

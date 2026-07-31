@@ -96,7 +96,7 @@ const CURRICULUM_TEMPLATES = {
         sousCompetences: {
           '1A': { nom: 'Communiquer en Français', total: 30, orale: 12, ecrite: 15, pratique: 0, savoirEtre: 3 },
           '1B': { nom: 'Communicate in English', total: 30, orale: 12, ecrite: 15, pratique: 0, savoirEtre: 3 },
-          '1C': { nom: 'Pratiquer une langue nationale', total: 20, orale: 10, ecrite: 8, pratique: 2, savoirEtre: 0 },
+          '1C': { nom: 'Pratiquer une langue nationale', total: 20, orale: 10, ecrite: 6, pratique: 2, savoirEtre: 0 },
         }
       },
       'C2': {
