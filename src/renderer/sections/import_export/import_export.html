@@ -479,107 +479,107 @@
        ONGLET BORDEREAU (Notes & Absences)
        ══════════════════════════════════════════════ -->
   <div id="tab-bordereau" class="tab-content">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start;">
 
-    <!-- Cartes informatives : types de bordereaux -->
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;">
-
-      <div class="card" style="border-left:3px solid var(--blue-fifa); padding:14px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <span style="font-size:20px;"></span>
-          <div style="font-weight:700; font-size:13px; color:var(--blue-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_absences_title">Absences</div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.tab_bordereau_combined">📄 Bordereaux</div>
         </div>
-        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;" data-i18n="ie.bordereau_card_absences_desc">Bordereau d'absences par trimestre</div>
-        <div style="margin-top:8px;">
-          <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase;" data-i18n="ie.bordereau_card_available">Disponible</span>
-        </div>
-      </div>
 
-      <div class="card" style="border-left:3px solid var(--purple-fifa); padding:14px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <span style="font-size:20px;"></span>
-          <div style="font-weight:700; font-size:13px; color:var(--purple-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_emargement_title">Émargement</div>
-        </div>
-        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;" data-i18n="ie.bordereau_card_emargement_desc">Feuille d'émargement (signatures)</div>
-        <div style="margin-top:8px;">
-          <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase;" data-i18n="ie.bordereau_card_available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="card" style="border-left:3px solid var(--green-fifa); padding:14px;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <span style="font-size:20px;"></span>
-          <div style="font-weight:700; font-size:13px; color:var(--green-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_notes_n3_title">Notes N3</div>
-        </div>
-        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;" data-i18n="ie.bordereau_card_notes_n3_desc">Bordereau de notes CM1/CM2</div>
-        <div style="margin-top:8px;">
-          <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase;" data-i18n="ie.bordereau_card_available">Disponible</span>
-        </div>
-      </div>
-
-      <div class="card" style="border-left:3px solid var(--yellow-fifa); padding:14px; opacity:0.65;">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-          <span style="font-size:20px;"></span>
-          <div style="font-weight:700; font-size:13px; color:var(--yellow-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_notes_n12_title">Notes N1/N2</div>
-        </div>
-        <div style="font-size:12px; color:var(--text-muted); line-height:1.5;" data-i18n="ie.bordereau_card_notes_n12_desc">Bordereau de notes SIL/CP/CE1/CE2</div>
-        <div style="margin-top:8px;">
-          <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(255,183,77,0.15); color:var(--yellow-fifa); text-transform:uppercase;" data-i18n="ie.bordereau_card_coming_soon">Prochaine version</span>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="card" style="max-width: 500px;">
-      <div class="card-header">
-        <div class="card-title" data-i18n="ie.tab_bordereau_combined">📄 Bordereaux</div>
-      </div>
-
-      <div class="input-group">
-        <label data-i18n="ie.tally_type">Type de bordereau *</label>
-        <select id="bordereau-type" class="input">
-          <option value="notes" data-i18n="ie.tally_notes">Bordereau de notes</option>
-          <option value="absences" data-i18n="ie.tally_absences">Bordereau d'absences</option>
-          <option value="emargement" data-i18n="ie.tally_emargement">Bordereau d'émargement</option>
-        </select>
-      </div>
-      
-      <div class="input-group">
-        <label data-i18n="ie.class">Classe *</label>
-        <select id="bordereau-classe" class="input">
-          <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
-        </select>
-      </div>
-
-      <div class="input-group" id="group-matiere">
-        <label data-i18n="ie.matiere">Matière *</label>
-        <select id="bordereau-matiere" class="input" disabled>
-          <option value="" data-i18n="ie.select_subject_dash">— Sélectionner une matière —</option>
-        </select>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div class="input-group">
-          <label data-i18n="ie.trimestre">Trimestre *</label>
-          <select id="bordereau-periode" class="input">
-            <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
-            <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
-            <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+          <label data-i18n="ie.tally_type">Type de bordereau *</label>
+          <select id="bordereau-type" class="input">
+            <option value="notes" data-i18n="ie.tally_notes">Bordereau de notes</option>
+            <option value="absences" data-i18n="ie.tally_absences">Bordereau d'absences</option>
+            <option value="emargement" data-i18n="ie.tally_emargement">Bordereau d'émargement</option>
           </select>
         </div>
-        <div class="input-group" id="group-sequence">
-          <label data-i18n="ie.sequence">Séquence *</label>
-          <select id="bordereau-sequence" class="input">
-            <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
-            <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+        
+        <div class="input-group">
+          <label data-i18n="ie.class">Classe *</label>
+          <select id="bordereau-classe" class="input">
+            <option value="" data-i18n="ie.select_class">— Sélectionner une classe —</option>
           </select>
+        </div>
+
+        <div class="input-group" id="group-matiere">
+          <label data-i18n="ie.matiere">Matière *</label>
+          <select id="bordereau-matiere" class="input" disabled>
+            <option value="" data-i18n="ie.select_subject_dash">— Sélectionner une matière —</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="input-group">
+            <label data-i18n="ie.trimestre">Trimestre *</label>
+            <select id="bordereau-periode" class="input">
+              <option value="Trimestre 1" data-i18n="dashboard.trimestre1">Trimestre 1</option>
+              <option value="Trimestre 2" data-i18n="dashboard.trimestre2">Trimestre 2</option>
+              <option value="Trimestre 3" data-i18n="dashboard.trimestre3">Trimestre 3</option>
+            </select>
+          </div>
+          <div class="input-group" id="group-sequence">
+            <label data-i18n="ie.sequence">Séquence *</label>
+            <select id="bordereau-sequence" class="input">
+              <option value="1" data-i18n="dashboard.sequence1">Séquence 1</option>
+              <option value="2" data-i18n="dashboard.sequence2">Séquence 2</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-full" id="btn-export-bordereau"
+                style="justify-content:center; padding:12px; margin-top:8px;"
+                data-i18n="ie.btn_generate_bordereau_combined">
+          Générer le bordereau PDF
+        </button>
+      </div>
+
+      <!-- Carte informative unique : types de bordereaux -->
+      <div class="card" style="border-left:3px solid var(--blue-fifa);">
+        <div class="card-header">
+          <div class="card-title" data-i18n="ie.bordereau_info_title">Types de bordereaux disponibles</div>
+        </div>
+        <div style="font-size:13px; color:var(--text-muted); line-height:1.7;">
+
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
+            <span style="font-size:16px; color:var(--blue-fifa);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13px; color:var(--blue-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_absences_title">Absences</div>
+              <div style="font-size:12px; color:var(--text-muted);" data-i18n="ie.bordereau_card_absences_desc">Bordereau d'absences par trimestre</div>
+            </div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase; white-space:nowrap;" data-i18n="ie.bordereau_card_available">Disponible</span>
+          </div>
+
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
+            <span style="font-size:16px; color:var(--purple-fifa);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13px; color:var(--purple-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_emargement_title">Émargement</div>
+              <div style="font-size:12px; color:var(--text-muted);" data-i18n="ie.bordereau_card_emargement_desc">Feuille d'émargement (signatures)</div>
+            </div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase; white-space:nowrap;" data-i18n="ie.bordereau_card_available">Disponible</span>
+          </div>
+
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-color);">
+            <span style="font-size:16px; color:var(--green-fifa);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13px; color:var(--green-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_notes_n3_title">Notes N3</div>
+              <div style="font-size:12px; color:var(--text-muted);" data-i18n="ie.bordereau_card_notes_n3_desc">Bordereau de notes CM1/CM2</div>
+            </div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(0,230,118,0.12); color:var(--green-fifa); text-transform:uppercase; white-space:nowrap;" data-i18n="ie.bordereau_card_available">Disponible</span>
+          </div>
+
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:8px 0;">
+            <span style="font-size:16px; color:var(--yellow-fifa);"></span>
+            <div style="flex:1;">
+              <div style="font-weight:700; font-size:13px; color:var(--yellow-fifa); text-transform:uppercase; letter-spacing:0.5px;" data-i18n="ie.bordereau_card_notes_n12_title">Notes N1/N2</div>
+              <div style="font-size:12px; color:var(--text-muted);" data-i18n="ie.bordereau_card_notes_n12_desc">Bordereau de notes SIL/CP/CE1/CE2</div>
+            </div>
+            <span style="font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(255,183,77,0.15); color:var(--yellow-fifa); text-transform:uppercase; white-space:nowrap;" data-i18n="ie.bordereau_card_coming_soon">Prochaine version</span>
+          </div>
+
         </div>
       </div>
 
-      <button class="btn btn-primary w-full" id="btn-export-bordereau"
-              style="justify-content:center; padding:12px; margin-top:8px;"
-              data-i18n="ie.btn_generate_bordereau_combined">
-        Générer le bordereau PDF
-      </button>
     </div>
   </div>
 

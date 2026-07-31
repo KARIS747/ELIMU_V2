@@ -642,6 +642,7 @@ const en = {
   'ie.title':                     ' Import & Export',
   'ie.subtitle':                  'Import grades from Excel · Generate individual or class-wide PDF report cards',
   'ie.bordereau_card_absences_title':  'Absences',
+  'ie.bordereau_info_title':           'Available tally sheet types',
   'ie.bordereau_card_absences_desc':   'Absence tally sheet by term',
   'ie.bordereau_card_emargement_title':'Attendance',
   'ie.bordereau_card_emargement_desc': 'Attendance sheet (signatures)',

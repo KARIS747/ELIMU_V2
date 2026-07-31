@@ -643,6 +643,7 @@ const fr = {
   'ie.title':                     ' Import & Export',
   'ie.subtitle':                  'Importez des notes depuis Excel · Générez des bulletins PDF individuels ou par classe entière',
   'ie.bordereau_card_absences_title':  'Absences',
+  'ie.bordereau_info_title':           'Types de bordereaux disponibles',
   'ie.bordereau_card_absences_desc':   'Bordereau d\'absences par trimestre',
   'ie.bordereau_card_emargement_title':'Émargement',
   'ie.bordereau_card_emargement_desc': 'Feuille d\'émargement (signatures)',
