@@ -60,8 +60,8 @@ function genererTranchesPourEleve(eleveId, anneeId, logger, ecoleId) {
             `genererTranchesPourEleve: tranche ${t} frais ${ft.id} élève ${eleveId} — ${insertErr.message}`
           );
         }
+        date.setMonth(date.getMonth() + ft.periodicite_mois);
       }
-      date.setMonth(date.getMonth() + ft.periodicite_mois);
     }
 
     logger.info(
