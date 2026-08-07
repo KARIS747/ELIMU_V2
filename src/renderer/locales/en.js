@@ -1200,6 +1200,7 @@ const en = {
   'params.audit_action_update_eleve': 'Student update',
   'params.audit_action_delete_eleve': 'Student deletion',
   'params.audit_action_absence':      'Absence entry',
+  'params.audit_action_professeur':   'Teacher management',
   'params.audit_action_bulletin':     'Report card generation',
   'params.audit_action_new_year':     'New school year',
   'params.audit_action_config':       'Settings modification',

@@ -98,7 +98,7 @@ function register(ipcMain, deps) {
         await logAudit(
           uid,
           'IMPORT_LISTE_PROFESSEURS',
-          `Mode ${mode} — ${result.nbAjoutes} professeur(s) importé(s), ${result.nbIgnores || 0} ignoré(s), ${result.nbErreurs} erreur(s)`
+          `Mode ${mode} — ${result.nbAjoutes} enseignant(s) importé(s), ${result.nbIgnores || 0} ignoré(s), ${result.nbErreurs} erreur(s)`
         );
       }
       return result;

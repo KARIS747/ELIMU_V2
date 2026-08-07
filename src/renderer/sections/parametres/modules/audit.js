@@ -26,6 +26,7 @@ function traduireAction(action) {
   if (a.includes('ELEVE') && a.includes('ADD'))          return t('params.audit_action_add_eleve');
   if (a.includes('ELEVE') && a.includes('UPDATE'))       return t('params.audit_action_update_eleve');
   if (a.includes('ELEVE') && a.includes('DELETE'))       return t('params.audit_action_delete_eleve');
+  if (a.includes('PROFESSEUR') || a.includes('ENSEIGNANT') || a.includes('TEACHER')) return t('params.audit_action_professeur');
   if (a.includes('ABSENCE'))                             return t('params.audit_action_absence');
   if (a.includes('BULLETIN'))                            return t('params.audit_action_bulletin');
   if (a.includes('NOUVELLE_ANNEE') || a.includes('NEW_YEAR')) return t('params.audit_action_new_year');

@@ -953,7 +953,7 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
 
   const profFull = profName.nom !== '—' ? `${(profName.nom || '').toUpperCase()} ${profName.prenom}` : '—';
   drawSigBox("Observations de l'enseignant", appAuto, LEFT);
-  drawSigBox(lang === 'en' ? 'The Class Teacher' : 'Le Professeur Principal', profFull, LEFT + colSigW);
+  drawSigBox(lang === 'en' ? 'The Class Teacher' : 'L\'Enseignant Principal', profFull, LEFT + colSigW);
   drawSigBox(titreDir, nomDir, LEFT + colSigW * 2);
   drawSigBox(t('parent_signature') || 'Le Parent', '', LEFT + colSigW * 3);
   
@@ -1222,7 +1222,7 @@ function drawBulletinTrimestre(doc, data, lang = 'fr') {
     if (val) doc.fillColor('#111').font('Helvetica').fontSize(8).text(val, x, y + 20, { width: sigW, align: 'center' });
     doc.fillColor('#ccc').font('Helvetica').fontSize(6.5).text(title === titreDir ? t('seal_and_signature') : '(Signature)', x, y + 46, { width: sigW, align: 'center' });
   };
-  drawSigBox(lang === 'en' ? 'The Class Teacher' : 'Le Professeur Principal', profFull, LEFT);
+  drawSigBox(lang === 'en' ? 'The Class Teacher' : 'L\'Enseignant Principal', profFull, LEFT);
   if (cfg.pied_signature !== '0') drawSigBox(titreDir, nomDir, LEFT + sigW + 6);
   drawSigBox(t('parent_signature'), '', LEFT + (sigW + 6) * 2);
   

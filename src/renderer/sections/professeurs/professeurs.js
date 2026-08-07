@@ -212,7 +212,7 @@ async function ouvrirDetailCompte(profId) {
 
   try {
     const detail = await window.elimuAPI.getProfesseurDetail(profId);
-    if (!detail?.professeur) throw new Error('Professeur introuvable');
+    if (!detail?.professeur) throw new Error('Enseignant introuvable');
 
     const p = { ...detail.professeur, username: detail.professeur.nom_utilisateur, suspendu: detail.professeur.actif === 1 && detail.professeur.compte_actif === 0 };
     const prenom = p.prenom || '';

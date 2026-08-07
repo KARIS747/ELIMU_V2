@@ -151,7 +151,7 @@ function register(ipcMain, deps) {
         LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
         WHERE p.id = ? AND p.ecole_id = ?
       `, [pid, ecoleId]);
-      if (!prof) return { error: 'Professeur introuvable' };
+      if (!prof) return { error: 'Enseignant introuvable' };
 
       const classes = all(`
         SELECT c.id, c.nom_classe, c.niveau,
@@ -389,7 +389,7 @@ function register(ipcMain, deps) {
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
       const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
-      if (!prof) return { success: false, error: 'Professeur introuvable' };
+      if (!prof) return { success: false, error: 'Enseignant introuvable' };
 
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 0 WHERE id = ?', [prof.utilisateur_id]);
@@ -415,7 +415,7 @@ function register(ipcMain, deps) {
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
       const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
-      if (!prof) return { success: false, error: 'Professeur introuvable' };
+      if (!prof) return { success: false, error: 'Enseignant introuvable' };
 
       if (prof.utilisateur_id) {
         run('UPDATE utilisateurs SET actif = 1 WHERE id = ?', [prof.utilisateur_id]);
@@ -447,7 +447,7 @@ function register(ipcMain, deps) {
         WHERE p.id = ? AND p.ecole_id = ?
       `, [pid, ecoleId]);
 
-      if (!prof) return { success: false, error: 'Professeur introuvable' };
+      if (!prof) return { success: false, error: 'Enseignant introuvable' };
       if (!prof.utilisateur_id) return { success: false, error: 'Aucun compte lie' };
 
       const rawPassword = generateSecurePassword();
@@ -508,7 +508,7 @@ function register(ipcMain, deps) {
         WHERE p.id = ? AND p.ecole_id = ?
       `, [pid, ecoleId]);
 
-      if (!prof) return { success: false, error: 'Professeur introuvable' };
+      if (!prof) return { success: false, error: 'Enseignant introuvable' };
 
       const classes = all(`
         SELECT c.nom_classe
@@ -597,7 +597,7 @@ function register(ipcMain, deps) {
       if (isNaN(pid)) return { success: false, error: 'ID invalide' };
 
       const prof = get('SELECT nom, prenom, utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
-      if (!prof) return { success: false, error: 'Professeur introuvable' };
+      if (!prof) return { success: false, error: 'Enseignant introuvable' };
 
       run('UPDATE classes SET professeur_principal_id = NULL WHERE professeur_principal_id = ? AND ecole_id = ?', [pid, ecoleId]);
 

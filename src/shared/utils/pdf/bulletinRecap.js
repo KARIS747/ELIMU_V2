@@ -437,7 +437,7 @@ function drawBulletinRecap(doc, data, lang = 'fr') {
   y += 6;
   const sigH = 52, sig3W = pageW / 3;
   doc.rect(LEFT, y, sig3W - 6, sigH).stroke('#d0d8e4');
-  doc.fillColor('#555').font('Helvetica-Bold').fontSize(7).text(lang === 'en' ? 'The Class Teacher' : 'Le Professeur Principal', LEFT + 3, y + 5, { width: sig3W - 12, align: 'center' });
+  doc.fillColor('#555').font('Helvetica-Bold').fontSize(7).text(lang === 'en' ? 'The Class Teacher' : 'L\'Enseignant Principal', LEFT + 3, y + 5, { width: sig3W - 12, align: 'center' });
   if (profFull) doc.fillColor('#333').font('Helvetica').fontSize(7.5).text(profFull, LEFT + 3, y + 16, { width: sig3W - 12, align: 'center' });
   doc.fillColor('#aaa').font('Helvetica').fontSize(6.5).text('(Signature)', LEFT + 3, y + 40, { width: sig3W - 12, align: 'center' });
   
