@@ -277,12 +277,12 @@ async function exportListeElevesPDF(eleves, options, outputPath, lang = 'fr') {
 
       const drawHeader = (top) => {
         doc.rect(50, top, 500, rowH).fill('#1a3c6e');
-        doc.fontSize(8.5).fillColor('#ffffff').font('Helvetica-Bold');
-        doc.text(t('col_num_short'), 55, top + 6);
-        doc.text(t('model_matricule'), 85, top + 6);
-        doc.text(t('col_name_fullname'), 185, top + 6);
-        doc.text(t('model_birthdate'), 425, top + 6, { width: colNaissance - 10, align: 'center' });
-        doc.text(t('eleve.sexe'), 515, top + 6, { width: colSexe, align: 'center' });
+        doc.fontSize(8).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text(t('col_num_short'), 50, top + 7, { width: colNo, align: 'center' });
+        doc.text(t('liste_eleves_col_matricule'), 50 + colNo, top + 7, { width: colMat, align: 'center' });
+        doc.text(t('col_name_fullname'), 50 + colNo + colMat, top + 7, { width: colNom, align: 'center' });
+        doc.text(t('liste_eleves_col_naissance'), 50 + colNo + colMat + colNom, top + 7, { width: colNaissance, align: 'center' });
+        doc.text(t('liste_eleves_col_sexe'), 50 + colNo + colMat + colNom + colNaissance, top + 7, { width: colSexe, align: 'center' });
         return top + rowH;
       };
 
@@ -307,11 +307,11 @@ async function exportListeElevesPDF(eleves, options, outputPath, lang = 'fr') {
         doc.moveTo(50 + colNo + colMat + colNom + colNaissance, currentY).lineTo(50 + colNo + colMat + colNom + colNaissance, currentY + rowH).stroke();
 
         doc.fontSize(9).fillColor('#000000');
-        doc.text(String(index + 1), 55, currentY + 6);
-        doc.text(el.matricule || '—', 85, currentY + 6, { width: colMat - 10, ellipsis: true });
-        doc.text(`${el.nom.toUpperCase()} ${el.prenom}`, 185, currentY + 6, { width: colNom - 12, ellipsis: true });
-        doc.text(el.date_naissance || '—', 425, currentY + 6, { width: colNaissance - 10, align: 'center' });
-        doc.text(el.sexe || '—', 515, currentY + 6, { width: colSexe, align: 'center' });
+        doc.text(String(index + 1), 50, currentY + 6, { width: colNo, align: 'center' });
+        doc.text(el.matricule || '—', 50 + colNo, currentY + 6, { width: colMat, align: 'center', ellipsis: true });
+        doc.text(`${el.nom.toUpperCase()} ${el.prenom}`, 50 + colNo + colMat, currentY + 6, { width: colNom, align: 'left', ellipsis: true });
+        doc.text(el.date_naissance || '—', 50 + colNo + colMat + colNom, currentY + 6, { width: colNaissance, align: 'center', ellipsis: true });
+        doc.text(el.sexe || '—', 50 + colNo + colMat + colNom + colNaissance, currentY + 6, { width: colSexe, align: 'center', ellipsis: true });
 
         currentY += rowH;
       });
@@ -360,11 +360,11 @@ async function exportListeProfesseursPDF(enseignants, options, outputPath, lang 
 
       const drawHeader = (top) => {
         doc.rect(50, top, 500, rowH).fill('#1a3c6e');
-        doc.fontSize(8.5).fillColor('#ffffff').font('Helvetica-Bold');
-        doc.text(t('col_num_short'), 55, top + 6);
-        doc.text(t('col_name_fullname'), 85, top + 6);
-        doc.text(t('model_prof_discipline'), 325, top + 6, { width: colMatiere - 10, align: 'center' });
-        doc.text(t('model_prof_phone'), 455, top + 6, { width: colTel - 8, align: 'center' });
+        doc.fontSize(8).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text(t('col_num_short'), 50, top + 7, { width: colNo, align: 'center' });
+        doc.text(t('col_name_fullname'), 50 + colNo, top + 7, { width: colNom, align: 'center' });
+        doc.text(t('liste_profs_col_discipline'), 50 + colNo + colNom, top + 7, { width: colMatiere, align: 'center' });
+        doc.text(t('liste_profs_col_phone'), 50 + colNo + colNom + colMatiere, top + 7, { width: colTel, align: 'center' });
         return top + rowH;
       };
 
@@ -388,10 +388,10 @@ async function exportListeProfesseursPDF(enseignants, options, outputPath, lang 
         doc.moveTo(50 + colNo + colNom + colMatiere, currentY).lineTo(50 + colNo + colNom + colMatiere, currentY + rowH).stroke();
 
         doc.fontSize(9).fillColor('#000000');
-        doc.text(String(index + 1), 55, currentY + 6);
-        doc.text(`${(el.nom || '').toUpperCase()} ${el.prenom || ''}`, 85, currentY + 6, { width: colNom - 12, ellipsis: true });
-        doc.text(el.matiere_principale || '—', 325, currentY + 6, { width: colMatiere - 10, align: 'center' });
-        doc.text(el.telephone || '—', 455, currentY + 6, { width: colTel - 8, align: 'center' });
+        doc.text(String(index + 1), 50, currentY + 6, { width: colNo, align: 'center' });
+        doc.text(`${(el.nom || '').toUpperCase()} ${el.prenom || ''}`, 50 + colNo, currentY + 6, { width: colNom, align: 'left', ellipsis: true });
+        doc.text(el.matiere_principale || '—', 50 + colNo + colNom, currentY + 6, { width: colMatiere, align: 'center', ellipsis: true });
+        doc.text(el.telephone || '—', 50 + colNo + colNom + colMatiere, currentY + 6, { width: colTel, align: 'center', ellipsis: true });
 
         currentY += rowH;
       });
