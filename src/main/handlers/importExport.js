@@ -327,6 +327,107 @@ function register(ipcMain, deps) {
     }
   });
 
+  // ── Export liste affichable des notes (PDF paysage) ─────────────────────────
+  // Liste destinée à être affichée en classe pour consultation/contestation.
+  // N1/N2 : une liste par UA, notes sur Σ(poids) par sous-compétence.
+  // N3    : notes /20 par matière pour la séquence choisie.
+
+  ipcMain.handle('export:listeAffichable', async (event, classeId, options, utilisateurId, lang = 'fr') => {
+    if (!(await checkAccess(['admin', 'secretaire', 'enseignant']))) return { success: false, error: 'Accès non autorisé' };
+    try {
+      const cid = parseInt(classeId);
+      if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
+      const opts = options || {};
+      const periode = opts.periode || 'Trimestre 1';
+
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+      if (!classe) return { error: 'Classe non trouvée' };
+      const lvl = classe.niveau_v2;
+
+      const anneeId = getCurrentAnneeId();
+      const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
+
+      const savePath = await dialog.showSaveDialog(getMainWindow(), {
+        defaultPath: `liste_affichable_${classe.nom_classe.replace(/\s/g, '_')}_${Date.now()}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (savePath.canceled) return { canceled: true };
+
+      const eleves = all(
+        'SELECT id, nom, prenom, matricule FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ? ORDER BY nom, prenom',
+        [cid, anneeId, ecoleId]
+      );
+      const students = eleves.map(e => ({ id: e.id, nom: e.nom, prenom: e.prenom, matricule: e.matricule }));
+
+      let result;
+      const uid = parseInt(utilisateurId) || getCurrentUserId();
+
+      if (lvl === 'N1' || lvl === 'N2') {
+        const { getUAsForPeriode, CURRICULUM_TEMPLATES, getWeightsForSousCompetence } = require('../../shared/constants/curriculum');
+        let uas;
+        if (opts.ua && opts.ua !== 'ALL') {
+          uas = [opts.ua];
+        } else {
+          uas = getUAsForPeriode(periode);
+        }
+        if (!uas.length) return { error: 'Aucune UA pour la période sélectionnée' };
+
+        const notes = all(
+          `SELECT n.eleve_id, n.ua, n.sous_competence_code, n.sous_type, n.note
+           FROM notes n
+           WHERE n.ecole_id = ? AND n.annee_scolaire_id = ? AND n.sous_type IS NOT NULL
+             AND n.ua IN (${uas.map(() => '?').join(',')})
+             AND n.eleve_id IN (${students.map(() => '?').join(',') || "''"})
+           ORDER BY n.ua, n.eleve_id, n.sous_competence_code`,
+          [ecoleId, anneeId, ...uas, ...students.map(s => s.id)]
+        );
+
+        const { buildDocDataN12, exportListeAffichableN12PDF } = require('../../shared/utils/pdf/listesAffichables');
+        const docData = buildDocDataN12(notes, students, {
+          lvl, uas, CURRICULUM_TEMPLATES, getWeightsForSousCompetence,
+          classe: classe.nom_classe, trimestre: periode, annee
+        });
+        result = await exportListeAffichableN12PDF(docData, savePath.filePath, lang);
+        await logAudit(uid, 'EXPORT_LISTE_AFFICHABLE_N12', `Liste affichable ${lvl} classe ${cid} (${uas.join(',')})`);
+      } else {
+        // N3 — liste par matière pour la séquence choisie
+        const sequence = opts.sequence || '1';
+        const matieres = all(
+          `SELECT DISTINCT m.id AS matiere_id, m.nom_matiere AS nom, m.coefficient AS coef
+           FROM notes n JOIN matieres m ON m.id = n.matiere_id
+           WHERE n.ecole_id = ? AND n.annee_scolaire_id = ? AND n.periode = ? AND n.sequence = ?
+             AND n.matiere_id IS NOT NULL
+           ORDER BY m.nom_matiere`,
+          [ecoleId, anneeId, periode, parseInt(sequence)]
+        );
+
+        const notes = all(
+          `SELECT n.eleve_id, n.matiere_id, n.note
+           FROM notes n
+           WHERE n.ecole_id = ? AND n.annee_scolaire_id = ? AND n.periode = ? AND n.sequence = ?
+             AND n.matiere_id IS NOT NULL
+             AND n.eleve_id IN (${students.map(() => '?').join(',') || "''"})
+           ORDER BY n.eleve_id`,
+          [ecoleId, anneeId, periode, parseInt(sequence), ...students.map(s => s.id)]
+        );
+
+        const { buildDocDataN3, exportListeAffichableN3PDF } = require('../../shared/utils/pdf/listesAffichables');
+        const docData = buildDocDataN3(notes, students, {
+          matieres, classe: classe.nom_classe, trimestre: periode, sequence, annee
+        });
+        if (docData.matieres.length === 0) return { error: 'Aucune note trouvée pour cette séquence' };
+        result = await exportListeAffichableN3PDF(docData, savePath.filePath, lang);
+        await logAudit(uid, 'EXPORT_LISTE_AFFICHABLE_N3', `Liste affichable N3 classe ${cid} (Séq ${sequence})`);
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Erreur exportListeAffichable:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // ── Export bordereau d'émargement (PDF) ──────────────────────────────────────
 
   ipcMain.handle('export:bordereauEmargement', async (event, classeId, trimestre, utilisateurId, translations) => {

@@ -117,7 +117,13 @@ const docLocales = {
     liste_eleves_title: 'LISTE DES ÉLÈVES DE LA CLASSE',
     liste_enseignants_title: 'LISTE DES ENSEIGNANTS',
     col_total: 'Total',
-    annee: 'Année'
+    annee: 'Année',
+    liste_aff_title: 'LISTE AFFICHABLE DES NOTES',
+    liste_aff_ua: 'Unité',
+    liste_aff_moy20: 'MOY\n/20',
+    liste_aff_sequence: 'Séq',
+    liste_aff_legend: 'Note affichée : somme des points obtenus sur la somme des points de la sous-compétence (poids). Les élèves peuvent consulter et contester leurs notes.',
+    liste_aff_legend_n3: 'Notes sur 20 par matière pour la séquence sélectionnée. Les élèves peuvent consulter et contester leurs notes.'
   },
   en: {
     // Bulletins
@@ -233,7 +239,13 @@ const docLocales = {
     liste_eleves_title: 'STUDENT LIST OF THE CLASS',
     liste_enseignants_title: 'LIST OF TEACHERS',
     col_total: 'Total',
-    annee: 'Year'
+    annee: 'Year',
+    liste_aff_title: 'DISPLAYABLE GRADES LIST',
+    liste_aff_ua: 'Unit',
+    liste_aff_moy20: 'AVG\n/20',
+    liste_aff_sequence: 'Seq',
+    liste_aff_legend: 'Shown grade: sum of obtained points over the sum of points of the sub-competence (weight). Students may review and contest their grades.',
+    liste_aff_legend_n3: 'Grades out of 20 per subject for the selected sequence. Students may review and contest their grades.'
   }
 };
 

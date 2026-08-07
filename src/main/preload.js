@@ -95,6 +95,7 @@ contextBridge.exposeInMainWorld('elimuAPI', {
   exportBordereauAbsences: (classeId, trimestre, utilisateurId, lang) => ipcRenderer.invoke('export:bordereauAbsences', classeId, trimestre, utilisateurId, lang),
   exportListeEleves: (classeId, utilisateurId, lang) => ipcRenderer.invoke('export:listeEleves', classeId, utilisateurId, lang),
   exportListeProfesseurs: (utilisateurId, lang) => ipcRenderer.invoke('export:listeProfesseurs', utilisateurId, lang),
+  exportListeAffichable: (classeId, options, utilisateurId, lang) => ipcRenderer.invoke('export:listeAffichable', classeId, options, utilisateurId, lang),
   exportBordereauEmargement: (classeId, trimestre, utilisateurId, translations) => ipcRenderer.invoke('export:bordereauEmargement', classeId, trimestre, utilisateurId, translations),
   exportModeleAbsences: (classeId, utilisateurId, periode, lang) => ipcRenderer.invoke('export:modeleAbsences', classeId, utilisateurId, periode, lang),
   exportModeleNotes: (classeId, utilisateurId, lang) => ipcRenderer.invoke('export:modeleNotes', classeId, utilisateurId, lang),

@@ -40,7 +40,7 @@ export async function init(st) {
 // ============================================================
 
 function remplirSelects() {
-  ['import-classe', 'abs-import-classe', 'export-classe-bulletins', 'bordereau-classe', 'export-eleve-classe'].forEach(id => {
+  ['import-classe', 'abs-import-classe', 'export-classe-bulletins', 'bordereau-classe', 'export-eleve-classe', 'liste-aff-classe'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     classes.forEach(c => {
@@ -107,6 +107,41 @@ function remplirSelects() {
       bordereauMatiere.disabled = true;
     }
   }
+
+  // ── Listes affichables : sélection UA / Séquence selon le niveau ──────────
+  const listeAffClasse  = document.getElementById('liste-aff-classe');
+  const listeAffPeriode = document.getElementById('liste-aff-periode');
+  const groupeUA        = document.getElementById('group-liste-aff-ua');
+  const groupeSeq       = document.getElementById('group-liste-aff-sequence');
+  const selectUA        = document.getElementById('liste-aff-ua');
+
+  const UA_PAR_TRIMESTRE = {
+    'Trimestre 1': ['UA1', 'UA2', 'UA3'],
+    'Trimestre 2': ['UA4', 'UA5', 'UA6'],
+    'Trimestre 3': ['UA7', 'UA8']
+  };
+
+  const remplirUAs = () => {
+    if (!selectUA) return;
+    const uas = UA_PAR_TRIMESTRE[listeAffPeriode?.value] || [];
+    const options = [`<option value="ALL" data-i18n="ie.liste_aff_ua_all">${t('ie.liste_aff_ua_all')}</option>`];
+    uas.forEach(u => options.push(`<option value="${u}">${u}</option>`));
+    selectUA.innerHTML = options.join('');
+  };
+
+  if (listeAffClasse) {
+    listeAffClasse.addEventListener('change', () => {
+      const c = classes.find(cl => cl.id === parseInt(listeAffClasse.value));
+      const isV2 = c && (c.niveau_v2 === 'N1' || c.niveau_v2 === 'N2');
+      if (groupeUA)  groupeUA.style.display  = isV2 ? 'block' : 'none';
+      if (groupeSeq) groupeSeq.style.display = isV2 ? 'none'  : 'block';
+      remplirUAs();
+    });
+  }
+  if (listeAffPeriode) {
+    listeAffPeriode.addEventListener('change', remplirUAs);
+  }
+  remplirUAs();
 }
 
 /**
@@ -548,6 +583,48 @@ function setupEvents() {
     } else {
       showToast(result?.error || t('common.error'), 'error');
     }
+  });
+
+  // ── Export liste affichable (paysage) ────────────────────────────────
+  document.getElementById('btn-export-liste-affichable')?.addEventListener('click', async () => {
+    const classeId = document.getElementById('liste-aff-classe')?.value;
+    if (!classeId) {
+      showToast(t('ie.toast_select_all'), 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-export-liste-affichable');
+    const statusEl = document.getElementById('liste-aff-status');
+    const c = classes.find(cl => cl.id === parseInt(classeId));
+    const isV2 = c && (c.niveau_v2 === 'N1' || c.niveau_v2 === 'N2');
+
+    const periode = document.getElementById('liste-aff-periode')?.value || 'Trimestre 1';
+    const options = isV2
+      ? { periode, ua: document.getElementById('liste-aff-ua')?.value || 'ALL' }
+      : { periode, sequence: document.getElementById('liste-aff-sequence')?.value || '1' };
+
+    btn.disabled = true; btn.textContent = '⏳ ' + t('ie.liste_aff_btn_waiting');
+    if (statusEl) statusEl.style.display = 'none';
+    showIELoader(t('ie.liste_aff_title'), t('common.processing'), 50);
+
+    const lang = window.getCurrentGenLocale();
+    const result = await window.elimuAPI.exportListeAffichable(parseInt(classeId), options, state?.user?.id, lang);
+
+    btn.disabled = false; btn.textContent = t('ie.liste_aff_btn_export');
+    hideIELoader();
+    if (result?.canceled) return;
+
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.className = result?.success ? 'backup-info success' : 'backup-info';
+      statusEl.textContent = result?.success
+        ? '✅ ' + t('ie.liste_aff_toast_success')
+        : `❌ ${result?.error || t('common.error')}`;
+    }
+    showToast(
+      result?.success ? '📤 ' + t('ie.liste_aff_toast_success') : result?.error || t('common.error'),
+      result?.success ? 'success' : 'error'
+    );
   });
 
   // ── Export bulletin individuel ─────────────────────────────
