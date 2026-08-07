@@ -108,7 +108,11 @@ const docLocales = {
     col_name_fullname: 'NOMS ET PRÉNOMS',
     col_grade_20: 'NOTE / 20',
     col_signature: 'SIGNATURE',
-    col_abs_hours: 'HEURES D\'ABSENCE'
+    col_abs_hours: 'HEURES D\'ABSENCE',
+    'eleve.sexe': 'SEXE',
+    liste_eleves_title: 'LISTE DES ÉLÈVES DE LA CLASSE',
+    col_total: 'Total',
+    annee: 'Année'
   },
   en: {
     // Bulletins
@@ -216,7 +220,10 @@ const docLocales = {
     col_name_fullname: 'NAMES AND SURNAMES',
     col_grade_20: 'GRADE / 20',
     col_signature: 'SIGNATURE',
-    col_abs_hours: 'ABSENCE HOURS'
+    col_abs_hours: 'ABSENCE HOURS',
+    liste_eleves_title: 'STUDENT LIST OF THE CLASS',
+    col_total: 'Total',
+    annee: 'Year'
   }
 };
 

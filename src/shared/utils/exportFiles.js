@@ -245,10 +245,95 @@ async function generateBordereauAbsencesPDF(eleves, options, outputPath, lang = 
 }
 
 /**
+ * Génère une liste d'élèves d'une classe en PDF (avec matricule, date de naissance, sexe)
+ */
+async function exportListeElevesPDF(eleves, options, outputPath, lang = 'fr') {
+  const cfg = loadConfig();
+  const { getDocTranslator } = require('./pdf/locales');
+  const t = getDocTranslator(lang);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const stream = fs.createWriteStream(outputPath);
+      doc.pipe(stream);
+
+      let y = drawAdminHeader(doc, cfg, 40);
+
+      doc.font('Helvetica-Bold').fontSize(15).fillColor('#111111')
+        .text(t('liste_eleves_title'), 50, y, { width: 500, align: 'center' });
+      const y2 = y + 22;
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#444444')
+        .text(options.classe || '', 50, y2, { width: 500, align: 'center' });
+      const y3 = y2 + 16;
+      if (options.annee) {
+        doc.font('Helvetica').fontSize(9).fillColor('#666666')
+          .text(`${t('annee')} : ${options.annee}`, 50, y3, { width: 500, align: 'center' });
+      }
+
+      const tableTop = y3 + 22;
+      const colNo = 30, colMat = 90, colNom = 240, colNaissance = 90, colSexe = 50;
+      const rowH = 20;
+
+      const drawHeader = (top) => {
+        doc.rect(50, top, 500, rowH).fill('#1a3c6e');
+        doc.fontSize(8.5).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text(t('col_num_short'), 55, top + 6);
+        doc.text(t('model_matricule'), 85, top + 6);
+        doc.text(t('col_name_fullname'), 185, top + 6);
+        doc.text(t('model_birthdate'), 425, top + 6, { width: colNaissance - 10, align: 'center' });
+        doc.text(t('eleve.sexe'), 515, top + 6, { width: colSexe, align: 'center' });
+        return top + rowH;
+      };
+
+      let currentY = drawHeader(tableTop);
+      doc.fillColor('#000000').font('Helvetica');
+
+      const total = eleves.length;
+      eleves.forEach((el, index) => {
+        if (currentY > 750) {
+          doc.addPage();
+          currentY = drawHeader(50);
+        }
+
+        const isEven = index % 2 === 0;
+        if (isEven) {
+          doc.rect(50, currentY, 500, rowH).fill('#f4f6fb');
+        }
+        doc.rect(50, currentY, 500, rowH).strokeColor('#dddddd').lineWidth(0.5).stroke();
+        doc.moveTo(50 + colNo, currentY).lineTo(50 + colNo, currentY + rowH).stroke();
+        doc.moveTo(50 + colNo + colMat, currentY).lineTo(50 + colNo + colMat, currentY + rowH).stroke();
+        doc.moveTo(50 + colNo + colMat + colNom, currentY).lineTo(50 + colNo + colMat + colNom, currentY + rowH).stroke();
+        doc.moveTo(50 + colNo + colMat + colNom + colNaissance, currentY).lineTo(50 + colNo + colMat + colNom + colNaissance, currentY + rowH).stroke();
+
+        doc.fontSize(9).fillColor('#000000');
+        doc.text(String(index + 1), 55, currentY + 6);
+        doc.text(el.matricule || '—', 85, currentY + 6, { width: colMat - 10, ellipsis: true });
+        doc.text(`${el.nom.toUpperCase()} ${el.prenom}`, 185, currentY + 6, { width: colNom - 12, ellipsis: true });
+        doc.text(el.date_naissance || '—', 425, currentY + 6, { width: colNaissance - 10, align: 'center' });
+        doc.text(el.sexe || '—', 515, currentY + 6, { width: colSexe, align: 'center' });
+
+        currentY += rowH;
+      });
+
+      if (total > 0) {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333')
+          .text(`${t('col_total')} : ${total}`, 50, currentY + 8);
+      }
+
+      doc.end();
+      stream.on('finish', () => resolve({ success: true, path: outputPath, total }));
+      stream.on('error', (err) => reject(err));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
  * Génère un bordereau d'émargement PDF (N°, Nom, Signature)
  */
 async function generateBordereauEmargementPDF(eleves, options, outputPath) {
-  const cfg = loadConfig();
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ margin: 50, size: 'A4' });
@@ -319,6 +404,7 @@ module.exports = {
   generateBordereauPDF, 
   generateBordereauAbsencesPDF,
   generateBordereauEmargementPDF,
+  exportListeElevesPDF,
   exportBulletinTrimestre,
   exportBulletinClassePDF,
   exportBulletinRecap,

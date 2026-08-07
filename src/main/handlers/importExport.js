@@ -253,6 +253,44 @@ function register(ipcMain, deps) {
     }
   });
 
+  // ── Export liste élèves d'une classe (PDF) ──────────────────────────────────
+
+  ipcMain.handle('export:listeEleves', async (event, classeId, utilisateurId, lang = 'fr') => {
+    if (!(await checkAccess(['admin', 'secretaire', 'enseignant']))) return { success: false, error: 'Accès non autorisé' };
+    try {
+      const cid = parseInt(classeId);
+      if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
+      const { exportListeElevesPDF } = require('../../shared/utils/exportFiles');
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+      if (!classe) return { error: 'Classe non trouvée' };
+
+      const savePath = await dialog.showSaveDialog(getMainWindow(), {
+        defaultPath: `liste_eleves_${classe.nom_classe.replace(/\s/g, '_')}_${Date.now()}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (savePath.canceled) return { canceled: true };
+
+      const anneeId = getCurrentAnneeId();
+      const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
+
+      const eleves = all(
+        `SELECT nom, prenom, matricule, date_naissance, sexe FROM eleves
+         WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+        [cid, anneeId, ecoleId]
+      );
+      eleves.sort((a,b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
+
+      const result = await exportListeElevesPDF(eleves, { classe: classe.nom_classe, annee }, savePath.filePath, lang);
+      const uid = parseInt(utilisateurId) || getCurrentUserId();
+      await logAudit(uid, 'EXPORT_LISTE_ELEVES', `Export liste élèves classe: ${cid} (${eleves.length} élèves)`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur exportListeEleves:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // ── Export bordereau d'émargement (PDF) ──────────────────────────────────────
 
   ipcMain.handle('export:bordereauEmargement', async (event, classeId, trimestre, utilisateurId, translations) => {

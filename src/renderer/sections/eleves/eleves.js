@@ -768,6 +768,15 @@ function attacherEvenements() {
     paginePage = 1;
     await chargerEleves(filtreClasseId, 1);
   });
+
+  // ★ Export liste élèves PDF
+  document.getElementById('btn-export-liste-eleves')?.addEventListener('click', ouvrirModaleExportListe);
+  document.getElementById('modal-export-liste-close')?.addEventListener('click', fermerModaleExportListe);
+  document.getElementById('modal-export-liste-cancel')?.addEventListener('click', fermerModaleExportListe);
+  document.getElementById('modal-export-liste')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-export-liste')) fermerModaleExportListe();
+  });
+  document.getElementById('export-liste-ok')?.addEventListener('click', executerExportListe);
 }
 
 // ============================================================
@@ -826,6 +835,53 @@ function remplirFiltreClasses(classes) {
   if (!select) return;
   const options = classes.map(c => `<option value="${c.id}">${esc(c.nom_classe)}</option>`).join('');
   select.innerHTML = `<option value="">${t('eleves.filter_class')}</option>` + options;
+}
+
+// ============================================================
+// EXPORT LISTE ÉLÈVES (PDF)
+// ============================================================
+
+function ouvrirModaleExportListe() {
+  const modal = document.getElementById('modal-export-liste');
+  const select = document.getElementById('export-liste-classe');
+  if (!modal || !select) return;
+  const classes = window.appState?.classes || [];
+  const options = classes.map(c => `<option value="${c.id}">${esc(c.nom_classe)}</option>`).join('');
+  select.innerHTML = `<option value="">${t('eleves.select_classe_placeholder')}</option>` + options;
+  modal.style.display = 'flex';
+}
+
+function fermerModaleExportListe() {
+  const modal = document.getElementById('modal-export-liste');
+  if (modal) modal.style.display = 'none';
+}
+
+async function executerExportListe() {
+  const select = document.getElementById('export-liste-classe');
+  const btn = document.getElementById('export-liste-ok');
+  const classeId = select?.value ? parseInt(select.value) : null;
+  if (!classeId) {
+    showToast(t('eleves.export_liste_no_classe'), 'error');
+    return;
+  }
+  if (btn) { btn.disabled = true; }
+  try {
+    const lang = window.appState?.lang || 'fr';
+    const result = await window.elimuAPI.exportListeEleves(classeId, _state?.user?.id, lang);
+    if (result?.canceled) return;
+    if (result?.error) {
+      showToast(t('common.error') + ' : ' + result.error, 'error');
+      return;
+    }
+    if (result?.success) {
+      showToast(t('eleves.export_liste_success') + ' (' + (result.total || 0) + ')', 'success');
+      fermerModaleExportListe();
+    }
+  } catch (err) {
+    showToast(t('common.error') + ' : ' + err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function genererEtoiles(moyenne) {

@@ -110,6 +110,9 @@
     <button class="btn btn-primary" id="btn-add-eleve" type="button" data-i18n="eleves.btn_add">
       Ajouter un élève
     </button>
+    <button class="btn btn-secondary" id="btn-export-liste-eleves" type="button" data-i18n="eleves.btn_export_liste">
+      Exporter la liste PDF
+    </button>
   </div>
 
   <!-- Grille des élèves -->
@@ -235,6 +238,44 @@
                 data-i18n="common.close">✕</button>
       </div>
       <div id="profil-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== MODALE EXPORT LISTE ÉLÈVES ===== -->
+  <div id="modal-export-liste" style="display:none; position:fixed; inset:0;
+       background:rgba(0,0,0,0.75); z-index:1001; align-items:center;
+       justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color);
+                border-radius:20px; padding:28px; width:90%; max-width:440px;
+                box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div style="font-family:'Rajdhani',sans-serif; font-size:20px;
+             font-weight:700; color:var(--text-primary); text-transform:uppercase;"
+             data-i18n="eleves.export_liste_title">
+          Exporter la liste PDF
+        </div>
+        <button id="modal-export-liste-close" type="button"
+                style="background:var(--bg-hover); border:1px solid var(--border-color);
+                       color:var(--text-secondary); border-radius:6px; padding:6px 10px;
+                       cursor:pointer; font-size:14px;"
+                data-i18n="common.close">✕</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px; line-height:1.6;"
+         data-i18n="eleves.export_liste_desc">
+        Sélectionnez la classe dont vous souhaitez exporter la liste des élèves (PDF avec matricule, date de naissance, sexe).
+      </p>
+      <div class="input-group" style="margin-bottom:20px;">
+        <label data-i18n="eleves.label_class">Classe</label>
+        <select id="export-liste-classe" class="input">
+          <option value="" data-i18n="eleves.select_classe_placeholder">— Sélectionner une classe —</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" id="modal-export-liste-cancel" class="btn btn-secondary"
+                data-i18n="common.cancel">Annuler</button>
+        <button type="button" id="export-liste-ok" class="btn btn-primary"
+                data-i18n="eleves.btn_export">Exporter</button>
+      </div>
     </div>
   </div>
 
