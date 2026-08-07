@@ -415,6 +415,7 @@ const fr = {
   'eleves.profil':                'Profil Élève',
   'eleves.label_lastname':        'Nom *',
   'eleves.label_firstname':       'Prénom *',
+  'eleves.label_matricule':       'Matricule',
   'eleves.label_birthdate':       'Date de naissance',
   'eleves.label_class':           'Classe',
   'eleves.label_parent':          'Nom du parent / tuteur',

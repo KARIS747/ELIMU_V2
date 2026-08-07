@@ -335,11 +335,11 @@ function register(ipcMain, deps) {
           try {
             const ins = run(
              `INSERT INTO eleves
-                (nom, prenom, sexe, date_naissance, classe_id, nom_parent,
+                (nom, prenom, sexe, matricule, date_naissance, classe_id, nom_parent,
                  telephone_parent, email_parent, photo, date_inscription, annee_scolaire_id, ecole_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
              [
-               eleve.nom, eleve.prenom, eleve.sexe, eleve.date_naissance, finalClasseId,
+               eleve.nom, eleve.prenom, eleve.sexe, eleve.matricule, eleve.date_naissance, finalClasseId,
                eleve.nom_parent, eleve.telephone_parent, eleve.email_parent,
                eleve.photo, dAid, ecoleId
              ]

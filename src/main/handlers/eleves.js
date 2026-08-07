@@ -48,7 +48,7 @@ function register(ipcMain, deps) {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const cid = parseInt(classeId);
       let sql = `
-        SELECT e.id, e.nom, e.prenom, e.sexe, e.classe_id, c.nom_classe, c.niveau_v2,
+        SELECT e.id, e.nom, e.prenom, e.matricule, e.sexe, e.classe_id, c.nom_classe, c.niveau_v2,
                (SELECT s.moyenne_generale FROM stats_eleves s WHERE s.eleve_id = e.id AND s.annee_scolaire_id = ? LIMIT 1) as moyenne_generale
         FROM eleves e
         LEFT JOIN classes c ON c.id = e.classe_id
@@ -97,7 +97,7 @@ function register(ipcMain, deps) {
       const total = countRow?.total || 0;
 
       const eleves = all(`
-        SELECT e.id, e.nom, e.prenom, e.date_naissance, e.sexe,
+        SELECT e.id, e.nom, e.prenom, e.matricule, e.date_naissance, e.sexe,
                e.classe_id, e.nom_parent, e.telephone_parent, e.date_inscription,
                c.nom_classe, c.niveau_v2,
                MAX(s.moyenne_generale) as moyenne_generale
@@ -164,9 +164,9 @@ function register(ipcMain, deps) {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       const result = run(
-        `INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, email_parent, annee_scolaire_id, ecole_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.nom.trim(), data.prenom.trim(), data.date_naissance, data.sexe || 'M', parseInt(data.classe_id) || null,
+        `INSERT INTO eleves (nom, prenom, matricule, date_naissance, sexe, classe_id, nom_parent, telephone_parent, email_parent, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [data.nom.trim(), data.prenom.trim(), data.matricule ? String(data.matricule).trim() : null, data.date_naissance, data.sexe || 'M', parseInt(data.classe_id) || null,
          data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
          data.email_parent ? data.email_parent.trim() : null, anneeId, ecoleId]
       );
@@ -202,8 +202,8 @@ function register(ipcMain, deps) {
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
 
       run(
-        `UPDATE eleves SET nom=?, prenom=?, date_naissance=?, sexe=?, classe_id=?, nom_parent=?, telephone_parent=?, email_parent=? WHERE id=? AND ecole_id=?`,
-        [data.nom.trim(), data.prenom.trim(), data.date_naissance, data.sexe || null, parseInt(data.classe_id) || null,
+        `UPDATE eleves SET nom=?, prenom=?, matricule=?, date_naissance=?, sexe=?, classe_id=?, nom_parent=?, telephone_parent=?, email_parent=? WHERE id=? AND ecole_id=?`,
+        [data.nom.trim(), data.prenom.trim(), data.matricule ? String(data.matricule).trim() : null, data.date_naissance, data.sexe || null, parseInt(data.classe_id) || null,
          data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
          data.email_parent ? data.email_parent.trim() : null, eid, ecoleId]
       );

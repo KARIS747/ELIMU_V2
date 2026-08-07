@@ -184,6 +184,7 @@ function afficherEleves(eleves) {
         ${niveauBadge}
         <div class="card-avatar">${initiales}</div>
         <div class="card-name">${esc(eleve.nom)} ${esc(eleve.prenom)}</div>
+        ${eleve.matricule ? `<div class="card-class" style="font-size:10px;color:var(--text-muted);">${esc(eleve.matricule)}</div>` : ''}
         <div class="card-class">${esc(eleve.nom_classe || t('eleves.card_no_class'))}</div>
         <div style="display:flex;justify-content:center;gap:2px;margin-bottom:6px;">${etoiles}</div>
         <div class="card-actions">
@@ -289,6 +290,7 @@ async function chargerDonneesFormulaire(eleveId) {
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   set('ef-nom', e.nom);
   set('ef-prenom', e.prenom);
+  set('ef-matricule', e.matricule);
   set('ef-naissance', e.date_naissance);
   set('ef-parent', e.nom_parent);
   set('ef-email', e.email_parent);
@@ -327,6 +329,7 @@ async function sauvegarderEleve() {
   const data = {
     nom,
     prenom,
+    matricule: document.getElementById('ef-matricule')?.value.trim() || null,
     date_naissance: document.getElementById('ef-naissance')?.value || null,
     sexe: document.getElementById('ef-sexe')?.value || 'M',
     classe_id: document.getElementById('ef-classe')?.value || null,
@@ -492,6 +495,7 @@ async function rafraichirProfil(eleveId, title, content) {
                     text-transform:uppercase;letter-spacing:0.8px;">
           ${esc(eleve.nom_classe || t('common.no_class'))}
         </div>
+        ${eleve.matricule ? `<div style="font-size:10px;color:var(--text-muted);margin:-4px 0 4px;">Matricule: ${esc(eleve.matricule)}</div>` : ''}
         <div style="display:flex;justify-content:center;gap:2px;">${etoiles}</div>
         ${eleve.niveau_v2 ? `<div style="font-size:9px;font-weight:700;margin-top:6px;padding:2px 8px;border-radius:4px;
           background:${estQualitatifProfil ? 'rgba(33,150,243,0.18)' : 'rgba(0,230,118,0.12)'};

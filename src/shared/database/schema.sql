@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS eleves (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     nom              TEXT NOT NULL,
     prenom           TEXT NOT NULL,
+    matricule        TEXT,
     date_naissance   TEXT,
     classe_id        INTEGER,
     nom_parent       TEXT,

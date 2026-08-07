@@ -413,6 +413,7 @@ const en = {
   'eleves.profil':                'Student Profile',
   'eleves.label_lastname':        'Last name *',
   'eleves.label_firstname':       'First name *',
+  'eleves.label_matricule':       'Registration number',
   'eleves.label_birthdate':       'Date of birth',
   'eleves.label_class':           'Class',
   'eleves.label_parent':          'Parent / guardian name',

@@ -181,6 +181,7 @@ async function initializeDatabase(customPath = null) {
     "ALTER TABLE classes ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE parents ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE eleves ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE eleves ADD COLUMN matricule TEXT",
     "ALTER TABLE notes ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE absences ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE sanctions ADD COLUMN ecole_id TEXT NOT NULL DEFAULT ''",

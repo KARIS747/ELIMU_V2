@@ -712,7 +712,7 @@ function register(ipcMain, deps) {
       }));
 
       const students = all(`
-        SELECT e.id, e.nom, e.prenom, c.nom_classe
+        SELECT e.id, e.nom, e.prenom, e.matricule, c.nom_classe
         FROM eleves e
         JOIN classes c ON c.id = e.classe_id
         WHERE e.ecole_id = ? AND e.annee_scolaire_id = ?
@@ -720,6 +720,7 @@ function register(ipcMain, deps) {
         external_id: s.id,
         nom: s.nom,
         prenom: s.prenom,
+        matricule: s.matricule || null,
         classe_nom: s.nom_classe,
         ecole_id: ecoleId,
       }));

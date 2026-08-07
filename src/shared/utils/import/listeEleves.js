@@ -31,16 +31,17 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
     if (rowNumber === 1) return;
     const nom    = String(row.getCell(1).value || '').trim();
     const prenom = String(row.getCell(2).value || '').trim();
-    const sexeLu = String(row.getCell(3).value || '').trim().toUpperCase();
-    const dateN  = row.getCell(4).value;
-    const nomParent = String(row.getCell(5).value || '').trim() || null;
-    const telParent = String(row.getCell(6).value || '').trim() || null;
+    const matricule = String(row.getCell(3).value || '').trim() || null;
+    const sexeLu = String(row.getCell(4).value || '').trim().toUpperCase();
+    const dateN  = row.getCell(5).value;
+    const nomParent = String(row.getCell(6).value || '').trim() || null;
+    const telParent = String(row.getCell(7).value || '').trim() || null;
 
     let sexe = null;
     if (['M', 'G', 'GARCON', 'BOY', 'MASCULIN', 'MALE'].includes(sexeLu)) sexe = 'M';
     else if (['F', 'FILLE', 'GIRL', 'FEMININ', 'FEMALE'].includes(sexeLu)) sexe = 'F';
 
-    if (nom) lignes.push({ nom, prenom, sexe, dateN, nomParent, telParent, rowNumber });
+    if (nom) lignes.push({ nom, prenom, sexe, dateN, nomParent, telParent, matricule, rowNumber });
   });
 
   if (!lignes.length)
@@ -58,7 +59,7 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
       [classeId, anneeId, ecoleId]
     );
 
-    for (const { nom, prenom, sexe, dateN, nomParent, telParent, rowNumber } of lignes) {
+    for (const { nom, prenom, sexe, dateN, nomParent, telParent, matricule, rowNumber } of lignes) {
       try {
         if (!nom) {
           resultat.erreurs.push(`Ligne ${rowNumber}: nom vide, ignorée`);
@@ -70,8 +71,8 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
           const existant = trouverEleve(elevesActuels, nom, prenom);
           if (existant) {
             run(
-              'UPDATE eleves SET sexe = COALESCE(?, sexe), nom_parent = COALESCE(?, nom_parent), telephone_parent = COALESCE(?, telephone_parent) WHERE id = ?',
-              [sexe, nomParent, telParent, existant.id]
+              'UPDATE eleves SET sexe = COALESCE(?, sexe), nom_parent = COALESCE(?, nom_parent), telephone_parent = COALESCE(?, telephone_parent), matricule = COALESCE(?, matricule) WHERE id = ?',
+              [sexe, nomParent, telParent, matricule, existant.id]
             );
             if (telParent) {
               await syncParentEleve(existant.id, nomParent, telParent, defaultLogger, ecoleId);
@@ -102,16 +103,16 @@ async function importListeEleves(filePath, classeId, mode = 'ajoute', utilisateu
         let estNouveau = false;
         if (eleveGlobal) {
           run(
-            'UPDATE eleves SET classe_id = ?, sexe = ?, nom_parent = ?, telephone_parent = ? WHERE id = ? AND ecole_id = ?',
-            [classeId, sexe, nomParent, telParent, eleveGlobal.id, ecoleId]
+            'UPDATE eleves SET classe_id = ?, sexe = ?, nom_parent = ?, telephone_parent = ?, matricule = COALESCE(?, matricule) WHERE id = ? AND ecole_id = ?',
+            [classeId, sexe, nomParent, telParent, matricule, eleveGlobal.id, ecoleId]
           );
           eleveId = eleveGlobal.id;
           resultat.nbAjoutes++;
           estNouveau = true;
         } else {
           const inserted = run(
-            'INSERT INTO eleves (nom, prenom, date_naissance, sexe, classe_id, nom_parent, telephone_parent, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [nom, prenom, dateStr, sexe, classeId, nomParent, telParent, anneeId, ecoleId]
+            'INSERT INTO eleves (nom, prenom, matricule, date_naissance, sexe, classe_id, nom_parent, telephone_parent, annee_scolaire_id, ecole_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [nom, prenom, matricule, dateStr, sexe, classeId, nomParent, telParent, anneeId, ecoleId]
           );
           eleveId = inserted.lastID;
           resultat.nbAjoutes++;

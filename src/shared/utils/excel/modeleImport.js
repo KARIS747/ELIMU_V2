@@ -20,6 +20,7 @@ async function genererModeleImportClasse(classeId, outputPath, lang = 'fr') {
   const headerRow = sheet.addRow([
     t('model_lastname'), 
     t('model_firstname'), 
+    t('model_matricule'),
     t('eleve.sexe'),
     t('model_birthdate'), 
     t('model_parent_name'), 
@@ -38,6 +39,7 @@ async function genererModeleImportClasse(classeId, outputPath, lang = 'fr') {
   sheet.columns = [
     { width: 25 }, // Nom
     { width: 25 }, // Prénom
+    { width: 22 }, // Matricule
     { width: 10 }, // Sexe
     { width: 25 }, // Date N
     { width: 25 }, // Nom Parent
@@ -46,8 +48,8 @@ async function genererModeleImportClasse(classeId, outputPath, lang = 'fr') {
 
   // Ajouter quelques lignes d'exemple (grisées)
   const examples = [
-    ['DOE', 'John', 'M', '2012-05-14', 'DOE Senior', '699000000'],
-    ['NGUEMA', 'Marie', 'F', '2013-11-20', 'NGUEMA Paul', '677000000']
+    ['DOE', 'John', 'ELM-2026-001', 'M', '2012-05-14', 'DOE Senior', '699000000'],
+    ['NGUEMA', 'Marie', 'ELM-2026-002', 'F', '2013-11-20', 'NGUEMA Paul', '677000000']
   ];
 
   examples.forEach(ex => {

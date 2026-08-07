@@ -58,6 +58,7 @@ const docLocales = {
     // Models Import
     model_lastname: 'NOM (Obligatoire)',
     model_firstname: 'PRÉNOM (Obligatoire)',
+    model_matricule: 'MATRICULE (optionnel)',
     model_birthdate: 'DATE NAISSANCE (AAAA-MM-JJ)',
     model_parent_name: 'NOM DU PARENT',
     model_parent_phone: 'TÉLÉPHONE DU PARENT',
@@ -166,6 +167,7 @@ const docLocales = {
     // Models Import
     model_lastname: 'LAST NAME (Required)',
     model_firstname: 'FIRST NAME (Required)',
+    model_matricule: 'REGISTRATION NUMBER (optional)',
     model_birthdate: 'BIRTH DATE (YYYY-MM-DD)',
     model_parent_name: 'PARENT NAME',
     model_parent_phone: 'PARENT PHONE',
