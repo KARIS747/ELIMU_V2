@@ -458,6 +458,8 @@ const fr = {
   'profs.title':                  'Comptes Enseignants',
   'profs.subtitle':               'Creation, suspension et gestion des acces a la PWA',
   'profs.btn_import':             'Importer Excel',
+  'profs.btn_export_liste':       'Exporter la liste PDF',
+  'profs.export_liste_success':   'Liste exportée en PDF',
   'profs.btn_add':                'Creer un compte',
   'profs.search_placeholder':     'Rechercher par nom, prenom ou identifiant...',
   'profs.filter_active_only':     'Actifs seulement',

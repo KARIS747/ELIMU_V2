@@ -111,6 +111,7 @@ const docLocales = {
     col_abs_hours: 'HEURES D\'ABSENCE',
     'eleve.sexe': 'SEXE',
     liste_eleves_title: 'LISTE DES ÉLÈVES DE LA CLASSE',
+    liste_enseignants_title: 'LISTE DES ENSEIGNANTS',
     col_total: 'Total',
     annee: 'Année'
   },
@@ -222,6 +223,7 @@ const docLocales = {
     col_signature: 'SIGNATURE',
     col_abs_hours: 'ABSENCE HOURS',
     liste_eleves_title: 'STUDENT LIST OF THE CLASS',
+    liste_enseignants_title: 'LIST OF TEACHERS',
     col_total: 'Total',
     annee: 'Year'
   }

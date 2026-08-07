@@ -291,6 +291,42 @@ function register(ipcMain, deps) {
     }
   });
 
+  // ── Export liste des enseignants (PDF) ──────────────────────────────────────
+
+  ipcMain.handle('export:listeProfesseurs', async (event, utilisateurId, lang = 'fr') => {
+    if (!(await checkAccess(['admin', 'secretaire']))) return { success: false, error: 'Accès non autorisé' };
+    try {
+      const { exportListeProfesseursPDF } = require('../../shared/utils/exportFiles');
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+
+      const savePath = await dialog.showSaveDialog(getMainWindow(), {
+        defaultPath: `liste_enseignants_${Date.now()}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (savePath.canceled) return { canceled: true };
+
+      const anneeId = getCurrentAnneeId();
+      const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
+
+      const enseignants = all(
+        `SELECT p.nom, p.prenom, p.telephone, p.email, p.matiere_principale, p.actif, u.nom_utilisateur
+         FROM professeurs p
+         LEFT JOIN utilisateurs u ON p.utilisateur_id = u.id
+         WHERE p.ecole_id = ?
+         ORDER BY p.nom, p.prenom`,
+        [ecoleId]
+      );
+
+      const result = await exportListeProfesseursPDF(enseignants, { annee }, savePath.filePath, lang);
+      const uid = parseInt(utilisateurId) || getCurrentUserId();
+      await logAudit(uid, 'EXPORT_LISTE_ENSEIGNANTS', `Export liste enseignants (${enseignants.length} enseignants)`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur exportListeProfesseurs:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // ── Export bordereau d'émargement (PDF) ──────────────────────────────────────
 
   ipcMain.handle('export:bordereauEmargement', async (event, classeId, trimestre, utilisateurId, translations) => {

@@ -801,8 +801,30 @@ function _cacherErreur() {
 // EVENEMENTS
 // ═══════════════════════════════════════════════════════════
 
+async function exporterListeEnseignants() {
+  const btn = document.getElementById('btn-export-profs');
+  if (btn) btn.disabled = true;
+  try {
+    const lang = window.appState?.lang || 'fr';
+    const result = await window.elimuAPI.exportListeProfesseurs(_state?.user?.id, lang);
+    if (result?.canceled) return;
+    if (result?.error) {
+      showToast(t('common.error') + ' : ' + result.error, 'error');
+      return;
+    }
+    if (result?.success) {
+      showToast(t('profs.export_liste_success') + ' (' + (result.total || 0) + ')', 'success');
+    }
+  } catch (err) {
+    showToast(t('common.error') + ' : ' + err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 function _setupEvents() {
   document.getElementById('btn-add-prof')?.addEventListener('click', () => ouvrirModaleProfesseur(null));
+  document.getElementById('btn-export-profs')?.addEventListener('click', exporterListeEnseignants);
 
   // Detail modal
   document.getElementById('modal-prof-view-close')?.addEventListener('click', fermerDetailCompte);

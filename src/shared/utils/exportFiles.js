@@ -331,6 +331,86 @@ async function exportListeElevesPDF(eleves, options, outputPath, lang = 'fr') {
 }
 
 /**
+ * Génère une liste des enseignants en PDF (avec téléphone, email, matière, statut)
+ */
+async function exportListeProfesseursPDF(enseignants, options, outputPath, lang = 'fr') {
+  const cfg = loadConfig();
+  const { getDocTranslator } = require('./pdf/locales');
+  const t = getDocTranslator(lang);
+
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50, size: 'A4' });
+      const stream = fs.createWriteStream(outputPath);
+      doc.pipe(stream);
+
+      let y = drawAdminHeader(doc, cfg, 40);
+
+      doc.font('Helvetica-Bold').fontSize(15).fillColor('#111111')
+        .text(t('liste_enseignants_title'), 50, y, { width: 500, align: 'center' });
+      const y2 = y + 22;
+      if (options.annee) {
+        doc.font('Helvetica').fontSize(9).fillColor('#666666')
+          .text(`${t('annee')} : ${options.annee}`, 50, y2, { width: 500, align: 'center' });
+      }
+
+      const tableTop = y2 + 22;
+      const colNo = 30, colNom = 240, colMatiere = 130, colTel = 100;
+      const rowH = 20;
+
+      const drawHeader = (top) => {
+        doc.rect(50, top, 500, rowH).fill('#1a3c6e');
+        doc.fontSize(8.5).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text(t('col_num_short'), 55, top + 6);
+        doc.text(t('col_name_fullname'), 85, top + 6);
+        doc.text(t('model_prof_discipline'), 325, top + 6, { width: colMatiere - 10, align: 'center' });
+        doc.text(t('model_prof_phone'), 455, top + 6, { width: colTel - 8, align: 'center' });
+        return top + rowH;
+      };
+
+      let currentY = drawHeader(tableTop);
+      doc.fillColor('#000000').font('Helvetica');
+
+      const total = enseignants.length;
+      enseignants.forEach((el, index) => {
+        if (currentY > 750) {
+          doc.addPage();
+          currentY = drawHeader(50);
+        }
+
+        const isEven = index % 2 === 0;
+        if (isEven) {
+          doc.rect(50, currentY, 500, rowH).fill('#f4f6fb');
+        }
+        doc.rect(50, currentY, 500, rowH).strokeColor('#dddddd').lineWidth(0.5).stroke();
+        doc.moveTo(50 + colNo, currentY).lineTo(50 + colNo, currentY + rowH).stroke();
+        doc.moveTo(50 + colNo + colNom, currentY).lineTo(50 + colNo + colNom, currentY + rowH).stroke();
+        doc.moveTo(50 + colNo + colNom + colMatiere, currentY).lineTo(50 + colNo + colNom + colMatiere, currentY + rowH).stroke();
+
+        doc.fontSize(9).fillColor('#000000');
+        doc.text(String(index + 1), 55, currentY + 6);
+        doc.text(`${(el.nom || '').toUpperCase()} ${el.prenom || ''}`, 85, currentY + 6, { width: colNom - 12, ellipsis: true });
+        doc.text(el.matiere_principale || '—', 325, currentY + 6, { width: colMatiere - 10, align: 'center' });
+        doc.text(el.telephone || '—', 455, currentY + 6, { width: colTel - 8, align: 'center' });
+
+        currentY += rowH;
+      });
+
+      if (total > 0) {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#333333')
+          .text(`${t('col_total')} : ${total}`, 50, currentY + 8);
+      }
+
+      doc.end();
+      stream.on('finish', () => resolve({ success: true, path: outputPath, total }));
+      stream.on('error', (err) => reject(err));
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
  * Génère un bordereau d'émargement PDF (N°, Nom, Signature)
  */
 async function generateBordereauEmargementPDF(eleves, options, outputPath) {
@@ -405,6 +485,7 @@ module.exports = {
   generateBordereauAbsencesPDF,
   generateBordereauEmargementPDF,
   exportListeElevesPDF,
+  exportListeProfesseursPDF,
   exportBulletinTrimestre,
   exportBulletinClassePDF,
   exportBulletinRecap,

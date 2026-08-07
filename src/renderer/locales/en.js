@@ -457,6 +457,8 @@ const en = {
   'profs.title':                  'Teacher Accounts',
   'profs.subtitle':               'Create, suspend and manage PWA access',
   'profs.btn_import':             'Import Excel',
+  'profs.btn_export_liste':       'Export PDF list',
+  'profs.export_liste_success':   'List exported as PDF',
   'profs.btn_add':                'Create account',
   'profs.search_placeholder':     'Search by name or username...',
   'profs.filter_active_only':     'Active only',
