@@ -65,21 +65,15 @@ function prepareBulletinTrimestreData(eleveId, periode, lang = 'fr', anneeId = n
     });
 
     // Calculer les moyennes et rangs de la classe pour N1/N2
+    const classStats = computeClassStatsQualitatif(eleve.classe_id, eid, eleve.niveau_v2, lesUA);
     const elevesClasse = all(`SELECT id FROM eleves WHERE classe_id = ?`, [eleve.classe_id]);
     const nbElevesClasse = elevesClasse.length;
     
-    const listMoyennes = [];
+    const listMoyennes = classStats.sorted.slice();
+    const notedIds = new Set(listMoyennes.map(s => s.id));
     elevesClasse.forEach(el => {
-      const rowMoy = get(`
-        SELECT AVG(note) AS avg_note
-        FROM notes
-        WHERE eleve_id = ? AND ua IN (${lesUA.map(u => `'${u}'`).join(',')}) AND annee_scolaire_id = ? AND sous_type IS NULL
-      `, [el.id, eid]);
-      
-      const mVal = rowMoy ? rowMoy.avg_note : null;
-      listMoyennes.push({ id: el.id, moy: mVal !== null ? mVal : -1 });
+      if (!notedIds.has(el.id)) listMoyennes.push({ id: el.id, moy: -1 });
     });
-    
     listMoyennes.sort((a, b) => b.moy - a.moy);
     const pos = listMoyennes.findIndex(item => item.id === eleveId);
     const rangGeneral = (pos >= 0 && listMoyennes[pos].moy >= 0) ? pos + 1 : null;
@@ -88,7 +82,10 @@ function prepareBulletinTrimestreData(eleveId, periode, lang = 'fr', anneeId = n
     const heuresAbsence = absRow?.heures || 0;
 
     return {
-      eleve, notesAgg, notesSub, cfg, periode, lang, rangGeneral, nbElevesClasse, heuresAbsence
+      eleve, notesAgg, notesSub, cfg, periode, lang, rangGeneral, nbElevesClasse, heuresAbsence,
+      moyenneClasse: classStats.moyenneClasse,
+      moyennePremier: classStats.moyennePremier,
+      moyenneDernier: classStats.moyenneDernier
     };
   }
 
@@ -248,11 +245,83 @@ function buildSubCompIndex(lvl) {
 }
 
 /**
+ * Calcule la moyenne générale /20 de tous les élèves d'une classe N1/N2
+ * avec la MÊME formule pondérée que le bulletin (moy20General).
+ * Retourne un tableau trié décroissant + les stats de classe.
+ */
+function computeClassStatsQualitatif(classeId, anneeId, lvl, lesUA) {
+  const tmpl = CURRICULUM_TEMPLATES[lvl];
+  const empty = { sorted: [], moyenneClasse: null, moyennePremier: null, moyenneDernier: null };
+  if (!tmpl || !lesUA.length) return empty;
+
+  const rows = all(`
+    SELECT n.eleve_id, n.sous_competence_code, n.sous_type, n.note
+    FROM notes n JOIN eleves e ON e.id = n.eleve_id
+    WHERE e.classe_id = ? AND n.annee_scolaire_id = ?
+      AND n.ua IN (${lesUA.map(() => '?').join(',')}) AND n.sous_type IS NOT NULL
+  `, [classeId, anneeId, ...lesUA]);
+
+  const byStudent = {};
+  for (const r of rows) {
+    if (!byStudent[r.eleve_id]) byStudent[r.eleve_id] = [];
+    byStudent[r.eleve_id].push(r);
+  }
+
+  const activeTypes = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
+  const stats = [];
+  for (const [eleveId, subRows] of Object.entries(byStudent)) {
+    const byKey = {};
+    for (const r of subRows) {
+      const k = `${r.sous_competence_code}|${r.sous_type}`;
+      if (!byKey[k]) byKey[k] = [];
+      byKey[k].push(r.note);
+    }
+    let totalGeneral = 0;
+    let totalGeneralMaxScale = 0;
+    for (const comp of Object.values(tmpl.competences)) {
+      let compObtained = 0;
+      let compMax = 0;
+      for (const [scCode, sc] of Object.entries(comp.sousCompetences)) {
+        let scObtained = 0;
+        let scMax = 0;
+        for (const type of activeTypes) {
+          const maxPt = sc[type];
+          if (maxPt <= 0) continue;
+          const vals = byKey[`${scCode}|${type}`] || [];
+          for (const v of vals) {
+            scObtained += (v / 20) * maxPt;
+            scMax += maxPt;
+          }
+        }
+        if (scMax > 0) {
+          const scAvgOn20 = (scObtained / scMax) * 20;
+          compObtained += (scAvgOn20 / 20) * sc.total;
+          compMax += sc.total;
+        }
+      }
+      totalGeneral += compObtained;
+      totalGeneralMaxScale += compMax;
+    }
+    const moy = totalGeneralMaxScale > 0 ? (totalGeneral / totalGeneralMaxScale) * 20 : null;
+    if (moy !== null) stats.push({ id: Number(eleveId), moy });
+  }
+
+  stats.sort((a, b) => b.moy - a.moy);
+  const moyennes = stats.map(s => s.moy);
+  return {
+    sorted: stats,
+    moyenneClasse: moyennes.length ? moyennes.reduce((a, b) => a + b, 0) / moyennes.length : null,
+    moyennePremier: moyennes.length ? moyennes[0] : null,
+    moyenneDernier: moyennes.length ? moyennes[moyennes.length - 1] : null
+  };
+}
+
+/**
  * Dessine un bulletin qualitatif (N1/N2) — format référence 2 pages
  * UA1-3 en colonnes horizontales · sous-compétences en lignes
  */
 function drawBulletinQualitatif(doc, data, lang = 'fr') {
-  const { eleve, notesAgg, notesSub, cfg, periode, rangGeneral, nbElevesClasse, heuresAbsence } = data;
+  const { eleve, notesAgg, notesSub, cfg, periode, rangGeneral, nbElevesClasse, heuresAbsence, moyenneClasse, moyennePremier, moyenneDernier } = data;
   const t = getDocTranslator(lang);
   const coulPrimaire = cfg.couleur_primaire || '#26337A';
   const lvl = eleve.niveau_v2;
@@ -869,15 +938,32 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
     }
   });
 
-  // 6. RANG ET MOYENNE (Bandeau bleu marine)
+  // 6. RANG ET MOYENNE (Bandeau bleu marine) + moyennes par UA /20 + stats classe
   const bandeauH = 13;
-  doc.rect(LEFT, y, pageW, bandeauH).fill('#26337A');
+  const bandeauHStats = 18;
+  doc.rect(LEFT, y, pageW, bandeauHStats).fill('#26337A');
   const moyText = `MOYENNE GÉNÉRALE : ${moy20General !== null ? moy20General.toFixed(2) : '—'} / 20`;
   const rangText = `RANG : ${rangGeneral ? ordinalLang(rangGeneral, lang) : '—'} / ${nbElevesClasse}`;
   doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7.5);
-  doc.text(moyText, LEFT + 8, y + (bandeauH - 7.5) / 2 - 0.5);
-  doc.text(rangText, LEFT + pageW - 158, y + (bandeauH - 7.5) / 2 - 0.5, { width: 150, align: 'right' });
-  y += bandeauH + 4;
+  doc.text(moyText, LEFT + 8, y + 2.5);
+  doc.text(rangText, LEFT + pageW - 158, y + 2.5, { width: 150, align: 'right' });
+
+  const uaAvgStr = lesUA
+    .map(ua => {
+      const avg = uaGeneralMax[ua] > 0 ? ((uaGeneralObtained[ua] / uaGeneralMax[ua]) * 20) : null;
+      return `${ua} ${avg !== null ? avg.toFixed(1) : '—'}`;
+    })
+    .join('  ·  ');
+  const classStatsStr = [
+    `${t('class_average')} : ${moyenneClasse != null ? moyenneClasse.toFixed(1) : '—'}`,
+    `${t('class_first')} : ${moyennePremier != null ? moyennePremier.toFixed(1) : '—'}`,
+    `${t('class_last')} : ${moyenneDernier != null ? moyenneDernier.toFixed(1) : '—'}`
+  ].join('  ·  ');
+  doc.fillColor('#cfe0ff').font('Helvetica-Bold').fontSize(6);
+  doc.text(`${t('ua_averages')} : ${uaAvgStr}`, LEFT + 8, y + 11);
+  doc.text(classStatsStr, LEFT + pageW - 320, y + 11, { width: 312, align: 'right' });
+
+  y += bandeauHStats + 4;
 
   // 6b. ABSENCES (Bandeau vert, orange ou rouge selon la gravité)
   if (cfg.afficher_absences !== '0') {
@@ -1299,4 +1385,4 @@ function exportBulletinClassePDF(elevesIds, periode, outputPath, anneeId, lang =
   });
 }
 
-module.exports = { exportBulletinTrimestre, exportBulletinClassePDF };
+module.exports = { exportBulletinTrimestre, exportBulletinClassePDF, prepareBulletinTrimestreData, drawBulletinQualitatif, drawBulletinTrimestre, computeClassStatsQualitatif };
