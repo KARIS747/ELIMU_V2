@@ -51,3 +51,5 @@ clean-shm
 clean-wal
 tmp/
 temp/
+exports/
+*.pdf
