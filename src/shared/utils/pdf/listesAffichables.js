@@ -48,40 +48,60 @@ function buildColumnsN12(lvl, CURRICULUM_TEMPLATES) {
  * @returns {number} y après l'en-tête
  */
 function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW, colMoyW, y) {
-  const headH1 = 15;
-  const headH2 = 13;
   const tableW = pageW;
+  const scW = tableW - colNoW - colNomW - colMoyW;
+  const colW = scW / columns.length;
 
-  // Ligne 1 : groupes (compétences)
-  doc.rect(LEFT, y, tableW, headH1).fill('#1a3c6e');
-  doc.fillColor('#ffffff').font('Helvetica-Bold');
-  let x = LEFT + colNoW + colNomW;
+  // Hauteur ligne 1 : fixe (3 lignes max) pour garder l'en-tête compact et lisible
+  const fsGroup = 6.5;
+  const lineH = 7;
+  const maxLines = 3;
+  const headH1 = maxLines * lineH + 3;
+  const headH2 = 13;
+  const headH = headH1 + headH2;
+
+  doc.save();
+
+  // Ligne 1 : groupes (compétences) — contenus dans leur bande (ellipsis)
+  doc.rect(LEFT + colNoW, y, scW + colMoyW, headH1).fill('#1a3c6e');
+  doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(fsGroup);
+  let x = LEFT + colNoW;
   for (const g of compGroups) {
-    const w = g.count * ((tableW - colNoW - colNomW - colMoyW) / columns.length);
-    doc.fontSize(6).text(g.nom.toUpperCase(), x + 2, y + 4, { width: w - 4, align: 'center', lineBreak: true });
+    const w = g.count * colW;
+    doc.text(g.nom.toUpperCase(), x + 2, y + 1.5, {
+      width: w - 4, height: headH1 - 3, ellipsis: true, align: 'center'
+    });
     x += w;
   }
-  doc.fontSize(6.5).text(t('liste_aff_moy20'), x + 2, y + 4, { width: colMoyW - 4, align: 'center' });
 
   // Ligne 2 : codes des sous-compétences
   const y2 = y + headH1;
-  doc.rect(LEFT, y2, tableW, headH2).fill('#dce3f0');
+  doc.rect(LEFT + colNoW, y2, scW, headH2).fill('#dce3f0');
   doc.fillColor('#111').font('Helvetica-Bold');
-  x = LEFT + colNoW + colNomW;
-  const colW = (tableW - colNoW - colNomW - colMoyW) / columns.length;
+  x = LEFT + colNoW;
   for (const c of columns) {
-    doc.fontSize(7.5).text(c.code, x, y2 + 3.5, { width: colW, align: 'center' });
+    doc.fontSize(8).text(c.code, x, y2 + 3, { width: colW, align: 'center' });
     x += colW;
   }
-  doc.fontSize(7).text(t('liste_aff_moy20'), x, y2 + 3.5, { width: colMoyW, align: 'center' });
 
-  // En-têtes N° / Nom
-  doc.rect(LEFT, y, colNoW, headH1 + headH2).fill('#1a3c6e');
-  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(7)
-    .text(t('col_num_short'), LEFT, y + headH1 / 2 - 2, { width: colNoW, align: 'center' });
-  doc.fontSize(6.5).text(t('col_name_fullname'), LEFT + colNoW, y + headH1 / 2 - 2, { width: colNomW, align: 'center' });
+  // Colonne MOY (réserve sur toute la hauteur des deux lignes)
+  doc.rect(LEFT + pageW - colMoyW, y, colMoyW, headH).fill('#0e2a4d');
+  doc.font('Helvetica-Bold').fontSize(8).fillColor('#fff')
+    .text(t('liste_aff_moy20'), LEFT + pageW - colMoyW, y + headH / 2 - 7, { width: colMoyW, align: 'center' });
 
-  return y2 + headH2;
+  // En-têtes N° / Nom (sur les deux lignes)
+  doc.rect(LEFT, y, colNoW, headH).fill('#0e2a4d');
+  doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
+    .text(t('col_num_short'), LEFT, y + headH / 2 - 4, { width: colNoW, align: 'center' });
+  doc.fontSize(7).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 4, { width: colNomW, align: 'center' });
+
+  doc.restore();
+
+  // Séparateurs verticaux entre les blocs SC (sur les deux lignes d'en-tête)
+  doc.moveTo(LEFT + colNoW, y).lineTo(LEFT + colNoW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(LEFT + pageW - colMoyW, y).lineTo(LEFT + pageW - colMoyW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+
+  return y + headH;
 }
 
 /**
@@ -89,22 +109,40 @@ function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW
  * @returns {number} y après l'en-tête
  */
 function drawHeaderN3(doc, t, LEFT, pageW, matieres, colNoW, colNomW, colMoyW, y) {
-  const headH = 22;
   const tableW = pageW;
-  const colW = (tableW - colNoW - colNomW - colMoyW) / matieres.length;
+  const scW = tableW - colNoW - colNomW - colMoyW;
+  const colW = scW / matieres.length;
 
-  doc.rect(LEFT, y, tableW, headH).fill('#1a3c6e');
+  // Hauteur en-tête : maximise selon le nom de matière le plus long (2 lignes max)
+  const fsMat = 7;
+  let need2 = false;
+  matieres.forEach(m => {
+    const est = Math.ceil(doc.font('Helvetica-Bold').fontSize(fsMat).widthOfString(m.nom.toUpperCase()) / Math.max(colW - 2, 1));
+    if (est > 1) need2 = true;
+  });
+  const headH = need2 ? 26 : 20;
+
+  doc.save();
+
+  doc.rect(LEFT + colNoW, y, scW + colMoyW, headH).fill('#1a3c6e');
   doc.fillColor('#fff').font('Helvetica-Bold');
-  doc.fontSize(7).text(t('col_num_short'), LEFT, y + headH / 2 - 3, { width: colNoW, align: 'center' });
-  doc.fontSize(6).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 3, { width: colNomW, align: 'center' });
+  doc.fontSize(8).text(t('col_num_short'), LEFT, y + headH / 2 - 4, { width: colNoW, align: 'center' });
+  doc.fontSize(7).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 4, { width: colNomW, align: 'center' });
 
   let x = LEFT + colNoW + colNomW;
   matieres.forEach(m => {
-    doc.fontSize(6).text(m.nom.toUpperCase(), x + 1, y + 3, { width: colW - 2, align: 'center', lineBreak: true });
-    doc.fontSize(5.5).text(`(${t('coeff')} ${m.coef})`, x + 1, y + 12, { width: colW - 2, align: 'center' });
+    const textH = doc.fontSize(fsMat).heightOfString(m.nom.toUpperCase(), { width: colW - 2 });
+    doc.text(m.nom.toUpperCase(), x + 1, y + (headH - textH) / 2 - 4, { width: colW - 2, align: 'center', lineBreak: true });
+    doc.fontSize(6).text(`(${t('coeff')} ${m.coef})`, x + 1, y + (headH - textH) / 2 + textH - 2, { width: colW - 2, align: 'center' });
     x += colW;
   });
-  doc.fontSize(6.5).text(t('liste_aff_moy20'), x + 1, y + headH / 2 - 3, { width: colMoyW - 2, align: 'center' });
+  doc.font('Helvetica-Bold').fontSize(8).text(t('liste_aff_moy20'), x + 1, y + headH / 2 - 4, { width: colMoyW - 2, align: 'center' });
+
+  doc.restore();
+
+  doc.moveTo(LEFT + colNoW, y).lineTo(LEFT + colNoW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(LEFT + pageW - colMoyW, y).lineTo(LEFT + pageW - colMoyW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(LEFT, y + 1).lineTo(LEFT + pageW, y + 1).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
 
   return y + headH;
 }
@@ -136,10 +174,10 @@ async function exportListeAffichableN12PDF(docData, outputPath, lang = 'fr') {
 
       const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const LEFT = doc.page.margins.left;
-      const colNoW = 28;
+      const colNoW = 33;
       const colNomW = 150;
-      const colMoyW = 48;
-      const rowH = 16;
+      const colMoyW = 52;
+      const rowH = 18;
 
       docData.tables.forEach((table, ti) => {
         if (ti > 0) doc.addPage();
@@ -182,10 +220,10 @@ async function exportListeAffichableN12PDF(docData, outputPath, lang = 'fr') {
           doc.moveTo(LEFT + colNoW + colNomW, rowTop).lineTo(LEFT + colNoW + colNomW, rowTop + rowH).stroke();
           doc.moveTo(LEFT + pageW - colMoyW, rowTop).lineTo(LEFT + pageW - colMoyW, rowTop + rowH).stroke();
 
-          doc.fillColor('#111').font('Helvetica').fontSize(7.5)
-            .text(String(idx + 1), LEFT, rowTop + 4, { width: colNoW, align: 'center' });
-          doc.font('Helvetica-Bold').fontSize(7)
-            .text(`${st.nom.toUpperCase()} ${st.prenom}`, LEFT + colNoW + 4, rowTop + 4, { width: colNomW - 6, ellipsis: true });
+          doc.fillColor('#111').font('Helvetica').fontSize(8.5)
+            .text(String(idx + 1), LEFT, rowTop + 5, { width: colNoW, align: 'center' });
+          doc.font('Helvetica-Bold').fontSize(7.5)
+            .text(`${st.nom.toUpperCase()} ${st.prenom}`, LEFT + colNoW + 4, rowTop + 5, { width: colNomW - 6, ellipsis: true });
 
           const scCells = cells[st.id] || {};
           let x = LEFT + colNoW + colNomW;
@@ -193,22 +231,22 @@ async function exportListeAffichableN12PDF(docData, outputPath, lang = 'fr') {
             const cell = scCells[c.code];
             if (cell && cell.poids > 0) {
               const totalFmt = Math.round(cell.total * 10) / 10;
-              doc.fillColor('#111').font('Helvetica-Bold').fontSize(7.5)
-                .text(`${totalFmt}/${cell.poids}`, x, rowTop + 4, { width: colW, align: 'center' });
+              doc.fillColor('#0f1d33').font('Helvetica-Bold').fontSize(8)
+                .text(`${totalFmt}/${cell.poids}`, x, rowTop + 5, { width: colW, align: 'center' });
             } else {
-              doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7)
-                .text('—', x, rowTop + 4, { width: colW, align: 'center' });
+              doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7.5)
+                .text('—', x, rowTop + 5, { width: colW, align: 'center' });
             }
             x += colW;
           });
 
           const moy = moyMap[st.id];
           if (moy != null) {
-            doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(7.5)
-              .text(Math.round(moy * 10) / 10, LEFT + pageW - colMoyW, rowTop + 4, { width: colMoyW, align: 'center' });
+            doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(8.5)
+              .text(Math.round(moy * 10) / 10, LEFT + pageW - colMoyW, rowTop + 5, { width: colMoyW, align: 'center' });
           } else {
-            doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7)
-              .text('—', LEFT + pageW - colMoyW, rowTop + 4, { width: colMoyW, align: 'center' });
+            doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7.5)
+              .text('—', LEFT + pageW - colMoyW, rowTop + 5, { width: colMoyW, align: 'center' });
           }
           y += rowH;
         });
@@ -248,10 +286,10 @@ async function exportListeAffichableN3PDF(docData, outputPath, lang = 'fr') {
 
       const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const LEFT = doc.page.margins.left;
-      const colNoW = 28;
+      const colNoW = 33;
       const colNomW = 150;
-      const colMoyW = 48;
-      const rowH = 17;
+      const colMoyW = 52;
+      const rowH = 18;
 
       let y = drawAdminHeader(doc, cfg, 28, lang, false);
 
@@ -288,30 +326,30 @@ async function exportListeAffichableN3PDF(docData, outputPath, lang = 'fr') {
         doc.moveTo(LEFT + colNoW + colNomW, rowTop).lineTo(LEFT + colNoW + colNomW, rowTop + rowH).stroke();
         doc.moveTo(LEFT + pageW - colMoyW, rowTop).lineTo(LEFT + pageW - colMoyW, rowTop + rowH).stroke();
 
-        doc.fillColor('#111').font('Helvetica').fontSize(7.5)
-          .text(String(idx + 1), LEFT, rowTop + 4, { width: colNoW, align: 'center' });
-        doc.font('Helvetica-Bold').fontSize(7)
-          .text(`${row.eleve.nom.toUpperCase()} ${row.eleve.prenom}`, LEFT + colNoW + 4, rowTop + 4, { width: colNomW - 6, ellipsis: true });
+        doc.fillColor('#111').font('Helvetica').fontSize(8.5)
+          .text(String(idx + 1), LEFT, rowTop + 5, { width: colNoW, align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(7.5)
+          .text(`${row.eleve.nom.toUpperCase()} ${row.eleve.prenom}`, LEFT + colNoW + 4, rowTop + 5, { width: colNomW - 6, ellipsis: true });
 
         let x = LEFT + colNoW + colNomW;
         docData.matieres.forEach(m => {
           const note = row.notes[m.matiere_id];
           if (note != null) {
-            doc.fillColor('#111').font('Helvetica-Bold').fontSize(7.5)
-              .text(Math.round(note * 100) / 100, x, rowTop + 4, { width: colW, align: 'center' });
+            doc.fillColor('#0f1d33').font('Helvetica-Bold').fontSize(8)
+              .text(Math.round(note * 100) / 100, x, rowTop + 5, { width: colW, align: 'center' });
           } else {
-            doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7)
-              .text('—', x, rowTop + 4, { width: colW, align: 'center' });
+            doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7.5)
+              .text('—', x, rowTop + 5, { width: colW, align: 'center' });
           }
           x += colW;
         });
 
         if (row.moy != null) {
-          doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(7.5)
-            .text(Math.round(row.moy * 100) / 100, LEFT + pageW - colMoyW, rowTop + 4, { width: colMoyW, align: 'center' });
+          doc.fillColor(coulPrimaire).font('Helvetica-Bold').fontSize(8.5)
+            .text(Math.round(row.moy * 100) / 100, LEFT + pageW - colMoyW, rowTop + 5, { width: colMoyW, align: 'center' });
         } else {
-          doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7)
-            .text('—', LEFT + pageW - colMoyW, rowTop + 4, { width: colMoyW, align: 'center' });
+          doc.fillColor('#b9c2d0').font('Helvetica').fontSize(7.5)
+            .text('—', LEFT + pageW - colMoyW, rowTop + 5, { width: colMoyW, align: 'center' });
         }
         y += rowH;
       });
