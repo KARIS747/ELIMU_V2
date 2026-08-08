@@ -28,7 +28,7 @@
 | `../ELIMU_V2_ARCHITECTURE.md` | Architecture détaillée, templates, barèmes, flux de données |
 | `../ELIMU_V2_DESIGN_TRANSITION.md` | Design de transition V1→V2, profil élève adaptatif |
 | `../ELIMU_CURRICULUM_N1_N2.md` | Curriculum officiel MINEDUB Niveau 1 (SIL/CP) et Niveau 2 (CE1/CE2) |
-| `../ELIMU_CURRICULUM_N3.md` | Curriculum officiel MINEDUB Niveau 3 (CM1/CM2) |
+| `../ELIMU_CURRICULUM_N3.md` | Curriculum officiel MINEDUB Niveau 3 — CM1 passé en APC, CM2 seul en classique |
 | `gemini/GEMINI.md` | Règles de codage pour l'IA (sécurité, perf, i18n, etc.) |
 | `gemini/V2_IMPLEMENTATION_STATE.md` | État d'avancement phase 1 (migration schéma, curriculum, UI) |
 | `docs/CALCUL_NOTES_N1_N2.md` | Documentation détaillée des formules de calcul N1/N2 |
@@ -123,7 +123,8 @@ ELIMU_V2/
 |--------|---------|---------|-------|--------|
 | **N1** | SIL, CP | Compétences + UA (qualitatif 4 niveaux) | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
 | **N2** | CE1, CE2 | Compétences + UA (qualitatif 4 niveaux) | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
-| **N3** | CM1, CM2 | Classique /20 (quantitatif, trimestres) | — | `ELIMU_CURRICULUM_N3.md` |
+| **N2-APC** | CM1 | Compétences + UA (qualitatif 4 niveaux) — **CM1 utilisé en APC, `niveau_v2='N2'`** | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
+| **N3** | CM2 | Classique /20 (quantitatif, trimestres) — **seul niveau resté en classique** | — | `ELIMU_CURRICULUM_N3.md` |
 
 ### 4.2 Cotation qualitative (N1/N2)
 
@@ -326,9 +327,9 @@ Le calcul des notes N1/N2 contenait une **erreur fondamentale** dans toute la st
 
 ---
 
-## 10. N3 (CM1/CM2) — VÉRIFICATION
+## 10. N3 (CM2) — VÉRIFICATION
 
-Le niveau 3 conserve le système classique de la V1 :
+Le niveau 3 (désormais **réservé au CM2**) conserve le système classique de la V1 :
 - Matières fixes (22 matières, codifiées dans `CURRICULUM_TEMPLATES.N3.matieresFixes`)
 - Notes /20 par matière
 - 3 Trimestres × 2 Séquences

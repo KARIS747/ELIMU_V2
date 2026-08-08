@@ -93,8 +93,8 @@ export function afficherClasses(classes) {
 
     const niveauV2 = c.niveau_v2;
     const niveauV2Label = niveauV2 === 'N1' ? 'SIL/CP'
-      : niveauV2 === 'N2' ? 'CE1/CE2'
-      : niveauV2 === 'N3' ? 'CM1/CM2'
+      : niveauV2 === 'N2' ? 'CE1/CE2/CM1'
+      : niveauV2 === 'N3' ? 'CM2'
       : null;
     const niveauV2Color = niveauV2 === 'N1' ? 'rgba(0,230,118,0.15)'
       : niveauV2 === 'N2' ? 'rgba(61,142,248,0.15)'

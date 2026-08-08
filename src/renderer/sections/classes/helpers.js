@@ -23,7 +23,7 @@ export function getMatieresPourPreset(preset, systeme = 'francophone') {
     return list;
   }
 
-  if (preset === 'CE1' || preset === 'CE2') {
+  if (preset === 'CE1' || preset === 'CE2' || preset === 'CM1') {
     const competences = CLASS_TEMPLATES.template_CE1.competences;
     const list = [];
     competences.forEach(comp => {
@@ -41,7 +41,7 @@ export function getMatieresPourPreset(preset, systeme = 'francophone') {
     return list;
   }
 
-  if (preset === 'CM1' || preset === 'CM2') {
+  if (preset === 'CM2') {
     const list = [];
     const subjects = [
       { nom: 'Dictée', groupe: 'Français' },

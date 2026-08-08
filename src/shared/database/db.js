@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 122; // v1.2.2 (colonne matricule dans eleves)
+const CURRENT_SCHEMA_VERSION = 123; // v1.2.3 (CM1 passe en notation N2/APC)
 
 /**
  * Initialise la base de données et applique le schéma
@@ -279,6 +279,22 @@ async function initializeDatabase(customPath = null) {
     }
   } catch (err) {
     console.warn(`Note sur la migration sous_type: ${err.message}`);
+  }
+
+  // Migration : CM1 passe en notation N2 (APC) — MINEDUB a intégré CM1 dans l'approche par compétences
+  // CM2 reste en N3 (classique). N'affecte pas les notes existantes (conservées en historique).
+  try {
+    const classeCols = db.prepare("PRAGMA table_info(classes)").all().map(c => c.name);
+    if (classeCols.includes('niveau_v2')) {
+      const changed = db.prepare(
+        "UPDATE classes SET niveau_v2 = 'N2' WHERE niveau_v2 = 'N3' AND (nom_classe GLOB 'CM1*' OR nom_classe LIKE 'CM1 %' OR nom_classe LIKE 'CM1_%') AND nom_classe NOT GLOB 'CM2*'"
+      ).run();
+      if (changed.changes > 0) {
+        console.log(`🔄 Migration : ${changed.changes} classe(s) CM1 basculée(s) en N2 (APC)`);
+      }
+    }
+  } catch (e) {
+    console.warn(`Note sur la migration CM1 → N2: ${e.message}`);
   }
 
   // Migration spécifique pour la contrainte CHECK du rôle comptable

@@ -64,7 +64,7 @@ function attacherEvenements() {
     CP:   { niveau: 'Primaire', niveau_v2: 'N1' },
     CE1:  { niveau: 'Primaire', niveau_v2: 'N2' },
     CE2:  { niveau: 'Primaire', niveau_v2: 'N2' },
-    CM1:  { niveau: 'Primaire', niveau_v2: 'N3' },
+    CM1:  { niveau: 'Primaire', niveau_v2: 'N2' },
     CM2:  { niveau: 'Primaire', niveau_v2: 'N3' },
   };
 

@@ -120,7 +120,8 @@ async function importPwaNotesSheet(ws, resultat, ecoleId, anneeId, genererTranch
         const n = (classe.nom_classe || '').toUpperCase();
         if (n.includes('SIL') || n.includes('CP')) lvl = 'N1';
         else if (n.includes('CE1') || n.includes('CE2')) lvl = 'N2';
-        else if (n.includes('CM1') || n.includes('CM2')) lvl = 'N3';
+        else if (n.includes('CM1')) lvl = 'N2';
+        else if (n.includes('CM2')) lvl = 'N3';
       }
 
       if (lvl !== 'N1' && lvl !== 'N2') {
@@ -252,11 +253,18 @@ async function importPwaNotesN3Sheet(ws, resultat, ecoleId, anneeId, classeFallb
       if (!nom || !classeNom || isNaN(noteVal) || noteVal < 0) continue;
 
       if (!classeCache[classeNom]) {
-        classeCache[classeNom] = get('SELECT id FROM classes WHERE nom_classe=? AND ecole_id=?', [classeNom, ecoleId]);
+        classeCache[classeNom] = get('SELECT id, niveau_v2, nom_classe FROM classes WHERE nom_classe=? AND ecole_id=?', [classeNom, ecoleId]);
       }
       const classe = classeCache[classeNom];
       if (!classe) {
         resultat.avertissements.push(`N3 L${rowNumber}: Classe "${classeNom}" introuvable`);
+        continue;
+      }
+      const niveauEffectif = classe.niveau_v2 || (
+        (classe.nom_classe || '').toUpperCase().includes('CM2') ? 'N3' : ''
+      );
+      if (niveauEffectif !== 'N3') {
+        resultat.avertissements.push(`N3 L${rowNumber}: Classe "${classeNom}" n'est pas un niveau 3 (niveau_v2='${classe.niveau_v2 || 'indéfini'}') — ligne ignorée`);
         continue;
       }
 

@@ -98,8 +98,8 @@ src/
 | Niveau | Classes | Système |
 |--------|---------|---------|
 | N1 | SIL, CP | Compétences + UA (qualitatif NA/ECA/A/A+) |
-| N2 | CE1, CE2 | Compétences + UA (qualitatif NA/ECA/A/A+) |
-| N3 | CM1, CM2 | Classique /20 (quantitatif, 3 trimestres × 2 séquences) |
+| N2 | CE1, CE2, CM1 | Compétences + UA (qualitatif NA/ECA/A/A+) — CM1 en APC |
+| N3 | CM2 | Classique /20 (quantitatif, 3 trimestres × 2 séquences) |
 
 ## Documentation
 

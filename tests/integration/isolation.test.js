@@ -22,7 +22,7 @@ describe('Isolation multi-école Desktop', () => {
     await run("INSERT INTO professeurs (nom, prenom, ecole_id) VALUES ('Doe', 'Marie', ?)", [ECOLE_B]);
 
     await run("INSERT INTO classes (nom_classe, niveau, niveau_v2, ecole_id) VALUES ('CP-A', 'Primaire', 'N1', ?)", [ECOLE_A]);
-    await run("INSERT INTO classes (nom_classe, niveau, niveau_v2, ecole_id) VALUES ('CM1-A', 'Primaire', 'N3', ?)", [ECOLE_B]);
+    await run("INSERT INTO classes (nom_classe, niveau, niveau_v2, ecole_id) VALUES ('CM1-A', 'Primaire', 'N2', ?)", [ECOLE_B]);
 
     const classeA = await get('SELECT id FROM classes WHERE nom_classe = ?', ['CP-A']);
     const classeB = await get('SELECT id FROM classes WHERE nom_classe = ?', ['CM1-A']);

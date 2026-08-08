@@ -37,8 +37,13 @@ export async function ouvrirDetail(classeId) {
     : null;
   const nbEnDifficulte = eleves.filter(e => e.moyenne_generale && e.moyenne_generale < 10).length;
 
+  const estQualitative = classe?.niveau_v2 === 'N1' || classe?.niveau_v2 === 'N2';
+  const notationLabel = estQualitative
+    ? t('classes.detail_notation_qualitative')
+    : t('classes.detail_notation_quantitative');
+
   content.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">
       ${[
         { val: eleves.length, label: t('classes.detail_label_students'), color: 'var(--text-primary)' },
         { val: moyClasse ? moyClasse + '/20' : '\u2014', label: t('classes.detail_label_average'),
@@ -50,6 +55,10 @@ export async function ouvrirDetail(classeId) {
           <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:${k.color};">${k.val}</div>
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">${k.label}</div>
         </div>`).join('')}
+      <div style="background:var(--bg-secondary);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;color:${estQualitative ? 'var(--green-fifa)' : 'var(--purple-fifa)'};">${notationLabel}</div>
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">${t('classes.detail_label_notation')}</div>
+      </div>
     </div>
 
     ${matieres.length ? `

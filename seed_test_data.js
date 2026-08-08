@@ -251,7 +251,7 @@ try {
   const classesData = [
     { nom: 'SIL-A', niveau_v2: 'N1', systeme: 'francophone' },
     { nom: 'CE1-A', niveau_v2: 'N2', systeme: 'francophone' },
-    { nom: 'CM1-A', niveau_v2: 'N3', systeme: 'francophone' },
+    { nom: 'CM1-A', niveau_v2: 'N2', systeme: 'francophone' },
   ];
   const classIds = {};
   for (const cd of classesData) {
@@ -261,9 +261,9 @@ try {
           [cd.nom, 'Primaire', cd.systeme, cd.niveau_v2, '[]', ecoleId]);
       c = get("SELECT id FROM classes WHERE nom_classe=? AND niveau_v2=?", [cd.nom, cd.niveau_v2]);
     }
-    classIds[cd.niveau_v2] = c.id;
+    classIds[cd.nom] = c.id;
   }
-  console.log('  ✅ Classes SIL(N1), CE1(N2), CM1(N3)');
+  console.log('  ✅ Classes SIL(N1), CE1(N2), CM1(N2-APC)');
 
   // ── 5. Comptes enseignants ───────────────────────────────────────
   const adminExists = get("SELECT id FROM utilisateurs WHERE nom_utilisateur=? AND ecole_id=?", ['admin', ecoleId]);
@@ -278,9 +278,9 @@ try {
 
   const PWD_HASH = bcrypt.hashSync('teacher123', 10);
   const teacherData = [
-    { username: 'sil.a',  nom: 'Nkono',   prenom: 'Jean',  classe_nom: 'SIL-A', niveau: 'N1', classe_id: classIds['N1'], tel: '600000001' },
-    { username: 'ce1.a',  nom: 'Mvondo',  prenom: 'Paul',  classe_nom: 'CE1-A', niveau: 'N2', classe_id: classIds['N2'], tel: '600000002' },
-    { username: 'cm1.a',  nom: 'Essomba', prenom: 'Marie', classe_nom: 'CM1-A', niveau: 'N3', classe_id: classIds['N3'], tel: '600000003' },
+    { username: 'sil.a',  nom: 'Nkono',   prenom: 'Jean',  classe_nom: 'SIL-A', niveau: 'N1', classe_id: classIds['SIL-A'], tel: '600000001' },
+    { username: 'ce1.a',  nom: 'Mvondo',  prenom: 'Paul',  classe_nom: 'CE1-A', niveau: 'N2', classe_id: classIds['CE1-A'], tel: '600000002' },
+    { username: 'cm1.a',  nom: 'Essomba', prenom: 'Marie', classe_nom: 'CM1-A', niveau: 'N2', classe_id: classIds['CM1-A'], tel: '600000003' },
   ];
   let teacherCount = 0;
   for (const td of teacherData) {
@@ -331,9 +331,9 @@ try {
     return ids;
   }
 
-  const silIds = createEleves(classIds['N1'], 12);
-  const ce1Ids = createEleves(classIds['N2'], 12);
-  const cm1Ids = createEleves(classIds['N3'], 12);
+  const silIds = createEleves(classIds['SIL-A'], 12);
+  const ce1Ids = createEleves(classIds['CE1-A'], 12);
+  const cm1Ids = createEleves(classIds['CM1-A'], 12);
   console.log(`  ✅ ${eleveCount} élèves`);
 
   // ── Parents ──────────────────────────────────────────────────────
@@ -397,25 +397,10 @@ try {
 
   const n1Count = generateNotesN1N2(silIds, N1_POIDS, CURRICULUM.N1, 'N1');
   const n2Count = generateNotesN1N2(ce1Ids, N2_POIDS, CURRICULUM.N2, 'N2');
+  const cm1Count = generateNotesN1N2(cm1Ids, N2_POIDS, CURRICULUM.N2, 'N2');
   console.log(`  ✅ ${n1Count} notes N1 (SIL) — 4 sous-types + 1 agrégée par sc`);
   console.log(`  ✅ ${n2Count} notes N2 (CE1) — 4 sous-types + 1 agrégée par sc`);
-
-  // ── 7. Notes N3 (3 trimestres × 2 séquences) ─────────────────────
-  let n3Count = 0;
-  for (const periode of PERIODES) {
-    for (const seq of [1, 2]) {
-      for (const eid of cm1Ids) {
-        for (const matId of Object.values(matieresMap)) {
-          run(
-            "INSERT INTO notes (eleve_id,matiere_id,note,periode,sequence,annee_scolaire_id,source,ecole_id) VALUES (?,?,?,?,?,?,?,?)",
-            [eid, matId, rand(3, 19), periode, seq, anneeId, 'SEED', ecoleId]
-          );
-          n3Count++;
-        }
-      }
-    }
-  }
-  console.log(`  ✅ ${n3Count} notes N3 (CM1) — 3 trimestres × 2 séquences`);
+  console.log(`  ✅ ${cm1Count} notes N2-APC (CM1) — 4 sous-types + 1 agrégée par sc`);
 
   // ── 8. Absences (3 trimestres) ──────────────────────────────────
   let absCount = 0;

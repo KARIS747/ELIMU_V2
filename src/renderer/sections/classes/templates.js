@@ -64,10 +64,10 @@ export const CLASS_TEMPLATES = {
   template_CM1: {
     id: 'template_CM1',
     nom: 'Modèle CM1',
-    niveau: 'N3',
-    systeme: 'classique',
-    total_points: 20,
-    competences: []
+    niveau: 'N2',
+    systeme: 'francophone_nouveau',
+    total_points: 320,
+    competences: getCompetencesN2()
   },
   template_CM2: {
     id: 'template_CM2',

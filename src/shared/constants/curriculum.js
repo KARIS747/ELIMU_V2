@@ -140,7 +140,7 @@ const CURRICULUM_TEMPLATES = {
       }
     }
   },
-  // NIVEAU 3 : CM1 et CM2 (Système Quantitatif Classique)
+  // NIVEAU 3 : CM2 (Système Quantitatif Classique) — CM1 est passé en APC (N2)
   'N3': {
     systeme: 'quantitatif',
     matieresFixes: {

@@ -63,7 +63,7 @@ function populateNiveauSelect() {
   currentNiveauxDisponibles.forEach(n => {
     const opt = document.createElement('option');
     opt.value = n;
-    const labels = { N1: 'N1 (SIL/CP)', N2: 'N2 (CE1/CE2)', N3: 'N3 (CM1/CM2)', Autre: 'Autre' };
+    const labels = { N1: 'N1 (SIL/CP)', N2: 'N2 (CE1/CE2/CM1)', N3: 'N3 (CM2)', Autre: 'Autre' };
     opt.textContent = labels[n] || n;
     select.appendChild(opt);
   });
