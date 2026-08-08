@@ -49,8 +49,10 @@ function buildColumnsN12(lvl, CURRICULUM_TEMPLATES) {
  */
 function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW, colMoyW, y) {
   const tableW = pageW;
-  const scW = tableW - colNoW - colNomW - colMoyW;
+  const scStart = LEFT + colNoW + colNomW;          // début de la zone des sous-compétences
+  const scW = tableW - colNoW - colNomW - colMoyW;  // largeur zone SC
   const colW = scW / columns.length;
+  const moyStart = LEFT + pageW - colMoyW;
 
   // Hauteur ligne 1 : fixe (3 lignes max) pour garder l'en-tête compact et lisible
   const fsGroup = 6.5;
@@ -63,43 +65,44 @@ function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW
   doc.save();
 
   // Ligne 1 : groupes (compétences) — contenus dans leur bande (ellipsis)
-  doc.rect(LEFT + colNoW, y, scW + colMoyW, headH1).fill('#1a3c6e');
+  doc.rect(scStart, y, scW, headH1).fill('#1a3c6e');
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(fsGroup);
-  let x = LEFT + colNoW;
+  let x = scStart;
   for (const g of compGroups) {
-    const w = g.count * colW;
+    const wdt = g.count * colW;
     doc.text(g.nom.toUpperCase(), x + 2, y + 1.5, {
-      width: w - 4, height: headH1 - 3, ellipsis: true, align: 'center'
+      width: wdt - 4, height: headH1 - 3, ellipsis: true, align: 'center'
     });
-    x += w;
+    x += wdt;
   }
 
   // Ligne 2 : codes des sous-compétences
   const y2 = y + headH1;
-  doc.rect(LEFT + colNoW, y2, scW, headH2).fill('#dce3f0');
+  doc.rect(scStart, y2, scW, headH2).fill('#dce3f0');
   doc.fillColor('#111').font('Helvetica-Bold');
-  x = LEFT + colNoW;
+  x = scStart;
   for (const c of columns) {
     doc.fontSize(8).text(c.code, x, y2 + 3, { width: colW, align: 'center' });
     x += colW;
   }
 
-  // Colonne MOY (réserve sur toute la hauteur des deux lignes)
-  doc.rect(LEFT + pageW - colMoyW, y, colMoyW, headH).fill('#0e2a4d');
-  doc.font('Helvetica-Bold').fontSize(8).fillColor('#fff')
-    .text(t('liste_aff_moy20'), LEFT + pageW - colMoyW, y + headH / 2 - 7, { width: colMoyW, align: 'center' });
-
-  // En-têtes N° / Nom (sur les deux lignes)
-  doc.rect(LEFT, y, colNoW, headH).fill('#0e2a4d');
+  // Bloc N° + Nom (sur les deux lignes)
+  doc.rect(LEFT, y, colNoW + colNomW, headH).fill('#0e2a4d');
   doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
     .text(t('col_num_short'), LEFT, y + headH / 2 - 4, { width: colNoW, align: 'center' });
   doc.fontSize(7).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 4, { width: colNomW, align: 'center' });
 
+  // Bloc MOY (sur les deux lignes)
+  doc.rect(moyStart, y, colMoyW, headH).fill('#0e2a4d');
+  doc.font('Helvetica-Bold').fontSize(8)
+    .text(t('liste_aff_moy20'), moyStart, y + headH / 2 - 7, { width: colMoyW, align: 'center' });
+
   doc.restore();
 
-  // Séparateurs verticaux entre les blocs SC (sur les deux lignes d'en-tête)
+  // Séparateurs verticaux alignés avec les bordures de données
   doc.moveTo(LEFT + colNoW, y).lineTo(LEFT + colNoW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
-  doc.moveTo(LEFT + pageW - colMoyW, y).lineTo(LEFT + pageW - colMoyW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(scStart, y).lineTo(scStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(moyStart, y).lineTo(moyStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
 
   return y + headH;
 }
@@ -110,8 +113,10 @@ function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW
  */
 function drawHeaderN3(doc, t, LEFT, pageW, matieres, colNoW, colNomW, colMoyW, y) {
   const tableW = pageW;
-  const scW = tableW - colNoW - colNomW - colMoyW;
+  const scStart = LEFT + colNoW + colNomW;          // début de la zone des matières
+  const scW = tableW - colNoW - colNomW - colMoyW;  // largeur zone matières
   const colW = scW / matieres.length;
+  const moyStart = LEFT + pageW - colMoyW;
 
   // Hauteur en-tête : maximise selon le nom de matière le plus long (2 lignes max)
   const fsMat = 7;
@@ -124,24 +129,31 @@ function drawHeaderN3(doc, t, LEFT, pageW, matieres, colNoW, colNomW, colMoyW, y
 
   doc.save();
 
-  doc.rect(LEFT + colNoW, y, scW + colMoyW, headH).fill('#1a3c6e');
+  // Bloc N° + Nom
+  doc.rect(LEFT, y, colNoW + colNomW, headH).fill('#0e2a4d');
   doc.fillColor('#fff').font('Helvetica-Bold');
   doc.fontSize(8).text(t('col_num_short'), LEFT, y + headH / 2 - 4, { width: colNoW, align: 'center' });
   doc.fontSize(7).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 4, { width: colNomW, align: 'center' });
 
-  let x = LEFT + colNoW + colNomW;
+  // Zone matières
+  doc.rect(scStart, y, scW, headH).fill('#1a3c6e');
+  let x = scStart;
   matieres.forEach(m => {
     const textH = doc.fontSize(fsMat).heightOfString(m.nom.toUpperCase(), { width: colW - 2 });
     doc.text(m.nom.toUpperCase(), x + 1, y + (headH - textH) / 2 - 4, { width: colW - 2, align: 'center', lineBreak: true });
     doc.fontSize(6).text(`(${t('coeff')} ${m.coef})`, x + 1, y + (headH - textH) / 2 + textH - 2, { width: colW - 2, align: 'center' });
     x += colW;
   });
-  doc.font('Helvetica-Bold').fontSize(8).text(t('liste_aff_moy20'), x + 1, y + headH / 2 - 4, { width: colMoyW - 2, align: 'center' });
+
+  // Bloc MOY
+  doc.rect(moyStart, y, colMoyW, headH).fill('#0e2a4d');
+  doc.font('Helvetica-Bold').fontSize(8).text(t('liste_aff_moy20'), moyStart, y + headH / 2 - 4, { width: colMoyW, align: 'center' });
 
   doc.restore();
 
   doc.moveTo(LEFT + colNoW, y).lineTo(LEFT + colNoW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
-  doc.moveTo(LEFT + pageW - colMoyW, y).lineTo(LEFT + pageW - colMoyW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(scStart, y).lineTo(scStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
+  doc.moveTo(moyStart, y).lineTo(moyStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
   doc.moveTo(LEFT, y + 1).lineTo(LEFT + pageW, y + 1).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
 
   return y + headH;
