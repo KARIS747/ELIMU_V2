@@ -48,31 +48,32 @@ function buildColumnsN12(lvl, CURRICULUM_TEMPLATES) {
  * @returns {number} y après l'en-tête
  */
 function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW, colMoyW, y) {
-  const tableW = pageW;
   const scStart = LEFT + colNoW + colNomW;          // début de la zone des sous-compétences
-  const scW = tableW - colNoW - colNomW - colMoyW;  // largeur zone SC
+  const scW = pageW - colNoW - colNomW - colMoyW;   // largeur zone SC
   const colW = scW / columns.length;
   const moyStart = LEFT + pageW - colMoyW;
-
-  // Hauteur ligne 1 : fixe (3 lignes max) pour garder l'en-tête compact et lisible
   const fsGroup = 6.5;
-  const lineH = 7;
-  const maxLines = 3;
-  const headH1 = maxLines * lineH + 3;
+
+  // Hauteur ligne 1 : s'adapte au nom de compétence le plus long (taille réelle),
+  // pour ne jamais tronquer un titre en plein milieu d'une phrase.
+  let headH1 = 16;
+  compGroups.forEach(g => {
+    const h = doc.font('Helvetica-Bold').fontSize(fsGroup).heightOfString(g.nom.toUpperCase(), { width: g.count * colW - 4 });
+    if (h + 4 > headH1) headH1 = h + 4;
+  });
   const headH2 = 13;
   const headH = headH1 + headH2;
 
   doc.save();
 
-  // Ligne 1 : groupes (compétences) — contenus dans leur bande (ellipsis)
+  // Ligne 1 : groupes (compétences) — noms complets, centrés dans leur bande
   doc.rect(scStart, y, scW, headH1).fill('#1a3c6e');
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(fsGroup);
   let x = scStart;
   for (const g of compGroups) {
     const wdt = g.count * colW;
-    doc.text(g.nom.toUpperCase(), x + 2, y + 1.5, {
-      width: wdt - 4, height: headH1 - 3, ellipsis: true, align: 'center'
-    });
+    doc.text(g.nom.toUpperCase(), x + 2, y + 2, { width: wdt - 4, align: 'center', lineBreak: true });
+    doc.moveTo(x, y).lineTo(x, y + headH1).strokeColor('#32537e').lineWidth(0.6).stroke();
     x += wdt;
   }
 
@@ -84,22 +85,23 @@ function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW
   for (const c of columns) {
     doc.fontSize(8).text(c.code, x, y2 + 3, { width: colW, align: 'center' });
     x += colW;
+    doc.moveTo(x, y2).lineTo(x, y2 + headH2).strokeColor('#9fb3d0').lineWidth(0.6).stroke();
   }
 
-  // Bloc N° + Nom (sur les deux lignes)
+  // Bloc N° + Nom
   doc.rect(LEFT, y, colNoW + colNomW, headH).fill('#0e2a4d');
   doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
     .text(t('col_num_short'), LEFT, y + headH / 2 - 4, { width: colNoW, align: 'center' });
   doc.fontSize(7).text(t('col_name_fullname'), LEFT + colNoW, y + headH / 2 - 4, { width: colNomW, align: 'center' });
 
-  // Bloc MOY (sur les deux lignes)
+  // Bloc MOY
   doc.rect(moyStart, y, colMoyW, headH).fill('#0e2a4d');
   doc.font('Helvetica-Bold').fontSize(8)
     .text(t('liste_aff_moy20'), moyStart, y + headH / 2 - 7, { width: colMoyW, align: 'center' });
 
   doc.restore();
 
-  // Séparateurs verticaux alignés avec les bordures de données
+  // Séparateurs verticaux garment alignés avec les colonnes de données
   doc.moveTo(LEFT + colNoW, y).lineTo(LEFT + colNoW, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
   doc.moveTo(scStart, y).lineTo(scStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
   doc.moveTo(moyStart, y).lineTo(moyStart, y + headH).strokeColor('#5b7bb0').lineWidth(0.6).stroke();
@@ -138,11 +140,14 @@ function drawHeaderN3(doc, t, LEFT, pageW, matieres, colNoW, colNomW, colMoyW, y
   // Zone matières
   doc.rect(scStart, y, scW, headH).fill('#1a3c6e');
   let x = scStart;
-  matieres.forEach(m => {
+  matieres.forEach((m, mi) => {
     const textH = doc.fontSize(fsMat).heightOfString(m.nom.toUpperCase(), { width: colW - 2 });
     doc.text(m.nom.toUpperCase(), x + 1, y + (headH - textH) / 2 - 4, { width: colW - 2, align: 'center', lineBreak: true });
     doc.fontSize(6).text(`(${t('coeff')} ${m.coef})`, x + 1, y + (headH - textH) / 2 + textH - 2, { width: colW - 2, align: 'center' });
     x += colW;
+    if (mi < matieres.length - 1) {
+      doc.moveTo(x, y).lineTo(x, y + headH).strokeColor('#32537e').lineWidth(0.6).stroke();
+    }
   });
 
   // Bloc MOY
@@ -239,7 +244,7 @@ async function exportListeAffichableN12PDF(docData, outputPath, lang = 'fr') {
 
           const scCells = cells[st.id] || {};
           let x = LEFT + colNoW + colNomW;
-          docData.columns.forEach(c => {
+          docData.columns.forEach((c, colIdx) => {
             const cell = scCells[c.code];
             if (cell && cell.poids > 0) {
               const totalFmt = Math.round(cell.total * 10) / 10;
@@ -250,6 +255,9 @@ async function exportListeAffichableN12PDF(docData, outputPath, lang = 'fr') {
                 .text('—', x, rowTop + 5, { width: colW, align: 'center' });
             }
             x += colW;
+            if (colIdx < docData.columns.length - 1) {
+              doc.moveTo(x, rowTop).lineTo(x, rowTop + rowH).strokeColor('#d5dce8').lineWidth(0.4).stroke();
+            }
           });
 
           const moy = moyMap[st.id];
@@ -344,7 +352,7 @@ async function exportListeAffichableN3PDF(docData, outputPath, lang = 'fr') {
           .text(`${row.eleve.nom.toUpperCase()} ${row.eleve.prenom}`, LEFT + colNoW + 4, rowTop + 5, { width: colNomW - 6, ellipsis: true });
 
         let x = LEFT + colNoW + colNomW;
-        docData.matieres.forEach(m => {
+        docData.matieres.forEach((m, mi) => {
           const note = row.notes[m.matiere_id];
           if (note != null) {
             doc.fillColor('#0f1d33').font('Helvetica-Bold').fontSize(8)
@@ -354,6 +362,9 @@ async function exportListeAffichableN3PDF(docData, outputPath, lang = 'fr') {
               .text('—', x, rowTop + 5, { width: colW, align: 'center' });
           }
           x += colW;
+          if (mi < docData.matieres.length - 1) {
+            doc.moveTo(x, rowTop).lineTo(x, rowTop + rowH).strokeColor('#d5dce8').lineWidth(0.4).stroke();
+          }
         });
 
         if (row.moy != null) {
