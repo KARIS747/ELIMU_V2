@@ -287,19 +287,41 @@ function drawAdminHeader(doc, cfg, yStart, lang = 'fr', isMinimal = false) {
 /**
  * Dessine le logo de l'établissement en filigrane au centre de la page,
  * au-dessus des écritures. Le logo garde ses couleurs d'origine (non teinté).
- * Si aucun logo n'est configuré, ne fait rien.
+ * La taille d'affichage s'adapte aux dimensions natives du logo (ratio conservé)
+ * pour qu'il reste net et bien visible. Si aucun logo n'est configuré, ne fait rien.
  */
 function drawLogoFiligrane(doc, cfg, opts = {}) {
   if (!cfg || !cfg.etab_logo) return;
-  const { size = 180, opacity = 0.12 } = opts;
+  const { maxSize = null, opacity = 0.25 } = opts;
   try {
     const logoData = cfg.etab_logo;
     const imgBuf = Buffer.from(logoData.split(',')[1], 'base64');
+
+    // Dimensions natives de l'image (sans déformation)
+    const img = doc.openImage(imgBuf);
+    const iw = img.width || 1;
+    const ih = img.height || 1;
+
+    // Taille max : ~55% de la plus petite dimension de la page, ou valeur forcée
+    const pageMax = Math.min(doc.page.width, doc.page.height) * 0.55;
+    const max = maxSize || pageMax;
+
+    // Calculer w/h en conservant le ratio, borné par max
+    const ratio = iw / ih;
+    let w, h;
+    if (ratio >= 1) {
+      w = Math.min(max, iw);
+      h = w / ratio;
+    } else {
+      h = Math.min(max, ih);
+      w = h * ratio;
+    }
+
     const centerX = doc.page.width / 2;
     const centerY = doc.page.height / 2;
     doc.save();
     doc.opacity(opacity);
-    doc.image(imgBuf, centerX - size / 2, centerY - size / 2, { fit: [size, size], align: 'center', valign: 'center' });
+    doc.image(imgBuf, centerX - w / 2, centerY - h / 2, { width: w, height: h });
     doc.restore();
   } catch (e) {
     // Logo invalide : ignorer le filigrane
