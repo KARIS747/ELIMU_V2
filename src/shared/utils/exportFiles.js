@@ -355,7 +355,7 @@ async function exportListeProfesseursPDF(enseignants, options, outputPath, lang 
       }
 
       const tableTop = y2 + 22;
-      const colNo = 30, colNom = 240, colMatiere = 130, colTel = 100;
+      const colNo = 30, colNom = 240, colTel = 100;
       const rowH = 20;
 
       const drawHeader = (top) => {
@@ -363,8 +363,7 @@ async function exportListeProfesseursPDF(enseignants, options, outputPath, lang 
         doc.fontSize(8).fillColor('#ffffff').font('Helvetica-Bold');
         doc.text(t('col_num_short'), 50, top + 7, { width: colNo, align: 'center' });
         doc.text(t('col_name_fullname'), 50 + colNo, top + 7, { width: colNom, align: 'center' });
-        doc.text(t('liste_profs_col_discipline'), 50 + colNo + colNom, top + 7, { width: colMatiere, align: 'center' });
-        doc.text(t('liste_profs_col_phone'), 50 + colNo + colNom + colMatiere, top + 7, { width: colTel, align: 'center' });
+        doc.text(t('liste_profs_col_phone'), 50 + colNo + colNom, top + 7, { width: colTel, align: 'center' });
         return top + rowH;
       };
 
@@ -385,13 +384,11 @@ async function exportListeProfesseursPDF(enseignants, options, outputPath, lang 
         doc.rect(50, currentY, 500, rowH).strokeColor('#dddddd').lineWidth(0.5).stroke();
         doc.moveTo(50 + colNo, currentY).lineTo(50 + colNo, currentY + rowH).stroke();
         doc.moveTo(50 + colNo + colNom, currentY).lineTo(50 + colNo + colNom, currentY + rowH).stroke();
-        doc.moveTo(50 + colNo + colNom + colMatiere, currentY).lineTo(50 + colNo + colNom + colMatiere, currentY + rowH).stroke();
 
         doc.fontSize(9).fillColor('#000000');
         doc.text(String(index + 1), 50, currentY + 6, { width: colNo, align: 'center' });
         doc.text(`${(el.nom || '').toUpperCase()} ${el.prenom || ''}`, 50 + colNo, currentY + 6, { width: colNom, align: 'left', ellipsis: true });
-        doc.text(el.matiere_principale || '—', 50 + colNo + colNom, currentY + 6, { width: colMatiere, align: 'center', ellipsis: true });
-        doc.text(el.telephone || '—', 50 + colNo + colNom + colMatiere, currentY + 6, { width: colTel, align: 'center', ellipsis: true });
+        doc.text(el.telephone || '—', 50 + colNo + colNom, currentY + 6, { width: colTel, align: 'center', ellipsis: true });
 
         currentY += rowH;
       });
