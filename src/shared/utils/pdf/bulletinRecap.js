@@ -14,7 +14,8 @@ const {
   ordinalLang,
   calcMoyMatiere,
   calcMoyGenerale,
-  drawAdminHeader
+  drawAdminHeader,
+  drawLogoFiligrane
 } = require('./helpers');
 const { getDocTranslator } = require('./locales');
 const { CURRICULUM_TEMPLATES, getUAsForPeriode } = require('../../constants/curriculum');
@@ -453,6 +454,9 @@ function drawBulletinRecap(doc, data, lang = 'fr') {
   doc.fillColor('#aaa').font('Helvetica').fontSize(6.5).text('(Signature)', sigParX + 3, y + 40, { width: sig3W - 9, align: 'center' });
   y += sigH + 8;
   doc.fillColor('#cccccc').font('Helvetica').fontSize(6).text(`${t('generated_by_elimu')} — ${new Date().toLocaleDateString(locale)}`, LEFT, y, { width: pageW, align: 'center' });
+
+  // Filigrane du logo de l'établissement au centre, au-dessus des écritures
+  drawLogoFiligrane(doc, cfg);
 }
 
 /**

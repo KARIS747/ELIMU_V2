@@ -284,6 +284,28 @@ function drawAdminHeader(doc, cfg, yStart, lang = 'fr', isMinimal = false) {
   return yFinal + 12;
 }
 
+/**
+ * Dessine le logo de l'établissement en filigrane au centre de la page,
+ * au-dessus des écritures. Le logo garde ses couleurs d'origine (non teinté).
+ * Si aucun logo n'est configuré, ne fait rien.
+ */
+function drawLogoFiligrane(doc, cfg, opts = {}) {
+  if (!cfg || !cfg.etab_logo) return;
+  const { size = 180, opacity = 0.12 } = opts;
+  try {
+    const logoData = cfg.etab_logo;
+    const imgBuf = Buffer.from(logoData.split(',')[1], 'base64');
+    const centerX = doc.page.width / 2;
+    const centerY = doc.page.height / 2;
+    doc.save();
+    doc.opacity(opacity);
+    doc.image(imgBuf, centerX - size / 2, centerY - size / 2, { fit: [size, size], align: 'center', valign: 'center' });
+    doc.restore();
+  } catch (e) {
+    // Logo invalide : ignorer le filigrane
+  }
+}
+
 module.exports = {
   loadConfig,
   loadReglesAbsences,
@@ -300,5 +322,6 @@ module.exports = {
   calcMoyMatiere,
   calcMoyGenerale,
   calcTotauxGroupe,
-  drawAdminHeader
+  drawAdminHeader,
+  drawLogoFiligrane
 };

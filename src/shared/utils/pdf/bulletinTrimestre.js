@@ -18,7 +18,8 @@ const {
   calcMoyMatiere,
   calcMoyGenerale,
   calcTotauxGroupe,
-  drawAdminHeader
+  drawAdminHeader,
+  drawLogoFiligrane
 } = require('./helpers');
 const { getDocTranslator } = require('./locales');
 
@@ -1058,6 +1059,9 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
   const footText = `Fait à _____________, le _____________          Généré par Elimu — ${localeDate}`;
   doc.fillColor('#999').font('Helvetica').fontSize(5.5)
     .text(footText, LEFT, y, { width: pageW, align: 'right' });
+
+  // Filigrane du logo de l'établissement au centre, au-dessus des écritures
+  drawLogoFiligrane(doc, cfg);
 }
 
 /**
@@ -1315,6 +1319,9 @@ function drawBulletinTrimestre(doc, data, lang = 'fr') {
   y += sigH + 10;
   if (cfg.pied_texte) { doc.fillColor('#777').font('Helvetica').fontSize(8).text(cfg.pied_texte, LEFT, y, { width: pageW }); y += 12; }
   doc.fillColor('#bbb').font('Helvetica').fontSize(6).text(`${t('generated_by_elimu')} — ${new Date().toLocaleDateString(locale)}`, LEFT, y, { width: pageW, align: 'center' });
+
+  // Filigrane du logo de l'établissement au centre, au-dessus des écritures
+  drawLogoFiligrane(doc, cfg);
 }
 
 /**
