@@ -33,6 +33,22 @@ export async function init(st) {
   setupOnglets();
   setupEvents();
   chargerResumeConfig();
+  chargerDefautsTableauHonneur();
+}
+
+/**
+ * Pré-remplit le formulaire d'export des diplômes avec les valeurs par défaut
+ * configurées dans Paramètres → Bulletin (Tableau d'honneur). Modifiables ici.
+ */
+async function chargerDefautsTableauHonneur() {
+  const cfg = await window.elimuAPI.getBulletinConfig();
+  if (!cfg || cfg.error) return;
+  const rang = document.getElementById('th-rang-max');
+  const seuil = document.getElementById('th-seuil');
+  const regle = document.getElementById('th-regle');
+  if (rang) rang.value = cfg.honor_rang_max || '5';
+  if (seuil) seuil.value = cfg.honor_seuil || '12';
+  if (regle && cfg.honor_regle) regle.value = cfg.honor_regle;
 }
 
 // ============================================================
@@ -40,7 +56,7 @@ export async function init(st) {
 // ============================================================
 
 function remplirSelects() {
-  ['import-classe', 'abs-import-classe', 'export-classe-bulletins', 'bordereau-classe', 'export-eleve-classe', 'liste-aff-classe'].forEach(id => {
+  ['import-classe', 'abs-import-classe', 'export-classe-bulletins', 'bordereau-classe', 'export-eleve-classe', 'liste-aff-classe', 'th-classe'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     classes.forEach(c => {
@@ -623,6 +639,49 @@ function setupEvents() {
     }
     showToast(
       result?.success ? '📤 ' + t('ie.liste_aff_toast_success') : result?.error || t('common.error'),
+      result?.success ? 'success' : 'error'
+    );
+  });
+
+  // ── Export diplômes tableau d'honneur ────────────────────────────
+  document.getElementById('btn-export-diplomes')?.addEventListener('click', async () => {
+    const classeId = document.getElementById('th-classe')?.value;
+    if (!classeId) {
+      showToast(t('ie.toast_select_all'), 'warning');
+      return;
+    }
+
+    const btn     = document.getElementById('btn-export-diplomes');
+    const statusEl = document.getElementById('th-status');
+
+    const periode = document.getElementById('th-periode')?.value || 'Trimestre 1';
+    const options = {
+      periode,
+      rang_max: parseInt(document.getElementById('th-rang-max')?.value, 10) || 5,
+      seuil: parseFloat(document.getElementById('th-seuil')?.value) || 12,
+      regle: document.getElementById('th-regle')?.value || 'et'
+    };
+
+    btn.disabled = true; btn.textContent = '⏳ ' + t('ie.th_btn_waiting');
+    if (statusEl) statusEl.style.display = 'none';
+    showIELoader(t('ie.th_title'), t('common.processing'), 50);
+
+    const lang = window.getCurrentGenLocale();
+    const result = await window.elimuAPI.exportDiplomesHonneur(parseInt(classeId), options, state?.user?.id, lang);
+
+    btn.disabled = false; btn.textContent = t('ie.th_btn_export');
+    hideIELoader();
+    if (result?.canceled) return;
+
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.className = result?.success ? 'backup-info success' : 'backup-info';
+      statusEl.textContent = result?.success
+        ? `✅ ${result.nbDiplomes} ${t('ie.th_toast_success')}`
+        : `❌ ${result?.error || t('common.error')}`;
+    }
+    showToast(
+      result?.success ? `🎖️ ${result.nbDiplomes} ${t('ie.th_toast_success')}` : result?.error || t('common.error'),
       result?.success ? 'success' : 'error'
     );
   });

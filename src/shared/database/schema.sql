@@ -272,7 +272,8 @@ INSERT OR IGNORE INTO bulletin_config (cle, valeur) VALUES
     ('afficher_appreciation_generale','1'),('appreciation_auto','1'),
     ('delegation_regionale','DÉLÉGATION RÉGIONALE DU ...'),
     ('delegation_departementale','DÉLÉGATION DÉPARTEMENTALE DE ...'),
-    ('annee_scolaire',''),('titulaire_classe','');
+    ('annee_scolaire',''),('titulaire_classe',''),
+    ('honor_rang_max','5'),('honor_seuil','12'),('honor_regle','et');
 
 -- ============================================================
 -- TABLES FINANCE

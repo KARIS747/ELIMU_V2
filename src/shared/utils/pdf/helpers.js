@@ -292,7 +292,7 @@ function drawAdminHeader(doc, cfg, yStart, lang = 'fr', isMinimal = false) {
  */
 function drawLogoFiligrane(doc, cfg, opts = {}) {
   if (!cfg || !cfg.etab_logo) return;
-  const { maxSize = null, opacity = 0.45 } = opts;
+  const { maxSize = null, opacity = 0.45, centerX = null, centerY = null } = opts;
   try {
     const logoData = cfg.etab_logo;
     const imgBuf = Buffer.from(logoData.split(',')[1], 'base64');
@@ -317,11 +317,11 @@ function drawLogoFiligrane(doc, cfg, opts = {}) {
       w = h * ratio;
     }
 
-    const centerX = doc.page.width / 2;
-    const centerY = doc.page.height / 2;
+    const cx = centerX !== null ? centerX : doc.page.width / 2;
+    const cy = centerY !== null ? centerY : doc.page.height / 2;
     doc.save();
     doc.opacity(opacity);
-    doc.image(imgBuf, centerX - w / 2, centerY - h / 2, { width: w, height: h });
+    doc.image(imgBuf, cx - w / 2, cy - h / 2, { width: w, height: h });
     doc.restore();
   } catch (e) {
     // Logo invalide : ignorer le filigrane

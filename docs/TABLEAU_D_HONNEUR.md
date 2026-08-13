@@ -1,7 +1,7 @@
 # Tableau d'honneur — Spécification fonctionnelle
 
 > Feature : Export PDF « Tableau d'honneur » dans la section **Import / Export**.
-> Statut : **À implémenter** — ce document décrit la spec avant le développement.
+> Statut : **✅ Implémenté** — voir le module `src/shared/utils/pdf/tableauHonneur.js` et l'onglet `data-tab="tableau-honneur"`.
 
 ---
 

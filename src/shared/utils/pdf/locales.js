@@ -98,6 +98,15 @@ const docLocales = {
     payment_detail: 'DÉTAIL DU PAIEMENT',
     official_receipt_mention: 'Reçu officiel • Merci pour votre confiance',
     tear_here: '◄ Déchirer ici ►',
+
+    // Tableau d'honneur
+    honor_title: "TABLEAU D'HONNEUR",
+    honor_cert_title: 'Certificat de mérite',
+    honor_awarded_to: 'Décerné à',
+    honor_phrase: 'en reconnaissance de son excellence, pour avoir obtenu la moyenne de {moy} sur 20 et la {rang} place de la classe {classe}, avec une appréciation de {appr}, lors du {periode} — Année scolaire {annee}.',
+    honor_signature_line: '(Signature et cachet)',
+    honor_made_at: 'Fait à',
+    honor_on: 'le',
     parent_card_title: 'Fiches d\'accès Portail Parent',
     parent_label: 'Parent',
     phone_label: 'Téléphone',
@@ -226,6 +235,15 @@ const docLocales = {
     payment_detail: 'PAYMENT DETAIL',
     official_receipt_mention: 'Official Receipt • Thank you for your trust',
     tear_here: '◄ Tear here ►',
+
+    // Tableau d'honneur
+    honor_title: 'HONOR ROLL',
+    honor_cert_title: 'Certificate of Merit',
+    honor_awarded_to: 'Awarded to',
+    honor_phrase: 'in recognition of his excellence, for having obtained an average of {moy} out of 20 and the {rang} place in class {classe}, with an appreciation of {appr}, during the {periode} — School year {annee}.',
+    honor_signature_line: '(Signature and stamp)',
+    honor_made_at: 'Done at',
+    honor_on: 'on',
     parent_card_title: 'Parent Portal Access Cards',
     parent_label: 'Parent',
     phone_label: 'Phone',

@@ -624,6 +624,61 @@ function register(ipcMain, deps) {
     }
   });
 
+  // ── Export diplômes tableau d'honneur (PDF paysage multi-pages) ─────────────
+
+  ipcMain.handle('export:diplomesHonneur', async (event, classeId, options, utilisateurId, lang = 'fr') => {
+    if (!(await checkAccess(['admin', 'secretaire']))) return { error: 'Accès non autorisé' };
+    try {
+      const cid = parseInt(classeId);
+      if (isNaN(cid)) return { error: 'ID classe invalide' };
+      const opts = options || {};
+      const periode = opts.periode || 'Trimestre 1';
+      const criteres = {
+        regle: opts.regle || 'et',
+        rang_max: parseInt(opts.rang_max, 10) || 5,
+        seuil: parseFloat(opts.seuil) || 12
+      };
+
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe, niveau_v2 FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+      if (!classe) return { error: 'Classe non trouvée' };
+
+      const anneeId = getCurrentAnneeId();
+      const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
+
+      const { prepareDiplomes, exportDiplomesPDF } = require('../../shared/utils/pdf/tableauHonneur');
+      const data = prepareDiplomes(cid, periode, criteres, anneeId);
+      if (data.error) return { error: data.error };
+      if (!data.success) {
+        const r = criteres.regle;
+        const desc = r === 'rang' ? `Rang ≤ ${criteres.rang_max}`
+          : r === 'moyenne' ? `Moyenne ≥ ${criteres.seuil}`
+          : `Rang ≤ ${criteres.rang_max} ${r === 'ou' ? 'OU' : 'ET'} Moyenne ≥ ${criteres.seuil}`;
+        return { error: `Aucun élève ne satisfait les critères (${desc})` };
+      }
+
+      const savePath = await dialog.showSaveDialog(getMainWindow(), {
+        defaultPath: `Tableau_Honneur_${classe.nom_classe.replace(/\s/g, '_')}_${periode.replace(/\s/g, '_')}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (savePath.canceled) return { canceled: true };
+
+      const result = await exportDiplomesPDF(data, savePath.filePath, lang);
+
+      const uid = parseInt(utilisateurId) || getCurrentUserId();
+      await logAudit(
+        uid,
+        'EXPORT_TABLEAU_HONNEUR',
+        `Classe ${cid} — ${result.count} diplômes générés (${periode}, rang ≤ ${criteres.rang_max}, moy ≥ ${criteres.seuil})`
+      );
+
+      return { success: true, path: savePath.filePath, nbDiplomes: result.count };
+    } catch (error) {
+      logger.error('Erreur exportDiplomesHonneur:', error);
+      return { error: error.message };
+    }
+  });
+
   // ── Export modèle absences ──────────────────────────────────────────────────
 
   ipcMain.handle('export:modeleAbsences', async (event, classeId, utilisateurId, periode, lang = 'fr') => {

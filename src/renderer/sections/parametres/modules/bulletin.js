@@ -64,6 +64,10 @@ function remplirFormulaireBulletin() {
   set('bul-ministere',                 c.ministere);
   set('bul-devise-nationale',          c.devise_nationale);
 
+  set('bul-honor-rang-max',            c.honor_rang_max || '5');
+  set('bul-honor-seuil',               c.honor_seuil || '12');
+  set('bul-honor-regle',               c.honor_regle || 'et');
+
   set('bul-republique-en',                c.republique_en);
   set('bul-devise-etat-en',               c.devise_etat_en);
   set('bul-ministere-en',                 c.ministere_en);
@@ -270,6 +274,9 @@ function getConfigBulletin() {
     delegation_departementale_en:      val('bul-delegation-departementale-en'),
     etab_nom_en:                       val('bul-etab-nom-en'),
     etab_devise_en:                    val('bul-etab-devise-en'),
+    honor_rang_max:                    val('bul-honor-rang-max') || '5',
+    honor_seuil:                       val('bul-honor-seuil') || '12',
+    honor_regle:                       val('bul-honor-regle') || 'et',
   };
 }
 

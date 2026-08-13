@@ -564,6 +564,37 @@
         </div>
       </div>
 
+      <!-- BLOC 6 : Tableau d'honneur (diplômes) -->
+      <div class="card" style="margin-bottom:0; padding:12px;">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"></circle><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path></svg>
+          <span data-i18n="params.bulletin.honor_title">Tableau d'honneur (diplômes)</span>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-bottom:8px;" data-i18n="params.bulletin.honor_hint">
+          Valeurs par défaut des critères pour l'export des diplômes dans Import/Export → Tableau d'honneur.
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.honor_rang_max">Rang maximal</label>
+            <input type="number" id="bul-honor-rang-max" class="input" style="height:32px; font-size:12px;" min="1" max="50" value="5">
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.honor_seuil">Moyenne minimale (/20)</label>
+            <input type="number" id="bul-honor-seuil" class="input" style="height:32px; font-size:12px;" min="0" max="20" step="0.5" value="12">
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label style="font-size:11px;" data-i18n="params.bulletin.honor_regle">Règle</label>
+            <select id="bul-honor-regle" class="input" style="height:32px; font-size:12px;">
+              <option value="et" data-i18n="ie.th_regle_et">Rang ET Moyenne</option>
+              <option value="ou" data-i18n="ie.th_regle_ou">Rang OU Moyenne</option>
+              <option value="rang" data-i18n="ie.th_regle_rang">Rang uniquement</option>
+              <option value="moyenne" data-i18n="ie.th_regle_moyenne">Moyenne uniquement</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Barre d'action bas de page -->
