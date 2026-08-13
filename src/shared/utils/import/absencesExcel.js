@@ -37,29 +37,56 @@ async function importAbsencesExcel(filePath, classeId, utilisateurId = null, ann
   if (!eleves.length)
     return { ...resultat, error: 'Aucun élève trouvé pour cette école et cette année' };
 
-  // ── En-têtes (détection du format) ─────────────────────────────────────────
-  const headerCells = worksheet.getRow(1);
+  // ── En-têtes : scanner les premières lignes pour trouver la ligne d'entête ─
+  const indexDe = (headers, liste) => headers.findIndex(h => liste.includes(h));
+  const scoreLigne = (cells) => {
+    const headers = cells;
+    let s = 0;
+    if (indexDe(headers, ['nom', 'name', 'lastname', 'last name']) >= 0) s += 3;
+    if (indexDe(headers, ['prenom', 'prénom', 'firstname', 'first name']) >= 0) s += 3;
+    if (indexDe(headers, ['trimestre', 'periode', 'période', 'period', 'quarter']) >= 0) s += 2;
+    if (indexDe(headers, ['heures absence', 'heures absences', 'heures', 'nb heures', 'hours']) >= 0) s += 2;
+    if (indexDe(headers, ['classe', 'class']) >= 0) s += 1;
+    return s;
+  };
+
+  let headerRowNumber = 1;
+  let bestScore = -1;
+  for (let r = 1; r <= Math.min(5, worksheet.rowCount); r++) {
+    const cells = [];
+    worksheet.getRow(r).eachCell({ includeEmpty: true }, (cell, col) => {
+      cells[col] = normaliser(cell.value);
+    });
+    const sc = scoreLigne(cells);
+    if (sc > bestScore) { bestScore = sc; headerRowNumber = r; }
+  }
+
+  if (bestScore < 4)
+    return { ...resultat, error: "En-têtes non reconnus (attendu : Nom, Prenom, Trimestre, Heures absence)" };
+
   const headers = [];
-  headerCells.eachCell({ includeEmpty: true }, (cell, col) => {
+  worksheet.getRow(headerRowNumber).eachCell({ includeEmpty: true }, (cell, col) => {
     headers[col] = normaliser(cell.value);
   });
 
-  const indexDe = (liste) => headers.findIndex(h => liste.includes(h));
-  const nomIdx    = indexDe(['nom', 'name', 'lastname']);
-  const prenomIdx = indexDe(['prenom', 'prénom', 'prenoms', 'firstname']);
-  const trimCol   = indexDe(['trimestre', 'periode', 'période', 'period', 'quarter']);
-  const heureCol  = indexDe(['heures absence', 'heures absences', 'heures', 'nb heures', 'hours']);
-  const t1Idx     = indexDe(['trimestre 1', 'quarter 1', 't1', 'tr1']);
-  const t2Idx     = indexDe(['trimestre 2', 'quarter 2', 't2', 'tr2']);
-  const t3Idx     = indexDe(['trimestre 3', 'quarter 3', 't3', 'tr3']);
-  const classeIdx = indexDe(['classe', 'class']);
+  const nomIdx    = indexDe(headers, ['nom', 'name', 'lastname', 'last name']);
+  const prenomIdx = indexDe(headers, ['prenom', 'prénom', 'firstname', 'first name']);
+  const trimCol   = indexDe(headers, ['trimestre', 'periode', 'période', 'period', 'quarter']);
+  const heureCol  = indexDe(headers, ['heures absence', 'heures absences', 'heures', 'nb heures', 'hours']);
+  const t1Idx     = indexDe(headers, ['trimestre 1', 'quarter 1', 't1', 'tr1']);
+  const t2Idx     = indexDe(headers, ['trimestre 2', 'quarter 2', 't2', 'tr2']);
+  const t3Idx     = indexDe(headers, ['trimestre 3', 'quarter 3', 't3', 'tr3']);
+  const classeIdx = indexDe(headers, ['classe', 'class']);
 
   const modelePeriode = headers.findIndex(h => h && h.startsWith('heures (trimestre'));
 
-  let mode = 'pwa';
+  let mode = null;
   if (trimCol >= 0 && heureCol >= 0) mode = 'pwa';
   else if (t1Idx >= 0 || t2Idx >= 0 || t3Idx >= 0) mode = 'multi';
   else if (modelePeriode >= 0) mode = 'mono';
+
+  if (!mode)
+    return { ...resultat, error: "Format de fichier absences non reconnu" };
 
   const mapPeriode = (raw) => {
     const p = normaliser(raw);
@@ -102,7 +129,7 @@ async function importAbsencesExcel(filePath, classeId, utilisateurId = null, ann
   try {
     let nbLignes = 0;
     worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
+      if (rowNumber <= headerRowNumber) return;
       nbLignes++;
       try {
         const nom    = String(row.getCell(nomIdx >= 0 ? nomIdx : 1).value || '').trim();
@@ -120,13 +147,14 @@ async function importAbsencesExcel(filePath, classeId, utilisateurId = null, ann
         }
 
         if (mode === 'pwa') {
-          const peri = mapPeriode(row.getCell(trimCol).value);
+          const trimVal = row.getCell(trimCol >= 0 ? trimCol : 1).value;
+          const peri = mapPeriode(trimVal);
           if (!peri) {
-            resultat.erreurs.push(`Ligne ${rowNumber}: période "${row.getCell(trimCol).value}" non reconnue`);
+            resultat.erreurs.push(`Ligne ${rowNumber}: période "${trimVal}" non reconnue`);
             resultat.nbErreurs++;
             return;
           }
-          if (upsert(eleve.id, peri, row.getCell(heureCol).value)) resultat.nbMisAJour++;
+          if (upsert(eleve.id, peri, row.getCell(heureCol >= 0 ? heureCol : 3).value)) resultat.nbMisAJour++;
           else resultat.nbErreurs++;
         } else if (mode === 'mono') {
           const peri = modelePeriode >= 0 ? mapPeriode(headers[modelePeriode]) : mapPeriode(periode);
