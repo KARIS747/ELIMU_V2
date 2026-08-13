@@ -15,7 +15,7 @@ const crypto = require('crypto');
 
 const BCRYPT_ROUNDS = 10;
 const PASS_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const PASS_LENGTH = 10;
+const PASS_LENGTH = 6;
 
 function generateSecurePassword() {
   let pwd = '';

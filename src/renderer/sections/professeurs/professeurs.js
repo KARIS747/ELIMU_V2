@@ -633,32 +633,23 @@ async function sauvegarderProfesseur() {
       showToast(t('profs.save_success_update'), 'success');
     } else {
       // Creation : creer compte enseignant (utilisateur + professeur)
+      const classeIds = _getClassesSelectionnees();
       const data = {
         nom,
         prenom,
         telephone: _formatPhone(document.getElementById('pf-indicatif')?.value || '+237', document.getElementById('pf-telephone')?.value),
         email: document.getElementById('pf-email')?.value?.trim() || null,
-        matiere_principale: document.getElementById('pf-matiere')?.value?.trim() || null
+        matiere_principale: document.getElementById('pf-matiere')?.value?.trim() || null,
+        classeIds
       };
       const res = await window.elimuAPI.createTeacherAccount(data);
       if (!res?.success) { _afficherErreur(res?.error || t('common.error')); return; }
 
-      // Afficher le mot de passe genere
-      const pwBlock = document.getElementById('password-generated-block');
-      const pwEl = document.getElementById('generated-password');
-      pwBlock.style.display = 'block';
-      pwEl.textContent = res.password;
-      pwEl.style.color = 'var(--yellow-fifa)';
-      pwEl.style.fontSize = '22px';
-      document.querySelector('#password-generated-block .pw-value').style.fontSize = '22px';
-
-      // Lier les classes
-      const classeIds = _getClassesSelectionnees();
-      if (classeIds.length) {
-        await window.elimuAPI.updateClassesEnseignees(res.prof_id, classeIds);
-      }
-
-      showToast(t('profs.save_success_add').replace('{username}', res.username), 'success');
+      // Toast de succes avec l'identifiant et le mot de passe (affichés une seule fois)
+      showToast(
+        `${t('profs.save_success_add').replace('{username}', res.username)} | ${t('profs.password_generated')} : ${res.password}`,
+        'success', 15000
+      );
 
       // Afficher le chemin du PDF généré automatiquement
       if (res.pdfPath) {
@@ -668,12 +659,6 @@ async function sauvegarderProfesseur() {
           showToast(`📁 Dossier : ${res.pdfPath.replace(nomFichier, '')}`, 'info', 10000);
         }, 2000);
       }
-
-      // Desactiver le formulaire pour forcer la lecture du mot de passe
-      document.querySelectorAll('#form-prof input, #form-prof button').forEach(el => { if (el !== pwBlock && el.id !== 'btn-prof-cancel' && el.id !== 'modal-prof-close') el.disabled = true; });
-      btnSave.disabled = true;
-      btnSave.textContent = t('common.saved');
-      return;
     }
 
     fermerModaleProfesseur();
