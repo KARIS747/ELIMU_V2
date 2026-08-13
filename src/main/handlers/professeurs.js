@@ -632,6 +632,13 @@ function register(ipcMain, deps) {
           run('INSERT OR IGNORE INTO professeurs_classes (professeur_id, classe_id) VALUES (?, ?)', [pid, classIdNum]);
         }
       }
+      // Cohérence : miroir dans utilisateurs.classes_ids (source fallback du push PWA)
+      const prof = get('SELECT utilisateur_id FROM professeurs WHERE id = ? AND ecole_id = ?', [pid, ecoleId]);
+      if (prof?.utilisateur_id) {
+        const userClasses = (Array.isArray(classeIds) ? classeIds : []).map(Number).filter(n => !isNaN(n));
+        run('UPDATE utilisateurs SET classes_ids = ? WHERE id = ?',
+          [JSON.stringify(Array.from(new Set(userClasses))), prof.utilisateur_id]);
+      }
       return { success: true };
     } catch (e) {
       logger.error('Erreur updateClassesEnseignees:', e);
@@ -694,29 +701,75 @@ function register(ipcMain, deps) {
         telephone: t.telephone || '',
       }));
 
-      const classes = all(`
-        SELECT c.nom_classe, c.niveau_v2,
-               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ? AND annee_scolaire_id = ?) AS eleves_count,
-               u.nom_utilisateur AS teacher_username
+      // ══ Classes → associations classe ↔ enseignant ══
+      // Deux sources superposées : professeurs_classes (lien direct) + utilisateurs.classes_ids
+      // (fallback, mis à jour via la section Professeurs). Une classe sans enseignant n'est pas poussée.
+      const classesList = all(`
+        SELECT c.id, c.nom_classe, c.niveau_v2,
+               (SELECT COUNT(*) FROM eleves WHERE classe_id = c.id AND ecole_id = ? AND annee_scolaire_id = ?) AS eleves_count
         FROM classes c
-        LEFT JOIN professeurs_classes pc ON pc.classe_id = c.id
-        LEFT JOIN professeurs p ON p.id = pc.professeur_id
-        LEFT JOIN utilisateurs u ON u.id = p.utilisateur_id
         WHERE c.ecole_id = ?
-      `, [ecoleId, anneeId, ecoleId]).map((c) => ({
-        classe_nom: c.nom_classe,
-        niveau_v2: c.niveau_v2 || 'N1',
-        eleves_count: c.eleves_count || 0,
-        teacher_username: c.teacher_username || '',
-        ecole_id: ecoleId,
-      }));
+      `, [ecoleId, anneeId, ecoleId]);
 
+      const classTeacherRows = all(`
+        SELECT pc.classe_id, u.nom_utilisateur
+        FROM professeurs_classes pc
+        INNER JOIN professeurs p ON p.id = pc.professeur_id
+        INNER JOIN utilisateurs u ON u.id = p.utilisateur_id
+        WHERE u.role = 'enseignant' AND u.ecole_id = ?
+          AND pc.classe_id IN (SELECT id FROM classes WHERE ecole_id = ?)
+      `, [ecoleId, ecoleId]);
+
+      const usernamesByClass = new Map();
+      for (const row of classTeacherRows) {
+        if (!row.nom_utilisateur) continue;
+        if (!usernamesByClass.has(row.classe_id)) usernamesByClass.set(row.classe_id, new Set());
+        usernamesByClass.get(row.classe_id).add(row.nom_utilisateur);
+      }
+      // Fallback : classes_ids déclarés sur les comptes enseignants
+      for (const t of teachers) {
+        for (const cid of (t.classes_ids || [])) {
+          const classIdNum = parseInt(cid);
+          if (isNaN(classIdNum)) continue;
+          if (!usernamesByClass.has(classIdNum)) usernamesByClass.set(classIdNum, new Set());
+          usernamesByClass.get(classIdNum).add(t.username);
+        }
+      }
+
+      const classes = [];
+      const linkedClassIds = new Set();
+      for (const c of classesList) {
+        const usernames = usernamesByClass.get(c.id);
+        if (!usernames || usernames.size === 0) {
+          if ((c.eleves_count || 0) > 0) {
+            logger.warn('Sync PWA: classe "' + c.nom_classe + '" sans enseignant, non poussee');
+          }
+          continue;
+        }
+        linkedClassIds.add(c.id);
+        for (const username of usernames) {
+          classes.push({
+            classe_nom: c.nom_classe,
+            niveau_v2: c.niveau_v2 || 'N1',
+            eleves_count: c.eleves_count || 0,
+            teacher_username: username,
+            ecole_id: ecoleId,
+          });
+        }
+      }
+
+      const placeholders = Array.from(linkedClassIds).length
+        ? linkedClassIds.size - 1
+        : 0;
       const students = all(`
         SELECT e.id, e.nom, e.prenom, e.matricule, c.nom_classe
         FROM eleves e
         JOIN classes c ON c.id = e.classe_id
         WHERE e.ecole_id = ? AND e.annee_scolaire_id = ?
-      `, [ecoleId, anneeId]).map((s) => ({
+        ${placeholders ? `AND e.classe_id IN (${Array.from(linkedClassIds).map(() => '?').join(',')})` : ''}
+      `, placeholders
+        ? [ecoleId, anneeId, ...Array.from(linkedClassIds)]
+        : [ecoleId, anneeId]).map((s) => ({
         external_id: s.id,
         nom: s.nom,
         prenom: s.prenom,
