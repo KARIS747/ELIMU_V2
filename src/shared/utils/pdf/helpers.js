@@ -292,7 +292,7 @@ function drawAdminHeader(doc, cfg, yStart, lang = 'fr', isMinimal = false) {
  */
 function drawLogoFiligrane(doc, cfg, opts = {}) {
   if (!cfg || !cfg.etab_logo) return;
-  const { maxSize = null, opacity = 0.25 } = opts;
+  const { maxSize = null, opacity = 0.45 } = opts;
   try {
     const logoData = cfg.etab_logo;
     const imgBuf = Buffer.from(logoData.split(',')[1], 'base64');
