@@ -783,6 +783,7 @@ function register(ipcMain, deps) {
         annee_scolaire: anneeLibelle,
         ecole_id: ecoleId,
         code_ecole: codeEcole,
+        full_sync: true,
         teachers, classes, students
       };
 
