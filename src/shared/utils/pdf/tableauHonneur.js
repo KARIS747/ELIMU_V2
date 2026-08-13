@@ -393,7 +393,7 @@ function drawDiplome(doc, data, honore, lang = 'fr') {
   ], LEFT, y, W, 4) + 14;
 
   // ── Filigrane logo (à l'emplacement de l'ancien encadré critères) ──
-  drawLogoFiligrane(doc, cfg, { maxSize: 110, opacity: 0.5, centerY: y + 26 });
+  drawLogoFiligrane(doc, cfg, { maxSize: 160, opacity: 0.5, centerY: y + 26 });
 
   // ── Signatures ────────────────────────────────────────────
   const sigY = pageH - 118;
