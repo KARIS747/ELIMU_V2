@@ -581,6 +581,7 @@ function register(ipcMain, deps) {
     try {
       const { classeId, fraisTypeId, numeroTranche, lang = 'fr' } = filtres;
       const anneeId = getCurrentAnneeId();
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
       
       const savePath = await dialog.showSaveDialog(getMainWindow(), {
         defaultPath: `impayes_${classeId ? 'classe_' + classeId : 'etablissement'}.pdf`,
