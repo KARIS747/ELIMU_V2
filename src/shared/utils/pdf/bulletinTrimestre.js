@@ -247,64 +247,34 @@ function buildSubCompIndex(lvl) {
 
 /**
  * Calcule la moyenne générale /20 de tous les élèves d'une classe N1/N2
- * avec la MÊME formule pondérée que le bulletin (moy20General).
+ * avec la MÊME formule que le bulletin (moy20General) : simple moyenne des
+ * agrégats stockés (sous_type IS NULL) — cohérente avec le profil élève
+ * et stats_eleves.
  * Retourne un tableau trié décroissant + les stats de classe.
  */
 function computeClassStatsQualitatif(classeId, anneeId, lvl, lesUA) {
-  const tmpl = CURRICULUM_TEMPLATES[lvl];
   const empty = { sorted: [], moyenneClasse: null, moyennePremier: null, moyenneDernier: null };
-  if (!tmpl || !lesUA.length) return empty;
+  if (!lesUA.length) return empty;
 
   const rows = all(`
-    SELECT n.eleve_id, n.sous_competence_code, n.sous_type, n.note
+    SELECT n.eleve_id, n.note
     FROM notes n JOIN eleves e ON e.id = n.eleve_id
     WHERE e.classe_id = ? AND n.annee_scolaire_id = ?
-      AND n.ua IN (${lesUA.map(() => '?').join(',')}) AND n.sous_type IS NOT NULL
+      AND n.ua IN (${lesUA.map(() => '?').join(',')}) AND n.sous_type IS NULL
   `, [classeId, anneeId, ...lesUA]);
 
-  const byStudent = {};
+  const sumByStudent = {};
+  const cntByStudent = {};
   for (const r of rows) {
-    if (!byStudent[r.eleve_id]) byStudent[r.eleve_id] = [];
-    byStudent[r.eleve_id].push(r);
+    if (r.note === null || r.note === undefined) continue;
+    sumByStudent[r.eleve_id] = (sumByStudent[r.eleve_id] || 0) + Number(r.note);
+    cntByStudent[r.eleve_id] = (cntByStudent[r.eleve_id] || 0) + 1;
   }
 
-  const activeTypes = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
   const stats = [];
-  for (const [eleveId, subRows] of Object.entries(byStudent)) {
-    const byKey = {};
-    for (const r of subRows) {
-      const k = `${r.sous_competence_code}|${r.sous_type}`;
-      if (!byKey[k]) byKey[k] = [];
-      byKey[k].push(r.note);
-    }
-    let totalGeneral = 0;
-    let totalGeneralMaxScale = 0;
-    for (const comp of Object.values(tmpl.competences)) {
-      let compObtained = 0;
-      let compMax = 0;
-      for (const [scCode, sc] of Object.entries(comp.sousCompetences)) {
-        let scObtained = 0;
-        let scMax = 0;
-        for (const type of activeTypes) {
-          const maxPt = sc[type];
-          if (maxPt <= 0) continue;
-          const vals = byKey[`${scCode}|${type}`] || [];
-          for (const v of vals) {
-            scObtained += (v / 20) * maxPt;
-            scMax += maxPt;
-          }
-        }
-        if (scMax > 0) {
-          const scAvgOn20 = (scObtained / scMax) * 20;
-          compObtained += (scAvgOn20 / 20) * sc.total;
-          compMax += sc.total;
-        }
-      }
-      totalGeneral += compObtained;
-      totalGeneralMaxScale += compMax;
-    }
-    const moy = totalGeneralMaxScale > 0 ? (totalGeneral / totalGeneralMaxScale) * 20 : null;
-    if (moy !== null) stats.push({ id: Number(eleveId), moy });
+  for (const [eleveId, sum] of Object.entries(sumByStudent)) {
+    const cnt = cntByStudent[eleveId] || 0;
+    if (cnt > 0) stats.push({ id: Number(eleveId), moy: sum / cnt });
   }
 
   stats.sort((a, b) => b.moy - a.moy);
@@ -418,10 +388,10 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
           const rawNote = row ? row.note : null;
 
           if (rawNote !== null && rawNote !== undefined) {
-            const obtained = (rawNote / 20) * maxPt;
+            const obtained = rawNote;
             evalNode.uas[ua] = {
               note: Math.round(obtained * 10) / 10,
-              cote: getNoteToCode(rawNote)
+              cote: getNoteToCode((rawNote / maxPt) * 20)
             };
             evalNode.totalObtained += obtained;
             evalNode.totalMax += maxPt;
@@ -459,27 +429,15 @@ function drawBulletinQualitatif(doc, data, lang = 'fr') {
     dataTree.push(compNode);
   }
 
-  // Calcul des moyennes générales
-  let totalGeneral = 0;
-  let totalGeneralMaxScale = 0;
-  dataTree.forEach(comp => {
-    let compObtained = 0;
-    let compMax = 0;
-    comp.subCompetences.forEach(sc => {
-      if (sc.totalMax > 0) {
-        const scAvgOn20 = (sc.totalObtained / sc.totalMax) * 20;
-        const scScore = (scAvgOn20 / 20) * sc.totalWeight;
-        compObtained += scScore;
-        compMax += sc.totalWeight;
-      }
+  // Moyenne générale = simple moyenne des agrégats stockés de la période
+  // (cohérente avec le profil élève et stats_eleves — pas de pondération curriculum).
+  const aggNotes20 = [];
+  notesAgg.forEach(u => {
+    (u.aggRows || []).forEach(r => {
+      if (r.note !== null && r.note !== undefined) aggNotes20.push(Number(r.note));
     });
-    comp.totalObtained = compObtained;
-    comp.totalMax = compMax;
-
-    totalGeneral += compObtained;
-    totalGeneralMaxScale += compMax;
   });
-  const moy20General = totalGeneralMaxScale > 0 ? (totalGeneral / totalGeneralMaxScale) * 20 : null;
+  const moy20General = aggNotes20.length ? aggNotes20.reduce((a, b) => a + b, 0) / aggNotes20.length : null;
 
   // --- DESSIN DU BULLETIN ---
 

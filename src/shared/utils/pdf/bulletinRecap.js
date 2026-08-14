@@ -153,7 +153,7 @@ function prepareRecapQualitatif(eleve, cfg, lang = 'fr', anneeId = null) {
           if (maxPt <= 0) continue;
           const raw = mapNote.get(`${scCode}|${type}`);
           if (raw !== null && raw !== undefined) {
-            scObtained += (raw / 20) * maxPt;
+            scObtained += raw;
             scMax += maxPt;
           }
         }
@@ -242,7 +242,7 @@ function calcMoyCompParTrimestreForEleve(eleveId, periode, tmpl, eid) {
         if (maxPt <= 0) continue;
         const raw = mapNote.get(`${scCode}|${type}`);
         if (raw !== null && raw !== undefined) {
-          scObtained += (raw / 20) * maxPt;
+          scObtained += raw;
           scMax += maxPt;
         }
       }
