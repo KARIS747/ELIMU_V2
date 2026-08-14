@@ -494,12 +494,18 @@ function register(ipcMain, deps) {
           utilisateurs: all('SELECT * FROM utilisateurs WHERE ecole_id = ?', [ecoleId]),
           parametres: all('SELECT * FROM parametres'),
           bulletin_config: all('SELECT * FROM bulletin_config'),
+          eleves: all('SELECT * FROM eleves WHERE ecole_id = ?', [ecoleId]),
+          parents: all('SELECT * FROM parents WHERE ecole_id = ?', [ecoleId]),
+          parents_eleves: all('SELECT * FROM parents_eleves WHERE ecole_id = ?', [ecoleId]),
+          notes: all('SELECT * FROM notes WHERE ecole_id = ?', [ecoleId]),
+          absences: all('SELECT * FROM absences WHERE ecole_id = ?', [ecoleId]),
+          heures_absence: all('SELECT * FROM heures_absence WHERE ecole_id = ?', [ecoleId]),
+          paiements: all('SELECT * FROM paiements WHERE ecole_id = ?', [ecoleId]),
           frais_types: all('SELECT * FROM frais_types WHERE ecole_id = ?', [ecoleId]),
           tranches: all('SELECT * FROM tranches WHERE ecole_id = ?', [ecoleId]),
           paiement_tranches: all('SELECT * FROM paiement_tranches WHERE ecole_id = ?', [ecoleId]),
           sanctions: all('SELECT * FROM sanctions WHERE ecole_id = ?', [ecoleId]),
           imports: all('SELECT * FROM imports WHERE ecole_id = ?', [ecoleId])
-          // Les notes, élèves, parents et paiements sont déjà dans le payload principal
         },
         timestamp: new Date().toISOString()
       };
