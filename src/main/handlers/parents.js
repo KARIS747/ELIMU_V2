@@ -501,7 +501,7 @@ function register(ipcMain, deps) {
           imports: all('SELECT * FROM imports WHERE ecole_id = ?', [ecoleId])
           // Les notes, élèves, parents et paiements sont déjà dans le payload principal
         },
-        timestamp: getLocalTimestampForFile()
+        timestamp: new Date().toISOString()
       };
 
       const zlib = require('zlib');
