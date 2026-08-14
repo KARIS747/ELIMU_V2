@@ -473,6 +473,12 @@ function register(ipcMain, deps) {
             return null;
           }).filter(Boolean);
         })(),
+        stats: all(`
+          SELECT s.eleve_id, s.periode, s.sequence, s.moyenne, s.moyenne_generale, s.total_notes
+          FROM stats_eleves s
+          JOIN eleves e ON e.id = s.eleve_id
+          WHERE e.ecole_id = ?
+        `, [ecoleId]),
         absences: all(`
           SELECT eleve_id, periode, heures 
           FROM heures_absence WHERE ecole_id = ?
