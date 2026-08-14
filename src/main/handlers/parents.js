@@ -518,6 +518,8 @@ function register(ipcMain, deps) {
         timestamp: new Date().toISOString()
       };
 
+      logger.info(`portal:export payload: eleves=${payload.eleves.length}, parents=${payload.parents.length}, notes=${(payload.notes || []).length}, stats=${(payload.stats || []).length}`);
+
       const zlib = require('zlib');
       const util = require('util');
       const gzip = util.promisify(zlib.gzip);
@@ -550,7 +552,7 @@ function register(ipcMain, deps) {
       await logAudit(getCurrentUserId(), 'PORTAL_EXPORT', `Exportation réussie vers ${url}`);
       return { success: true, timestamp: payload.timestamp };
     } catch (error) {
-      logger.error('Erreur portal:export:', error);
+      logger.error('Erreur portal:export: ' + (error?.message || error));
       return { success: false, error: error.message };
     }
   });
