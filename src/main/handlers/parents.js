@@ -17,7 +17,7 @@ const { CURRICULUM_TEMPLATES, getPeriodeForUA } = require('../../shared/constant
  * @param {{ logger: object, getMainWindow: function, getCurrentUserId: function }} deps
  */
 function register(ipcMain, deps) {
-  const { logger, getMainWindow, getCurrentUserId, getCurrentEcoleId } = deps;
+  const { logger, getMainWindow, getCurrentUserId, getCurrentEcoleId, setCurrentEcoleId, getCurrentAnneeId, setCurrentAnneeId } = deps;
 
   /**
    * Hache un mot de passe en utilisant scrypt (format PHC) - Version Main Thread pour un seul parent
@@ -505,7 +505,9 @@ function register(ipcMain, deps) {
           tranches: all('SELECT * FROM tranches WHERE ecole_id = ?', [ecoleId]),
           paiement_tranches: all('SELECT * FROM paiement_tranches WHERE ecole_id = ?', [ecoleId]),
           sanctions: all('SELECT * FROM sanctions WHERE ecole_id = ?', [ecoleId]),
-          imports: all('SELECT * FROM imports WHERE ecole_id = ?', [ecoleId])
+          imports: all('SELECT * FROM imports WHERE ecole_id = ?', [ecoleId]),
+          professeurs_classes: all('SELECT * FROM professeurs_classes'),
+          pwa_login_history: all('SELECT * FROM pwa_login_history WHERE ecole_id = ?', [ecoleId])
         },
         timestamp: new Date().toISOString()
       };
@@ -592,7 +594,8 @@ function register(ipcMain, deps) {
             'paiement_tranches', 'paiements', 'tranches', 'frais_types',
             'notes', 'absences', 'sanctions', 'heures_absence', 'imports',
             'parents_eleves', 'parents', 'eleves', 'classes', 'professeurs',
-            'matieres', 'bulletin_config', 'annees_scolaires', 'utilisateurs'
+            'matieres', 'bulletin_config', 'annees_scolaires', 'utilisateurs',
+            'professeurs_classes', 'pwa_login_history'
           ];
 
           let tableIndex = 0;
@@ -635,10 +638,51 @@ function register(ipcMain, deps) {
               }
             }
           }
+
+          // 4. Recalcul complet de stats_eleves (moyennes N3 pré-calculées).
+          //    Indispensable : les triggers recalculaient avec des coefficients
+          //    manquants (matieres restaurée après notes). Ici on reconstruit tout.
+          db.exec("DELETE FROM stats_eleves");
+          db.exec(`INSERT INTO stats_eleves (eleve_id, annee_scolaire_id, periode, sequence, moyenne, total_notes, last_updated)
+                   SELECT eleve_id, annee_scolaire_id, periode, sequence, ROUND(AVG(note), 2), COUNT(*), CURRENT_TIMESTAMP
+                   FROM notes WHERE sous_type IS NULL
+                   GROUP BY eleve_id, annee_scolaire_id, periode, sequence`);
+          db.exec(`UPDATE stats_eleves SET moyenne_generale = (
+                     SELECT ROUND(SUM(n.note * COALESCE(m.coefficient, 1.0)) / NULLIF(SUM(COALESCE(m.coefficient, 1.0)), 0), 2)
+                     FROM notes n LEFT JOIN matieres m ON n.matiere_id = m.id
+                     WHERE n.eleve_id = stats_eleves.eleve_id
+                       AND n.annee_scolaire_id = stats_eleves.annee_scolaire_id
+                       AND n.sous_type IS NULL
+                   )`);
         })();
       } finally {
-        // 4. Réactiver les contraintes APRÈS la transaction
+        // 5. Réactiver les contraintes APRÈS la transaction
         db.exec('PRAGMA foreign_keys = ON');
+      }
+
+      // 6. Re-synchroniser l'ecole_id en mémoire : après restauration sur une
+      //    machine neuve, parametres.ecole_id a été écrasé par l'UUID de l'école
+      //    d'origine. Sans ceci, le filtre des requêtes resterait sur l'UUID
+      //    local → toutes les données restaurées seraient invisibles.
+      try {
+        const ecoleRestored = get("SELECT valeur FROM parametres WHERE cle = 'ecole_id'")?.valeur;
+        if (ecoleRestored && typeof setCurrentEcoleId === 'function' && ecoleRestored !== getCurrentEcoleId()) {
+          setCurrentEcoleId(ecoleRestored);
+        }
+      } catch (e) {
+        logger.warn('Re-sync ecole_id après restore:', e.message);
+      }
+
+      // 7. Re-synchroniser currentAnneeId : même principe que pour ecole_id.
+      //    Sur machine neuve, l'année active générée au démarrage disparaît
+      //    au profit de celle restaurée → il faut re-pointer l'année active.
+      try {
+        const anneeRestored = get('SELECT id FROM annees_scolaires WHERE active = 1 ORDER BY id DESC LIMIT 1');
+        if (anneeRestored && typeof setCurrentAnneeId === 'function' && anneeRestored.id !== getCurrentAnneeId()) {
+          setCurrentAnneeId(anneeRestored.id);
+        }
+      } catch (e) {
+        logger.warn('Re-sync annee_id après restore:', e.message);
       }
 
       event.sender.send('export-progress', { type: 'portalRestore', step: 'completed', message: 'Restauration terminée avec succès !', percent: 100 });
