@@ -128,10 +128,11 @@ async function main() {
   console.log(`  Graine : ${SEED}`);
   console.log('==========================================================\n');
 
-  // ── Préserver la licence et l'ecole_id existants ──
+  // ── Préserver la licence et l'identité d'installation existantes ──
   let licenceKey = null;
   let licenceLastUsage = null;
   let ecoleId = null;
+  let codeEcoleParam = null;
   if (fs.existsSync(DB_PATH)) {
     try {
       const sqlite = require('better-sqlite3');
@@ -140,11 +141,13 @@ async function main() {
       licenceKey = q('licence_key');
       licenceLastUsage = q('licence_last_usage');
       ecoleId = q('ecole_id');
+      codeEcoleParam = q('code_ecole');
       old.close();
       console.log('→ Licence existante préservée.');
       if (ecoleId) console.log(`→ ecole_id préservé : ${ecoleId}`);
+      if (codeEcoleParam) console.log(`→ code_ecole préservé : ${codeEcoleParam}`);
     } catch (e) {
-      console.log('→ Licence/ecole_id non préservés :', e.message);
+      console.log('→ Licence/identité non préservées :', e.message);
     }
   }
 
@@ -187,7 +190,7 @@ async function main() {
   const insParam = db.prepare('INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?,?)');
   for (const [k, v] of Object.entries({
     ecole_id: ECOLE_ID,
-    code_ecole: '7KMQXT',
+    code_ecole: codeEcoleParam || '7KMQXT',
     nom_etablissement: 'École Publique de Nkolbisson',
     telephone: '+237 691 234 567',
     email: 'ep.nkolbisson@elimu.cm',
