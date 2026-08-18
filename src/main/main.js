@@ -232,7 +232,7 @@ app.whenReady().then(async () => {
 
 async function initAnneesScolaires() {
   const { get, run } = require('../shared/database/db');
-  
+
   // S'assurer qu'une année est active
   const activeAnnee = get('SELECT id FROM annees_scolaires WHERE active = 1 LIMIT 1');
   if (activeAnnee) {
@@ -242,6 +242,29 @@ async function initAnneesScolaires() {
     if (lastAnnee) {
       currentAnneeId = lastAnnee.id;
       run('UPDATE annees_scolaires SET active = 1 WHERE id = ?', [currentAnneeId]);
+    } else {
+      // Aucune année scolaire : en créer une par défaut (rentrée en cours)
+      const anneeCourante = new Date().getFullYear();
+      const libelle = `${anneeCourante}/${anneeCourante + 1}`;
+      const res = run(
+        'INSERT INTO annees_scolaires (libelle, date_debut, date_fin, active) VALUES (?, ?, ?, 1)',
+        [libelle, `${anneeCourante}-09-01`, `${anneeCourante + 1}-07-31`]
+      );
+      currentAnneeId = Number(res.lastID);
+      getLogger().info(`Aucune année scolaire trouvée : création automatique de "${libelle}" (id=${currentAnneeId})`);
+    }
+  }
+
+  // Récupération des données orphelines créées alors qu'aucune année n'était active :
+  // on les rattache à l'année courante pour les rendre visibles dans l'application
+  if (currentAnneeId) {
+    const tablesOrphelines = ['eleves', 'notes', 'absences', 'tranches', 'paiements', 'paiement_tranches', 'heures_absence', 'frais_types', 'imports', 'sanctions'];
+    for (const table of tablesOrphelines) {
+      try {
+        run(`UPDATE ${table} SET annee_scolaire_id = ? WHERE annee_scolaire_id IS NULL`, [currentAnneeId]);
+      } catch (err) {
+        getLogger().warn(`Rattachement orphelins ignoré pour ${table} : ${err.message}`);
+      }
     }
   }
 }

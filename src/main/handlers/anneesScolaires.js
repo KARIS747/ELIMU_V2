@@ -242,6 +242,17 @@ function register(ipcMain, deps) {
       // Mettre à jour l'état global
       setCurrentAnneeId(aid);
 
+      // Récupération : rattacher à cette année les enregistrements orphelins
+      // (créés alors qu'aucune année scolaire n'était définie)
+      try {
+        run('UPDATE eleves SET annee_scolaire_id = ? WHERE annee_scolaire_id IS NULL', [aid]);
+        run('UPDATE tranches SET annee_scolaire_id = ? WHERE annee_scolaire_id IS NULL', [aid]);
+        run('UPDATE paiements SET annee_scolaire_id = ? WHERE annee_scolaire_id IS NULL', [aid]);
+        run('UPDATE absences SET annee_scolaire_id = ? WHERE annee_scolaire_id IS NULL', [aid]);
+      } catch (err) {
+        logger.warn('Récupération des orphelins ignorée:', err.message);
+      }
+
       // SYNCHRONISATION : Mettre à jour l'affichage sur les bulletins et reçus
       try {
         run(`UPDATE bulletin_config SET valeur = ? WHERE cle = 'annee_scolaire'`, [annee.libelle]);
