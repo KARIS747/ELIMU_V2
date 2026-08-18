@@ -22,6 +22,7 @@
     "build:all": "node scripts/inject-secret.js && node scripts/obfuscate.js && node scripts/smoke-test.js && electron-builder --win --linux",
     "rebuild:electron": "electron-builder install-app-deps",
     "rebuild:node": "npm rebuild better-sqlite3",
+    "demo:data": "node scripts/demo_data.js",
     "test": "jest tests/unit",
     "test:all": "jest --forceExit",
     "test:integration": "jest tests/integration --forceExit"
