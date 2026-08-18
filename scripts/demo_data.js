@@ -128,9 +128,10 @@ async function main() {
   console.log(`  Graine : ${SEED}`);
   console.log('==========================================================\n');
 
-  // ── Préserver la licence existante éventuelle ──
+  // ── Préserver la licence et l'ecole_id existants ──
   let licenceKey = null;
   let licenceLastUsage = null;
+  let ecoleId = null;
   if (fs.existsSync(DB_PATH)) {
     try {
       const sqlite = require('better-sqlite3');
@@ -138,10 +139,12 @@ async function main() {
       const q = (k) => old.prepare('SELECT valeur FROM parametres WHERE cle=?').get(k)?.valeur;
       licenceKey = q('licence_key');
       licenceLastUsage = q('licence_last_usage');
+      ecoleId = q('ecole_id');
       old.close();
       console.log('→ Licence existante préservée.');
+      if (ecoleId) console.log(`→ ecole_id préservé : ${ecoleId}`);
     } catch (e) {
-      console.log('→ Licence non préservée :', e.message);
+      console.log('→ Licence/ecole_id non préservés :', e.message);
     }
   }
 
@@ -168,7 +171,7 @@ async function main() {
   // ==========================================================================
   // ÉCOLE / ANNÉES / PARAMÈTRES
   // ==========================================================================
-  const ECOLE_ID = '6b3e9d2a-4c1f-4b8e-9a5c-1d2e3f4a5b6c';
+  const ECOLE_ID = ecoleId || '6b3e9d2a-4c1f-4b8e-9a5c-1d2e3f4a5b6c';
   const ANNEE = '2025/2026';
 
   const insAnnee = db.prepare(
