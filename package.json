@@ -23,8 +23,8 @@
     "rebuild:electron": "electron-builder install-app-deps",
     "rebuild:node": "npm rebuild better-sqlite3",
     "test": "jest tests/unit",
-    "test:all": "jest",
-    "test:integration": "jest tests/integration"
+    "test:all": "jest --forceExit",
+    "test:integration": "jest tests/integration --forceExit"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
