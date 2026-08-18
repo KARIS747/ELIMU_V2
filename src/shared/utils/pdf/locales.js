@@ -137,7 +137,19 @@ const docLocales = {
     liste_aff_moy20: 'MOY\n/20',
     liste_aff_sequence: 'Séq',
     liste_aff_legend: 'Note affichée : somme des points obtenus sur la somme des points de la sous-compétence (poids). Les élèves peuvent consulter et contester leurs notes.',
-    liste_aff_legend_n3: 'Notes sur 20 par matière pour la séquence sélectionnée. Les élèves peuvent consulter et contester leurs notes.'
+    liste_aff_legend_n3: 'Notes sur 20 par matière pour la séquence sélectionnée. Les élèves peuvent consulter et contester leurs notes.',
+    // Pyramide des âges
+    pyramide_title: 'PYRAMIDE DES ÂGES',
+    pyramide_sous_titre: 'COURBE DES NAISSANCES',
+    pyramide_effectif: 'Effectif',
+    pyramide_sexe: 'Sexe',
+    pyramide_garcons: 'Garçons',
+    pyramide_filles: 'Filles',
+    pyramide_axe_x: 'Années de naissance',
+    pyramide_axe_y: 'Effectifs',
+    pyramide_sans_date: 'Aucune date de naissance renseignée pour cette sélection.',
+    pyramide_edite_le: 'Édité le',
+    pyramide_page: 'Page'
   },
   en: {
     // Bulletins
@@ -273,7 +285,19 @@ const docLocales = {
     liste_aff_moy20: 'AVG\n/20',
     liste_aff_sequence: 'Seq',
     liste_aff_legend: 'Shown grade: sum of obtained points over the sum of points of the sub-competence (weight). Students may review and contest their grades.',
-    liste_aff_legend_n3: 'Grades out of 20 per subject for the selected sequence. Students may review and contest their grades.'
+    liste_aff_legend_n3: 'Grades out of 20 per subject for the selected sequence. Students may review and contest their grades.',
+    // Pyramide des âges
+    pyramide_title: 'AGE PYRAMID',
+    pyramide_sous_titre: 'BIRTH YEAR CURVE',
+    pyramide_effectif: 'Total',
+    pyramide_sexe: 'Gender',
+    pyramide_garcons: 'Boys',
+    pyramide_filles: 'Girls',
+    pyramide_axe_x: 'Birth years',
+    pyramide_axe_y: 'Count',
+    pyramide_sans_date: 'No birth date recorded for this selection.',
+    pyramide_edite_le: 'Edited on',
+    pyramide_page: 'Page'
   }
 };
 

@@ -777,6 +777,9 @@ function attacherEvenements() {
     if (e.target === document.getElementById('modal-export-liste')) fermerModaleExportListe();
   });
   document.getElementById('export-liste-ok')?.addEventListener('click', executerExportListe);
+  // ★ Export pyramide des âges PDF
+  document.getElementById('btn-export-pyramide')?.addEventListener('click', ouvrirModaleExportListe);
+  document.getElementById('export-pyramide-ok')?.addEventListener('click', executerExportPyramide);
 }
 
 // ============================================================
@@ -875,6 +878,36 @@ async function executerExportListe() {
     }
     if (result?.success) {
       showToast(t('eleves.export_liste_success') + ' (' + (result.total || 0) + ')', 'success');
+      fermerModaleExportListe();
+    }
+  } catch (err) {
+    showToast(t('common.error') + ' : ' + err.message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function executerExportPyramide() {
+  const select = document.getElementById('export-liste-classe');
+  const sexeSelect = document.getElementById('export-pyramide-sexe');
+  const btn = document.getElementById('export-pyramide-ok');
+  const classeId = select?.value ? parseInt(select.value) : null;
+  if (!classeId) {
+    showToast(t('eleves.export_liste_no_classe'), 'error');
+    return;
+  }
+  if (btn) { btn.disabled = true; }
+  try {
+    const lang = window.appState?.lang || 'fr';
+    const sexe = sexeSelect?.value || 'T';
+    const result = await window.elimuAPI.exportPyramideAge(classeId, sexe, _state?.user?.id, lang);
+    if (result?.canceled) return;
+    if (result?.error) {
+      showToast(t('common.error') + ' : ' + result.error, 'error');
+      return;
+    }
+    if (result?.success) {
+      showToast(t('eleves.export_pyramide_success') + ' (' + (result.total || 0) + ')', 'success');
       fermerModaleExportListe();
     }
   } catch (err) {

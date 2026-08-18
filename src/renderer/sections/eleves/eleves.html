@@ -113,6 +113,9 @@
     <button class="btn btn-secondary" id="btn-export-liste-eleves" type="button" data-i18n="eleves.btn_export_liste">
       Exporter la liste PDF
     </button>
+    <button class="btn btn-secondary" id="btn-export-pyramide" type="button" data-i18n="eleves.btn_export_pyramide">
+      Pyramide des âges
+    </button>
   </div>
 
   <!-- Grille des élèves -->
@@ -251,8 +254,8 @@
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
         <div style="font-family:'Rajdhani',sans-serif; font-size:20px;
              font-weight:700; color:var(--text-primary); text-transform:uppercase;"
-             data-i18n="eleves.export_liste_title">
-          Exporter la liste PDF
+             data-i18n="eleves.export_pdf_title">
+          Exporter (PDF)
         </div>
         <button id="modal-export-liste-close" type="button"
                 style="background:var(--bg-hover); border:1px solid var(--border-color);
@@ -262,7 +265,7 @@
       </div>
       <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px; line-height:1.6;"
          data-i18n="eleves.export_liste_desc">
-        Sélectionnez la classe dont vous souhaitez exporter la liste des élèves (PDF avec matricule, date de naissance, sexe).
+        Sélectionnez la classe à exporter. La liste PDF inclut matricule, date de naissance et sexe. La pyramide des âges trace la courbe des naissances (par sexe si choisi).
       </p>
       <div class="input-group" style="margin-bottom:20px;">
         <label data-i18n="eleves.label_class">Classe</label>
@@ -270,11 +273,21 @@
           <option value="" data-i18n="eleves.select_classe_placeholder">— Sélectionner une classe —</option>
         </select>
       </div>
-      <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <div class="input-group" style="margin-bottom:20px;">
+        <label data-i18n="eleves.label_sexe">Sexe</label>
+        <select id="export-pyramide-sexe" class="input">
+          <option value="T" data-i18n="eleves.sexe_tous">Tous</option>
+          <option value="M" data-i18n="eleve.garcon">Garçon</option>
+          <option value="F" data-i18n="eleve.fille">Fille</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
         <button type="button" id="modal-export-liste-cancel" class="btn btn-secondary"
                 data-i18n="common.cancel">Annuler</button>
         <button type="button" id="export-liste-ok" class="btn btn-primary"
-                data-i18n="eleves.btn_export">Exporter</button>
+                data-i18n="eleves.btn_export">Exporter la liste</button>
+        <button type="button" id="export-pyramide-ok" class="btn btn-primary"
+                data-i18n="eleves.btn_export_pyramide">Exporter la pyramide</button>
       </div>
     </div>
   </div>

@@ -291,6 +291,44 @@ function register(ipcMain, deps) {
     }
   });
 
+  // ── Export pyramide des âges (courbe des naissances, PDF) ────────────────
+
+  ipcMain.handle('export:pyramideAge', async (event, classeId, sexe, utilisateurId, lang = 'fr') => {
+    if (!(await checkAccess(['admin', 'secretaire', 'enseignant']))) return { success: false, error: 'Accès non autorisé' };
+    try {
+      const cid = parseInt(classeId);
+      if (isNaN(cid)) return { success: false, error: 'ID classe invalide' };
+      const filtreSexe = sexe === 'M' || sexe === 'F' ? sexe : 'T';
+      const { exportPyramideAgePDF } = require('../../shared/utils/pdf/pyramideAge');
+      const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classe = get('SELECT nom_classe FROM classes WHERE id = ? AND ecole_id = ?', [cid, ecoleId]);
+      if (!classe) return { error: 'Classe non trouvée' };
+
+      const savePath = await dialog.showSaveDialog(getMainWindow(), {
+        defaultPath: `pyramide_ages_${(classe.nom_classe || 'classe').replace(/\s/g, '_')}_${Date.now()}.pdf`,
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (savePath.canceled) return { canceled: true };
+
+      const anneeId = getCurrentAnneeId();
+      const annee = (get('SELECT libelle FROM annees_scolaires WHERE id = ?', [anneeId]))?.libelle || '';
+
+      const eleves = all(
+        `SELECT nom, prenom, date_naissance, sexe FROM eleves
+         WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`,
+        [cid, anneeId, ecoleId]
+      );
+
+      const result = await exportPyramideAgePDF(eleves, { classe: classe.nom_classe, annee, sexe: filtreSexe }, savePath.filePath, lang);
+      const uid = parseInt(utilisateurId) || getCurrentUserId();
+      await logAudit(uid, 'EXPORT_PYRAMIDE_AGES', `Export pyramide des âges classe: ${cid} (${result.total} élèves, sexe: ${filtreSexe})`);
+      return result;
+    } catch (error) {
+      logger.error('Erreur exportPyramideAge:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // ── Export liste des enseignants (PDF) ──────────────────────────────────────
 
   ipcMain.handle('export:listeProfesseurs', async (event, utilisateurId, lang = 'fr') => {
