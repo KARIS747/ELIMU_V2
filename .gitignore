@@ -45,6 +45,9 @@ Thumbs.db
 .env.local
 .env.production
 
+# Secret de licence injecté au build (jamais commité)
+src/shared/license.secret.js
+
 # Temporary
 clean
 clean-shm

@@ -26,7 +26,13 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - name: Injecter le secret de licence
+        run: node scripts/inject-secret.js
+        env:
+          ELIMU_LICENCE_SECRET: ${{ secrets.ELIMU_LICENCE_SECRET }}
       - run: node scripts/obfuscate.js
+      - name: Smoke-test des sources obfusquées
+        run: node scripts/smoke-test.js
       - run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

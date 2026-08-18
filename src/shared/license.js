@@ -4,21 +4,72 @@ const os = require('os');
 /**
  * license.js - Utilitaire de gestion des licences (Hardware ID, Vérification)
  * Aucun émoji n'est utilisé dans les textes visibles.
+ *
+ * IMPORTANT SÉCURITÉ (build) :
+ *  - Le secret de signature ne doit JAMAIS être codé en dur dans le dépôt,
+ *    qui est public. Il est injecté au moment du build par
+ *    scripts/inject-secret.js dans src/shared/license.secret.js
+ *    (fichier gitignoré, jamais commité).
+ *  - Ordre de résolution du secret :
+ *      1. Variable d'environnement ELIMU_LICENCE_SECRET (tests / dev)
+ *      2. Fichier injecté au build (license.secret.js)
+ *      3. Secret historique (compatibilité avec les clés déjà émises
+ *         uniquement — il est public et seules les anciennes clés l'utilisent).
  */
 
 /**
- * Génère le secret de manière dynamique pour compliquer le reverse-engineering.
- * Le secret n'est jamais stocké en clair dans une seule variable.
+ * Secret historique, public dans le dépôt GitHub public. Conservé UNIQUEMENT
+ * pour vérifier les clés déjà émises avant le passage au build secret.
+ * Toute NOUVELLE clé doit être signée avec le secret injecté au build.
  */
-function _getDynamicSecret() {
+function _getLegacySecret() {
   const parts = [
     'eLimU',
     Buffer.from('X1MzY3IzdF8=', 'base64').toString(), // _S3cr3t_
     (2000 + 25).toString(), // 2025
     '!'
   ];
-  // On ajoute un fragment du nom de l'OS pour lier le secret à la plateforme
   return parts.join('') + os.platform().substring(0, 1);
+}
+
+// Secret injecté au build (fichier généré par scripts/inject-secret.js).
+let _injectedSecret = null;
+try {
+  _injectedSecret = require('./license.secret.js');
+} catch (_) {
+  _injectedSecret = null;
+}
+
+/**
+ * Retourne le secret de signature utilisé pour émettre/vérifier les clés.
+ * Privilégie l'environnement, puis le fichier injecté au build, puis le
+ * secret historique.
+ */
+function _getDynamicSecret() {
+  if (process.env.ELIMU_LICENCE_SECRET) return process.env.ELIMU_LICENCE_SECRET;
+  if (typeof _injectedSecret === 'string' && _injectedSecret.length > 0) {
+    return _injectedSecret;
+  }
+  return _getLegacySecret();
+}
+
+/**
+ * Calcule la signature HMAC-SHA256 d'une clé.
+ * @param {string} secret - Secret de signature
+ * @param {string} dataToSign - Portion de la clé à signer
+ * @param {number} [len=16] - Longueur de la signature en chars hex
+ * @returns {string} Signature hexadécimale majuscule
+ *
+ * NOTE : le Licence Manager (portal) signe en 16 hex (64 bits). L'ancien
+ * générateur signait en 8 hex (32 bits). La vérification accepte les deux.
+ */
+function _hmacForSecret(secret, dataToSign, len = 16) {
+  return crypto
+    .createHmac('sha256', secret)
+    .update(dataToSign)
+    .digest('hex')
+    .substring(0, len)
+    .toUpperCase();
 }
 
 /**
@@ -99,16 +150,21 @@ function verifyLicense(key, hwid, todayOverride = null) {
   // Reconstruire la partie à signer : ELIMU-{expiry}-{hwid}
   const dataToSign = parts.slice(0, parts.length - 1).join('-');
   
-  // Calculer la signature attendue
-  const expectedSignature = crypto
-    .createHmac('sha256', _getDynamicSecret())
-    .update(dataToSign)
-    .digest('hex')
-    .substring(0, 8)
-    .toUpperCase();
+  // Calculer la signature attendue : le portail signe en 16 hex (64 bits),
+// l'ancien générateur en 8 hex (32 bits), et l'ancien secret historique reste
+// accepté pour les clés déjà émises.
+  const currentSecret = _getDynamicSecret();
+  const legacySecret = _getLegacySecret();
+
+  const signatureOk =
+    signature === _hmacForSecret(currentSecret, dataToSign, 16) ||
+    signature === _hmacForSecret(currentSecret, dataToSign, 8) ||
+    (currentSecret !== legacySecret &&
+      (signature === _hmacForSecret(legacySecret, dataToSign, 16) ||
+        signature === _hmacForSecret(legacySecret, dataToSign, 8)));
 
   // 1. Vérifier la signature
-  if (signature !== expectedSignature) return false;
+  if (!signatureOk) return false;
 
   // 2. Vérifier le HWID (sauf si la clé est universelle)
   const keyHwid = parts.slice(2, parts.length - 1).join('-');
@@ -151,10 +207,12 @@ function extractExpiryFromKey(key) {
   if (!/^\d{8}$/.test(expiryStr)) return null;
   
   const year = parseInt(expiryStr.substring(0, 4));
-  const month = parseInt(expiryStr.substring(4, 6)) - 1;
+  const month = parseInt(expiryStr.substring(4, 6)); // 1..12
   const day = parseInt(expiryStr.substring(6, 8));
-  
-  return new Date(year, month, day);
+
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  return new Date(year, month - 1, day);
 }
 
 module.exports = { generateHardwareId, getAllPossibleHardwareIds, verifyLicense, extractExpiryFromKey };

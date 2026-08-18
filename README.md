@@ -22,6 +22,17 @@ npm install
 npx electron .
 ```
 
+## Build & Release
+
+Les builds (CI exclusivement, via GitHub Actions) exigent un **secret de licence** obligatoire : sans lui, `scripts/inject-secret.js` fait échouer le build.
+
+1. Générer un secret long et aléatoire : `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+2. **Utiliser EXACTEMENT la même valeur que `LICENSE_SECRET` du portail** (`portal/.env`) — c'est le Licence Manager qui signe les clés.
+3. Dans GitHub → Settings → **Actions secrets** → ajouter `ELIMU_LICENCE_SECRET` avec cette valeur.
+4. Estampiller un tag `v*` pour déclencher la release.
+
+Le secret n'est **jamais** commité : il est injecté dans `src/shared/license.secret.js` (gitignoré) à la compilation, puis obfusqué. Les clés de licence émises avec l'ancien secret restent valides (compatibilité 8 hex + secret historique), mais **toute clé générée par le Licence Manager avec un secret différent sera rejetée** : la signature HMAC-SHA256 est tronquée à 16 hex (64 bits) côté portail, et le Desktop accepte les signatures 16 et 8 hex calculées avec le secret courant ou l'ancien secret.
+
 ## Structure
 
 ```
