@@ -133,6 +133,7 @@ async function main() {
   let licenceLastUsage = null;
   let ecoleId = null;
   let codeEcoleParam = null;
+  const oldParams = {};
   if (fs.existsSync(DB_PATH)) {
     try {
       const sqlite = require('better-sqlite3');
@@ -142,6 +143,7 @@ async function main() {
       licenceLastUsage = q('licence_last_usage');
       ecoleId = q('ecole_id');
       codeEcoleParam = q('code_ecole');
+      for (const r of old.prepare('SELECT cle, valeur FROM parametres').all()) oldParams[r.cle] = r.valeur;
       old.close();
       console.log('→ Licence existante préservée.');
       if (ecoleId) console.log(`→ ecole_id préservé : ${ecoleId}`);
@@ -205,6 +207,18 @@ async function main() {
   })) insParam.run(k, v);
   if (licenceKey) insParam.run('licence_key', licenceKey);
   if (licenceLastUsage) insParam.run('licence_last_usage', licenceLastUsage);
+
+  // Préserver tous les autres paramètres existants (connexions PWA/portail,
+  // clés API, dossier de sauvegarde, etc.) non réécrits par la démo.
+  const DEMO_PARAM_KEYS = new Set([
+    'ecole_id', 'code_ecole', 'nom_etablissement', 'telephone', 'email',
+    'adresse', 'periode_active', 'seuil_alerte', 'note_max', 'theme',
+    'langue_interface', 'nom_directeur', 'schema_version',
+    'licence_key', 'licence_last_usage',
+  ]);
+  for (const [k, v] of Object.entries(oldParams)) {
+    if (!DEMO_PARAM_KEYS.has(k)) insParam.run(k, v);
+  }
 
   const bc = db.prepare('INSERT OR REPLACE INTO bulletin_config (cle, valeur) VALUES (?,?)');
   for (const [k, v] of Object.entries({
