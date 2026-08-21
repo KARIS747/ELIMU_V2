@@ -7,11 +7,11 @@ const bcrypt = require('bcryptjs');
 const { run, get, all } = require('../../shared/database/db');
 const { logAudit } = require('../../shared/security/audit');
 const { hasRole } = require('../../shared/security/access');
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { dialog, app } = require('electron');
 const crypto = require('crypto');
+const { exportFicheAccesPDF } = require('../../shared/utils/pdf/ficheAccesEnseignant');
 
 const BCRYPT_ROUNDS = 10;
 const PASS_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -266,52 +266,28 @@ function register(ipcMain, deps) {
           }
           pdfPath = path.join(pdfDir, `fiche_acces_${username}.pdf`);
 
-          const doc = new PDFDocument({ size: 'A5', margin: 18 });
-          const stream = fs.createWriteStream(pdfPath);
-          doc.pipe(stream);
-
-          // En-tête
-          doc.fontSize(16).font('Helvetica-Bold')
-             .text('ELIMU - Acces Enseignant', { align: 'center' });
-          doc.moveDown(0.5);
-
-          // Encadré code école
-          const codeEcole = get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || ecoleId || '---';
-          const boxY = doc.y;
-          doc.roundedRect(18, boxY, 174, 36, 6).fillAndStroke('#e8f4fd', '#2d6ef8');
-          doc.fillColor('#1a1a2e').fontSize(9).font('Helvetica').text('Code ecole', 28, boxY + 4, { width: 154, align: 'center' });
-          doc.font('Helvetica-Bold').fontSize(22).fillColor('#2d6ef8')
-             .text(codeEcole, 28, boxY + 14, { width: 154, align: 'center' });
-          doc.fillColor('#000000');
-          doc.moveDown(2.2);
-
-          // Informations
-          doc.fontSize(10).font('Helvetica-Bold').fillColor('#333333').text('Nom complet : ');
-          doc.font('Helvetica').fillColor('#000000').text((prenom || '') + ' ' + (nom || ''));
-          doc.moveDown(0.3);
-
-          doc.font('Helvetica-Bold').fillColor('#333333').text('Identifiant : ');
-          doc.font('Helvetica').fillColor('#000000').text(username);
-          doc.moveDown(0.3);
-
-          doc.font('Helvetica-Bold').fillColor('#333333').text('Mot de passe : ');
-          doc.font('Helvetica').fillColor('#000000').text(rawPassword);
-          doc.moveDown(0.3);
-
-          if (data.matiere_principale) {
-            doc.font('Helvetica-Bold').fillColor('#333333').text('Matiere : ');
-            doc.font('Helvetica').fillColor('#000000').text(data.matiere_principale);
-            doc.moveDown(0.3);
+          const classeNames = [];
+          if (Array.isArray(classeIds) && classeIds.length) {
+            const ids = classeIds.map(cid => parseInt(cid)).filter(n => !isNaN(n));
+            if (ids.length) {
+              const placeholders = ids.map(() => '?').join(',');
+              const rowsCls = all(
+                `SELECT nom_classe FROM classes WHERE ecole_id = ? AND id IN (${placeholders}) ORDER BY nom_classe`,
+                [ecoleId, ...ids]
+              );
+              classeNames.push(...rowsCls.map(r => r.nom_classe));
+            }
           }
 
-          // Séparateur + note
-          doc.moveTo(18, doc.y).lineTo(192, doc.y).stroke('#dddddd');
-          doc.moveDown(0.4);
-          doc.fontSize(7).font('Helvetica-Oblique').fillColor('#999999')
-             .text('Ce mot de passe ne sera plus affiche apres fermeture de cette fenetre. Conservez ce document en lieu sur.', { align: 'center' });
+          await exportFicheAccesPDF({
+            nomComplet: ((prenom || '') + ' ' + (nom || '')).trim(),
+            identifiant: username,
+            motDePasse: rawPassword,
+            codeEcole: get("SELECT valeur FROM parametres WHERE cle = 'code_ecole'")?.valeur || ecoleId || '',
+            matiere: data.matiere_principale,
+            classes: classeNames
+          }, pdfPath);
 
-          doc.end();
-          await new Promise(resolve => stream.on('finish', resolve));
           logger.info('Fiche PDF auto-generee: ' + pdfPath);
         } catch (pdfErr) {
           logger.warn('Auto-generation PDF echouee:', pdfErr.message);
@@ -525,58 +501,14 @@ function register(ipcMain, deps) {
 
       if (savePath.canceled) return { canceled: true };
 
-      const doc = new PDFDocument({ size: 'A5', margin: 20 });
-      const stream = fs.createWriteStream(savePath.filePath);
-      doc.pipe(stream);
-
-      // En-tête
-      doc.fontSize(16).font('Helvetica-Bold')
-         .text('ELIMU - Acces Enseignant', { align: 'center' });
-      doc.moveDown(0.5);
-
-      // Séparateur
-      doc.moveTo(20, doc.y).lineTo(175, doc.y).stroke('#cccccc');
-      doc.moveDown(0.8);
-
-      // Informations
-      doc.fontSize(11).font('Helvetica-Bold').text('Nom complet : ');
-      doc.font('Helvetica').text((prof.prenom || '') + ' ' + (prof.nom || ''));
-      doc.moveDown(0.4);
-
-      doc.font('Helvetica-Bold').text('Identifiant : ');
-      doc.font('Helvetica').text(prof.nom_utilisateur || '—');
-      doc.moveDown(0.4);
-
-      doc.font('Helvetica-Bold').text('Code ecole : ');
-      doc.font('Helvetica').text(codeEcole || '—');
-      doc.moveDown(0.4);
-
-      doc.font('Helvetica-Bold').text('Mot de passe : ');
-      doc.font('Helvetica').text(passwordOverride || '—');
-      doc.moveDown(0.4);
-
-      if (prof.matiere_principale) {
-        doc.font('Helvetica-Bold').text('Matiere : ');
-        doc.font('Helvetica').text(prof.matiere_principale);
-        doc.moveDown(0.4);
-      }
-
-      if (classes.length) {
-        doc.font('Helvetica-Bold').text('Classes : ');
-        doc.font('Helvetica').text(classes.map(c => c.nom_classe).join(', '));
-        doc.moveDown(0.6);
-      }
-
-      // Note de sécurité
-      doc.moveTo(20, doc.y).lineTo(175, doc.y).stroke('#cccccc');
-      doc.moveDown(0.5);
-      doc.fontSize(8).font('Helvetica-Oblique')
-         .fillColor('#666666')
-         .text('Ce mot de passe ne sera plus affiche. Conservez ce document en lieu sur.', { align: 'center' });
-
-      doc.end();
-
-      await new Promise(resolve => stream.on('finish', resolve));
+      await exportFicheAccesPDF({
+        nomComplet: ((prof.prenom || '') + ' ' + (prof.nom || '')).trim(),
+        identifiant: prof.nom_utilisateur,
+        motDePasse: passwordOverride,
+        codeEcole,
+        matiere: prof.matiere_principale,
+        classes: classes.map(c => c.nom_classe)
+      }, savePath.filePath, lang);
 
       await logAudit(getCurrentUserId(), 'PRINT_TEACHER_CARD',
         'Fiche acces imprimee pour ID ' + pid);

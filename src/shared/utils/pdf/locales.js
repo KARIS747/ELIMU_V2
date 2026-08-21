@@ -149,7 +149,17 @@ const docLocales = {
     pyramide_axe_y: 'Effectifs',
     pyramide_sans_date: 'Aucune date de naissance renseignée pour cette sélection.',
     pyramide_edite_le: 'Édité le',
-    pyramide_page: 'Page'
+    pyramide_page: 'Page',
+    // Fiche d'accès enseignant
+    fiche_title: "FICHE D'ACCÈS ENSEIGNANT",
+    fiche_nom_complet: 'Nom complet',
+    fiche_identifiant: 'Identifiant',
+    fiche_code_ecole: 'Code école',
+    fiche_mdp: 'Mot de passe',
+    fiche_matiere: 'Matière',
+    fiche_classes: 'Classes',
+    fiche_note_securite: 'Ce mot de passe ne sera plus affiché. Conservez ce document en lieu sûr.',
+    fiche_edite_le: 'Édité le'
   },
   en: {
     // Bulletins
@@ -297,7 +307,17 @@ const docLocales = {
     pyramide_axe_y: 'Count',
     pyramide_sans_date: 'No birth date recorded for this selection.',
     pyramide_edite_le: 'Edited on',
-    pyramide_page: 'Page'
+    pyramide_page: 'Page',
+    // Fiche d'accès enseignant
+    fiche_title: 'TEACHER ACCESS CARD',
+    fiche_nom_complet: 'Full name',
+    fiche_identifiant: 'Username',
+    fiche_code_ecole: 'School code',
+    fiche_mdp: 'Password',
+    fiche_matiere: 'Subject',
+    fiche_classes: 'Classes',
+    fiche_note_securite: 'This password will not be shown again. Keep this document in a safe place.',
+    fiche_edite_le: 'Edited on'
   }
 };
 
