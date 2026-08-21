@@ -56,10 +56,76 @@
     }
     h1 { margin-bottom: 10px; font-size: 1.5rem; }
     p { color: #a0aec0; margin-bottom: 30px; line-height: 1.5; }
-    
+
+    /* ── Dropzone fichier d'installation ── */
+    .dropzone {
+      border: 2px dashed #4a5568;
+      border-radius: 10px;
+      padding: 28px 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #1f2432;
+      margin-bottom: 8px;
+    }
+    .dropzone:hover, .dropzone:focus-visible {
+      border-color: #00a854;
+      background: #232939;
+      outline: none;
+    }
+    .dropzone.dragover {
+      border-color: #00a854;
+      background: rgba(0, 168, 84, 0.08);
+      transform: scale(1.01);
+    }
+    .dropzone svg { color: #00a854; margin-bottom: 10px; }
+    .dz-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 6px; }
+    .dz-sub { font-size: 0.82rem; color: #a0aec0; line-height: 1.45; }
+    .dz-hint { font-size: 0.72rem; color: #718096; margin-top: 10px; font-family: monospace; }
+
+    /* ── Récap succès bundle ── */
+    .success-box {
+      display: none;
+      background: rgba(72, 187, 120, 0.08);
+      border: 1px solid #48bb78;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 8px;
+    }
+    .success-box svg { color: #48bb78; margin-bottom: 6px; }
+    .success-school { font-size: 1.05rem; font-weight: bold; }
+    .success-expiry { font-size: 0.85rem; color: #48bb78; margin-top: 4px; }
+    .success-detail { font-size: 0.78rem; color: #a0aec0; margin-top: 8px; line-height: 1.5; }
+
+    /* ── Séparateur / repli manuel ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0 12px;
+      color: #718096;
+      font-size: 0.75rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #3d4455;
+    }
+    .link-btn {
+      background: none;
+      border: none;
+      color: #63b3ed;
+      font-size: 0.82rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .link-btn:hover { color: #90cdf4; }
+
     .form-group { text-align: left; margin-bottom: 20px; }
     label { display: block; margin-bottom: 8px; color: #cbd5e0; font-size: 0.9rem; }
-    
+
     .hwid-box {
       background: #1a1e2c;
       padding: 12px;
@@ -82,7 +148,7 @@
       transition: background 0.2s;
     }
     .copy-btn:hover { background: #4a5568; }
-    
+
     input {
       width: 100%;
       padding: 12px;
@@ -94,7 +160,7 @@
       box-sizing: border-box;
     }
     input:focus { border-color: #00a854; outline: none; }
-    
+
     .activate-btn {
       width: 100%;
       padding: 14px;
@@ -110,7 +176,7 @@
     }
     .activate-btn:hover { background: #008f47; }
     .activate-btn:disabled { background: #2d3748; cursor: not-allowed; }
-    
+
     .error-msg {
       color: #f56565;
       font-size: 0.85rem;
@@ -123,7 +189,7 @@
       margin-top: 15px;
       display: none;
     }
-    
+
     .help-text {
       font-size: 0.8rem;
       color: #718096;
@@ -140,26 +206,50 @@
     <div class="logo">Elimu</div>
     <h1 data-i18n="licence.title">Activation de la licence</h1>
     <p data-i18n="licence.subtitle">Pour continuer à utiliser Elimu, veuillez activer votre licence.</p>
-    
-    <div class="form-group">
-      <label data-i18n="licence.hwid_label">Identifiant machine</label>
-      <div class="hwid-box">
-        <span id="hwid-display" class="hwid-value">Chargement...</span>
-        <button id="copy-hwid" class="copy-btn" data-i18n="licence.copy_hwid">Copier</button>
-      </div>
-      <small class="help-text" data-i18n="licence.send_hwid">Envoyez cet identifiant à votre fournisseur pour obtenir votre clé.</small>
+
+    <!-- ── VUE PRINCIPALE : glisser-déposer le fichier d'installation ── -->
+    <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Fichier d'installation">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      <div class="dz-title" data-i18n="licence.dz_title">Installation rapide</div>
+      <div class="dz-sub" data-i18n="licence.dz_sub">Glissez-déposez le fichier d'installation reçu de votre fournisseur, ou cliquez pour le sélectionner.</div>
+      <div class="dz-hint">elimu-installation.json</div>
     </div>
-    
-    <div class="form-group">
-      <label data-i18n="licence.key_label">Clé de licence</label>
-      <input type="text" id="license-key" data-i18n-placeholder="licence.key_placeholder" placeholder="ELIMU-2025-12-31-HWID-XXXX">
+    <input type="file" id="bundle-input" accept=".json,application/json" hidden>
+
+    <!-- ── RÉCAP SUCCÈS (bundle) ── -->
+    <div id="success-box" class="success-box">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      <div id="success-school" class="success-school"></div>
+      <div id="success-expiry" class="success-expiry"></div>
+      <div id="success-detail" class="success-detail"></div>
     </div>
-    
-    <button id="activate-btn" class="activate-btn" data-i18n="licence.activate_btn">Activer la licence</button>
-    
+
     <div id="error-msg" class="error-msg"></div>
-    <div id="success-msg" class="success-msg" data-i18n="licence.success">Licence activée avec succès. Redémarrage...</div>
-    
+
+    <!-- ── SÉPARATEUR + REPLI MANUEL ── -->
+    <div class="divider"><span data-i18n="licence.or">ou</span></div>
+    <button id="toggle-manual" class="link-btn" data-i18n="licence.manual_toggle">Activer avec une clé uniquement</button>
+
+    <div id="manual-section" style="display:none">
+      <div class="form-group">
+        <label data-i18n="licence.hwid_label">Identifiant machine</label>
+        <div class="hwid-box">
+          <span id="hwid-display" class="hwid-value">Chargement...</span>
+          <button id="copy-hwid" class="copy-btn" data-i18n="licence.copy_hwid">Copier</button>
+        </div>
+        <small class="help-text" data-i18n="licence.send_hwid">Envoyez cet identifiant à votre fournisseur pour obtenir votre clé.</small>
+      </div>
+
+      <div class="form-group">
+        <label data-i18n="licence.key_label">Clé de licence</label>
+        <input type="text" id="license-key" data-i18n-placeholder="licence.key_placeholder" placeholder="ELIMU-2025-12-31-HWID-XXXX">
+      </div>
+
+      <button id="activate-btn" class="activate-btn" data-i18n="licence.activate_btn">Activer la licence</button>
+
+      <div id="success-msg" class="success-msg" data-i18n="licence.success">Licence activée avec succès. Redémarrage...</div>
+    </div>
+
     <div class="help-text" data-i18n="licence.managed_by">
       La licence est liée à votre machine. Pour tout changement, contactez votre fournisseur.
     </div>

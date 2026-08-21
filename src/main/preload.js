@@ -259,6 +259,7 @@ contextBridge.exposeInMainWorld('elimuAPI', {
 
   getHardwareId: () => ipcRenderer.invoke('license:getHardwareId'),
   saveLicense: (data) => ipcRenderer.invoke('license:save', data),
+  importLicenseBundle: (filePath) => ipcRenderer.invoke('license:importBundle', { filePath }),
   getLicenseStatus: () => ipcRenderer.invoke('license:getStatus'),
 
   // ==========================================
