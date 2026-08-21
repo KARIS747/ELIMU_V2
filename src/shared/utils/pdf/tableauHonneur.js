@@ -284,8 +284,9 @@ function textSegmentsCentered(doc, segments, x, y, width, lineGap = 4) {
 function drawDiplome(doc, data, honore, lang = 'fr') {
   const t = getDocTranslator(lang);
   const cfg = data.cfg;
-  const coulPrimaire  = cfg.couleur_primaire   || '#1a3c6e';
-  const coulSecondaire = cfg.couleur_secondaire || '#c8a415';
+  // Couleurs propres au Tableau d'honneur (th_*), repli sur celles du bulletin
+  const coulPrimaire  = cfg.th_couleur_primaire  || cfg.couleur_primaire   || '#1a3c6e';
+  const coulSecondaire = cfg.th_couleur_secondaire || cfg.couleur_secondaire || '#c8a415';
   const nomDir  = cfg.directeur_nom || (lang === 'en' ? 'The Principal' : 'Le Directeur');
   const titreDir = cfg.directeur_titre || (lang === 'en' ? 'The Principal' : 'Le Directeur');
 

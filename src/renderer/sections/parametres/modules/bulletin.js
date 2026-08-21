@@ -87,6 +87,12 @@ function remplirFormulaireBulletin() {
   setCouleur('bul-couleur-primaire',   'bul-couleur-primaire-hex',   cp);
   setCouleur('bul-couleur-secondaire', 'bul-couleur-secondaire-hex', cs);
 
+  // Couleurs du Tableau d'honneur (repli sur celles du bulletin si non définies)
+  const thp = c.th_couleur_primaire   || cp;
+  const ths = c.th_couleur_secondaire || cs;
+  setCouleur('bul-th-couleur-primaire',   'bul-th-couleur-primaire-hex',   thp);
+  setCouleur('bul-th-couleur-secondaire', 'bul-th-couleur-secondaire-hex', ths);
+
   chk('bul-entete-bilingue',       c.entete_bilingue  !== undefined ? c.entete_bilingue  : '1');
   chk('col-coefficient',           c.col_coefficient  !== undefined ? c.col_coefficient  : '1');
   chk('col-seq1',                  c.col_seq1         !== undefined ? c.col_seq1         : '1');
@@ -114,6 +120,7 @@ function remplirFormulaireBulletin() {
 
   afficherMentions();
   mettreAJourApercuCouleurs();
+  mettreAJourApercuTHCouleurs();
   mettreAJourApercuNotation();
 }
 
@@ -181,6 +188,18 @@ function mettreAJourApercuCouleurs() {
   const moy    = document.getElementById('apercu-moy');
   if (header) header.style.background = cp;
   if (moy)    moy.style.color = cs;
+}
+
+function mettreAJourApercuTHCouleurs() {
+  const cp = document.getElementById('bul-th-couleur-primaire')?.value || '#7a1f2b';
+  const cs = document.getElementById('bul-th-couleur-secondaire')?.value || '#c8a415';
+  const bandeau = document.getElementById('apercu-th-bandeau');
+  const nom     = document.getElementById('apercu-th-nom');
+  if (bandeau) {
+    bandeau.style.background        = cp;
+    bandeau.style.borderBottomColor = cs;
+  }
+  if (nom) nom.style.color = cp;
 }
 
 /**
@@ -277,24 +296,28 @@ function getConfigBulletin() {
     honor_rang_max:                    val('bul-honor-rang-max') || '5',
     honor_seuil:                       val('bul-honor-seuil') || '12',
     honor_regle:                       val('bul-honor-regle') || 'et',
+    th_couleur_primaire:               val('bul-th-couleur-primaire'),
+    th_couleur_secondaire:             val('bul-th-couleur-secondaire'),
   };
 }
 
 function attacherEvenementsBulletin() {
-  const syncCouleur = (pickerId, hexId) => {
+  const syncCouleur = (pickerId, hexId, onInput = mettreAJourApercuCouleurs) => {
     document.getElementById(pickerId)?.addEventListener('input', e => {
       const hex = document.getElementById(hexId);
       if (hex) hex.value = e.target.value;
-      mettreAJourApercuCouleurs();
+      onInput();
     });
     document.getElementById(hexId)?.addEventListener('input', e => {
       const picker = document.getElementById(pickerId);
       if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value) && picker) picker.value = e.target.value;
-      mettreAJourApercuCouleurs();
+      onInput();
     });
   };
   syncCouleur('bul-couleur-primaire',   'bul-couleur-primaire-hex');
   syncCouleur('bul-couleur-secondaire', 'bul-couleur-secondaire-hex');
+  syncCouleur('bul-th-couleur-primaire',   'bul-th-couleur-primaire-hex',   mettreAJourApercuTHCouleurs);
+  syncCouleur('bul-th-couleur-secondaire', 'bul-th-couleur-secondaire-hex', mettreAJourApercuTHCouleurs);
 
   const checkPoids = () => {
     const p1 = parseInt(document.getElementById('bul-poids-seq1')?.value) || 0;
