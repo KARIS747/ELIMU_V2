@@ -1,7 +1,7 @@
 # AGENTS.md — ÉLIMU V2 (Desktop)
 
 > Fichier de mémoire pour l'assistant IA travaillant sur l'application desktop ÉLIMU V2.
-> À lire en intégralité avant toute modification.
+> À lire en intégralité avant toute modification. Dernière mise à jour : 22 Août 2026 (état v1.8.0+).
 
 ---
 
@@ -9,30 +9,29 @@
 
 | Champ | Valeur |
 |-------|--------|
-| **Nom** | ÉLIMU V2 |
+| **Nom** | ÉLIMU V2 (produit : « Elimu », version courante : 1.8.x) |
+| **Éditeur** | KarisDev — Karis Zogo Emmanuel |
 | **Type** | Application de gestion scolaire desktop |
-| **Stack** | Electron 31 + JavaScript (Vanilla) + better-sqlite3 |
-| **Base de données locale** | SQLite via better-sqlite3 |
-| **Base de données cloud** | PostgreSQL (Neon) — synchronisation |
-| **Portail parents** | Web (Render) — lecture seule |
-| **Sécurité** | bcryptjs, HWID, HMAC-SHA256, JWT, audit trail |
-| **Cible** | Écoles primaires africaines (système MINEDUB Cameroun) |
-| **Contact** | karisdev369@gmail.com |
-| **Licence** | Propriétaire (CLUF) |
+| **Stack** | Electron 31 + JavaScript (Vanilla) + better-sqlite3 ^12.11.1 |
+| **Base de données locale** | SQLite via better-sqlite3 (fichiers dans `database/`) |
+| **Base de données cloud** | PostgreSQL (Neon) — synchronisation Desktop/PWA/Portail |
+| **Portail parents** | Web (Render) — lecture seule, repo séparé `../portal` |
+| **PWA enseignants** | Web mobile hors-ligne, repo séparé `../PWA` |
+| **Sécurité** | bcryptjs, HWID, HMAC-SHA256, JWT, audit trail, CSP stricte |
+| **Cible** | Écoles primaires camerounaises (système MINEDUB) |
+| **Contact** | karisdev369@gmail.com — Tél. : +237 681 266 058 |
+| **Licence** | Propriétaire — CLUF 15 articles (`build-resources/license.txt`, UTF-8 avec BOM obligatoire) |
 
-### Références documentaires
+### Références documentaires (fichiers existants uniquement)
 
 | Fichier | Contenu |
 |---------|---------|
-| `../ELIMU_V2_VISION.md` | Vision stratégique, roadmap, écosystème Desktop/PWA/Portail |
-| `../ELIMU_V2_ARCHITECTURE.md` | Architecture détaillée, templates, barèmes, flux de données |
-| `../ELIMU_V2_DESIGN_TRANSITION.md` | Design de transition V1→V2, profil élève adaptatif |
-| `../ELIMU_CURRICULUM_N1_N2.md` | Curriculum officiel MINEDUB Niveau 1 (SIL/CP) et Niveau 2 (CE1/CE2) |
-| `../ELIMU_CURRICULUM_N3.md` | Curriculum officiel MINEDUB Niveau 3 — CM1 passé en APC, CM2 seul en classique |
-| `gemini/GEMINI.md` | Règles de codage pour l'IA (sécurité, perf, i18n, etc.) |
-| `gemini/V2_IMPLEMENTATION_STATE.md` | État d'avancement phase 1 (migration schéma, curriculum, UI) |
-| `docs/CALCUL_NOTES_N1_N2.md` | Documentation détaillée des formules de calcul N1/N2 |
-| `gemini/Rapport_Reverse_Sync_Juin_2026.md` | Rapport de synchronisation et reverse engineering |
+| `README.md` | Installation, build/release, structure |
+| `docs/CALCUL_NOTES_N1_N2.md` | Formules de calcul N1/N2 détaillées |
+| `docs/TABLEAU_D_HONNEUR.md` | Fonctionnement du module Tableau d'honneur |
+| `build-resources/license.txt` | CLUF complet (15 articles, droit camerounais) |
+
+> Les anciennes références (`gemini/`, `../ELIMU_V2_VISION.md`, etc.) n'existent plus. Ne pas s'y fier.
 
 ---
 
@@ -67,6 +66,7 @@
 - **Le Directeur ne saisit JAMAIS de notes.** L'onglet "Notes" global est supprimé du Desktop. Les notes arrivent via : (1) synchronisation Cloud PWA, (2) import Excel signé.
 - **Le Desktop est un outil de pilotage** : gestion des comptes, finances, ingestion, impression, validation.
 - **Tous les templates de compétences sont hardcodés** (pas de configuration UI) pour garantir la conformité MINEDUB.
+- **Flux au démarrage** : splash screen → vérification licence (HWID + HMAC) → écran d'activation si invalide (glisser-déposer du bundle ou clé manuelle) → fenêtre principale.
 
 ---
 
@@ -75,43 +75,81 @@
 ```
 ELIMU_V2/
 ├── src/
-│   ├── main/                    # Processus principal Electron (Backend)
-│   │   ├── handlers/            # Logique métier IPC
-│   │   │   ├── eleves.js        # Notes, stats, profil élève
-│   │   │   ├── classes.js       # CRUD classes
-│   │   │   ├── importExcel.js   # Moteur d'import Excel
-│   │   │   ├── finance.js
-│   │   │   ├── parametres.js
-│   │   │   └── backup.js
-│   │   ├── utils/               # Utilitaires Node.js
-│   │   ├── main.js              # Point d'entrée Electron
-│   │   └── preload.js           # Pont sécurisé IPC (contextBridge)
-│   ├── renderer/                # Interface utilisateur
-│   │   ├── assets/              # CSS, images, polices
-│   │   ├── locales/             # i18n (fr.js, en.js)
-│   │   ├── sections/            # Modules UI
+│   ├── main/                        # Processus principal Electron (Backend)
+│   │   ├── handlers/
+│   │   │   ├── auth.js              # Connexion utilisateurs (10 handlers)
+│   │   │   ├── eleves.js            # CRUD élèves, notes, stats, profil (12)
+│   │   │   ├── classes.js           # CRUD classes (4)
+│   │   │   ├── matieres.js          # Matières/coefs N3 (4)
+│   │   │   ├── absences.js          # Absences et heures (8)
+│   │   │   ├── finance.js           # Frais, tranches, paiements (16)
+│   │   │   ├── parents.js           # Comptes parents + sync portail (8)
+│   │   │   ├── professeurs.js       # Comptes enseignants PWA (17)
+│   │   │   ├── importExport.js      # Exports PDF/Excel + imports Excel (23)
+│   │   │   ├── parametres.js        # bulletin_config, logo, général (7)
+│   │   │   ├── anneesScolaires.js   # Années scolaires (9)
+│   │   │   ├── sauvegarde.js        # Backup local + Cloud Recovery (4)
+│   │   │   ├── audit.js             # Journal d'audit (2)
+│   │   │   └── license.js           # Activation/licence HWID (4)
+│   │   ├── utils/                   # financeUtils, integrity, testData
+│   │   ├── main.js                  # Point d'entrée : splash → licence → main
+│   │   ├── preload.js               # Pont contextBridge (window.elimuAPI)
+│   │   └── splash-preload.js        # Pont de la splash screen
+│   ├── renderer/                    # Interface utilisateur
+│   │   ├── assets/                  # CSS, images, polices (woff2)
+│   │   ├── locales/                 # i18n : fr.js, en.js, index.js
+│   │   ├── license-screen/          # Écran d'activation (drag-drop bundle / clé)
+│   │   ├── splash/                  # Splash screen
+│   │   ├── sections/
 │   │   │   ├── dashboard/
 │   │   │   ├── classes/
-│   │   │   ├── eleves/          # Profil élève, notes N1/N2/N3
-│   │   │   ├── parametres/
-│   │   │   └── ...
-│   │   └── renderer.js          # Point d'entrée UI
-│   └── shared/                  # Code partagé (main + renderer)
-│       ├── constants/
-│       │   └── curriculum.js    # *** CŒUR : templates N1/N2/N3 + fonctions de calcul ***
+│   │   │   ├── eleves/              # Profil élève, notes N1/N2/N3, exports
+│   │   │   ├── professeurs/         # Comptes enseignants PWA
+│   │   │   ├── parents/
+│   │   │   ├── finance/
+│   │   │   ├── import_export/       # Tableau d'honneur, listes affichables, pyramide, imports
+│   │   │   └── parametres/          # modules/ : general, bulletin, annees, seuils,
+│   │   │                            #   absences, utilisateurs, sauvegarde, audit, update
+│   │   ├── index.html               # Coquille principale (sidebar dynamique par rôle)
+│   │   └── assets/js/renderer.js    # Point d'entrée UI
+│   └── shared/                      # Code partagé (main + renderer)
+│       ├── constants/curriculum.js  # *** CŒUR : templates N1/N2/N3 + fonctions de calcul ***
 │       ├── database/
-│       │   ├── schema.sql       # Schéma SQLite
-│       │   └── db.js            # Wrapper SQL + migrations
-│       ├── security/
-│       └── utils/               # Helpers
-├── database/                    # Base SQLite locale
-├── exports/                     # PDFs, exports
-├── logs/
-├── scripts/                     # seed_test_data.js
-├── docs/
-│   └── CALCUL_NOTES_N1_N2.md
-└── package.json
+│       │   ├── schema.sql           # Schéma SQLite (version 123)
+│       │   └── db.js                # Wrapper SQL + migrations idempotentes
+│       ├── security/                # access.js, audit.js, auth.js, rate.Limit.js
+│       ├── license.js (+ .secret.js # Secret injecté au build, JAMAIS commité
+│       │      gitigné)              #
+│       └── utils/
+│           ├── pdf/                 # 11 modules PDF (voir §6.7)
+│           ├── excel/               # exportExcel, exportExcelRentree, modeleImport
+│           ├── import/              # classic, formatB, listeEleves, listeProfesseurs,
+│           │                        #   absencesExcel, pwaExport
+│           ├── importExcel.js       # Orchestrateur d'import signé
+│           ├── parentSync.js        # Sync comptes parents → portail
+│           ├── modeleNotes.js / modeleAbsences.js
+│           ├── exportFiles.js / dateUtils.js / phone.js / logger.js
+│           └── recuPDF.js           # Reçus de paiement
+├── tests/
+│   ├── unit/                        # Jest : curriculum, bulletinQualitatif, pyramideAge,
+│   │                                #   finance, license, dateUtils, exportFiles
+│   └── integration/                 # Jest --forceExit : db, auth, isolation, finance,
+│                                    #   absences, importExcel, parentSync
+├── scripts/                         # demo_data.js, generateTestData*.js, inject-secret.js,
+│                                    #   obfuscate.js, smoke-test.js
+├── tools/                           # diagnostic-finance.js, diagnostic.sh, reset_pass.js
+├── build-resources/                 # icon.ico, icons/, license.txt (CLUF, UTF-8 BOM), scripts/
+├── database/                        # Bases SQLite locales (*.db)
+├── exports/                         # PDFs, exports générés
+├── logs/                            # Journaux (winston daily rotate)
+├── backups/                         # Sauvegardes locales
+├── .github/workflows/               # ci.yml (tests), release.yml (build + publish)
+├── seed_test_data.js                # Générateur seed racine (sous-commande clean)
+└── package.json                     # v1.8.0 — voir scripts npm §13
 ```
+
+> Fichiers divers à la racine (`clean*`, `clean_emojis.js`, `gen_advantages_pdf.js`,
+> `LISTES_A_AJOUTER.md`) : artefacts historiques, ne pas s'en inspirer pour le code neuf.
 
 ---
 
@@ -119,12 +157,12 @@ ELIMU_V2/
 
 ### 4.1 Niveaux et systèmes
 
-| Niveau | Classes | Système | Total | Source |
-|--------|---------|---------|-------|--------|
-| **N1** | SIL, CP | Compétences + UA (qualitatif 4 niveaux) | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
-| **N2** | CE1, CE2 | Compétences + UA (qualitatif 4 niveaux) | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
-| **N2-APC** | CM1 | Compétences + UA (qualitatif 4 niveaux) — **CM1 utilisé en APC, `niveau_v2='N2'`** | 320 pts | `ELIMU_CURRICULUM_N1_N2.md` |
-| **N3** | CM2 | Classique /20 (quantitatif, trimestres) — **seul niveau resté en classique** | — | `ELIMU_CURRICULUM_N3.md` |
+| Niveau | Classes | Système | Total |
+|--------|---------|---------|-------|
+| **N1** | SIL, CP | Compétences + UA (qualitatif 4 niveaux) | 320 pts |
+| **N2** | CE1, CE2 | Compétences + UA (qualitatif 4 niveaux) | 320 pts |
+| **N2-APC** | CM1 | Même template que N2 — CM1 en APC, `niveau_v2='N2'` (depuis v123) | 320 pts |
+| **N3** | CM2 | Classique /20 (quantitatif, trimestres) — seul niveau resté en classique | — |
 
 ### 4.2 Cotation qualitative (N1/N2)
 
@@ -144,12 +182,14 @@ Trimestre 2 : UA4, UA5, UA6
 Trimestre 3 : UA7, UA8
 ```
 
-### 4.4 Barèmes (src/shared/constants/curriculum.js — `CURRICULUM_TEMPLATES`)
+### 4.4 Barèmes (src/shared/constants/curriculum.js — CURRICULUM_TEMPLATES)
 
 **N1 (SIL/CP)** — 320 pts : C1=100, C2=60, C3=40, C4=20, C5=40, C6=60
 **N2 (CE1/CE2)** — 320 pts : C1=80, C2=80, C3=40, C4=20, C5=40, C6=60
 
-Chaque sous-compétence a 4 poids : `orale, ecrite, pratique, savoirEtre`. Les poids MINEDUB sont hardcodés. Exemple 1A (N1) : `{orale:20, ecrite:15, pratique:0, savoirEtre:5}`.
+Chaque sous-compétence a 4 poids hardcodés MINEDUB : `orale, ecrite, pratique, savoirEtre`.
+Exemple 1A (N1) : `{orale:20, ecrite:15, pratique:0, savoirEtre:5}`. Certaines sous-compétences
+N2 ont `ecrite=28` (ex: 2A).
 
 ---
 
@@ -157,101 +197,126 @@ Chaque sous-compétence a 4 poids : `orale, ecrite, pratique, savoirEtre`. Les p
 
 ### 5.1 Stockage en base de données
 
-Les sous-notes N1/N2 sont stockées **sur leur échelle réelle** (orale/20, ecrite/15, pratique/0–10, savoir-être/2–5 selon sous-compétence), PAS sur une base /20. La contrainte SQL est : `CHECK(note >= 0)` sans upper bound, car certaines sous-compétences N2 ont `ecrite=28` (ex: 2A, N2).
+Les sous-notes N1/N2 sont stockées **sur leur échelle réelle** (orale/20, ecrite/15,
+pratique/0–10, savoir-être/2–5 selon sous-compétence), PAS sur une base /20.
+Contrainte SQL : `CHECK(note >= 0)` sans upper bound.
 
 ### 5.2 Affichage d'une sous-note dans le profil élève
 
 ```
-noteAffichee = note_stockee  (valeur réelle, pas de conversion)
+noteAffichee = note_stockee   // valeur réelle directe, aucune conversion
 ```
-
-Exemple : note orale stockée 14/20 → affiché 14.0 (directement la valeur réelle)
 
 ### 5.3 Agrégat sous-compétence → note /20
 
-La formule correcte est la **somme directe** :
+Formule correcte = **somme directe** (PAS une moyenne pondérée) :
 
 ```
-total = Σ(val)         // somme des notes sur leur échelle réelle
-agregat = (total / Σ(poids)) × 20
+total   = Σ(val)                    // somme des notes sur leur échelle réelle
+agregat = (total / Σ(poids)) × 20   // poids = max curriculum de chaque sous-type
 ```
 
-Où `poids` est le max curriculum de chaque sous-type.
-
-Cette formule est implémentée dans :
+Implémentée dans :
 - `src/shared/constants/curriculum.js` → `calcAggregateFromSubNotes()`
-- `src/renderer/sections/eleves/eleves.js` → calcul inline
-- `seed_test_data.js` → `calcAggregate()`
+- `src/renderer/sections/eleves/eleves.js` (calcul inline)
+- `seed_test_data.js` → `calcAggregate()` (même logique)
+
+La moyenne générale d'un élève = **simple moyenne des agrégats** des sous-compétences.
 
 ### 5.4 Code qualitatif
 
-Le code qualitatif (`getNoteToCode()`) s'applique sur l'équivalent /20 de l'agrégat, pas sur la somme brute.
-
-### 5.5 Conversion note → code qualitatif
+`getNoteToCode()` s'applique sur l'équivalent /20 de l'agrégat, pas sur la somme brute :
 
 ```javascript
-getNoteToCode(note)  // note sur /20
-→ note 0-10  → 'NA'
-→ note 11-14 → 'ECA'
-→ note 15-17 → 'A'
-→ note 18-20 → 'A+'
+note 0–10 → 'NA' ; 11–14 → 'ECA' ; 15–17 → 'A' ; 18–20 → 'A+'
 ```
 
-### 5.6 🔴 Erreurs passées (corrigées)
+### 5.5 Erreurs passées corrigées (à ne JAMAIS réintroduire)
 
-| Erreur | Fichier | Correctif |
-|--------|---------|-----------|
-| Agrégat = moyenne pondérée au lieu de somme directe | `curriculum.js` `calcAggregateFromSubNotes`, `eleves.js`, `seed_test_data.js` | Passer à `total += val` puis `(total/totalPoids)*20` |
-| Notes stockées sur /20 avec CHECK ≤ 20 | `schema.sql`, `db.js` | Supprimer upper bound, stocker sur échelle réelle |
-| Affichage `(note/20)*poids` au lieu de `note` directe | `eleves.js` | Afficher `noteReelle = s.note` |
-| Sous-notes générées sur échelle /20 | `seed_test_data.js` | Générer sur `1..weights[type]` |
-| `sous_competence_code` stocké `C1_1A` au lieu de `1A` | `seed_test_data.js`, handlers | Stocker uniquement le code (`1A`, `2B`, etc.) |
-| N3 non géré par la PWA | `PWA/` | Ajouter `teacher_notes_n3`, endpoint API, frontend dédié |
+| Erreur | Correctif |
+|--------|-----------|
+| Agrégat = moyenne pondérée `Σ(val×poids)/Σ(poids)` | Somme directe `(total/totalPoids)*20` |
+| Sous-notes stockées sur /20 avec CHECK ≤ 20 | Échelle réelle, CHECK `>= 0` seul |
+| Affichage `(note/20)*poids` | `noteReelle = s.note` (valeur directe) |
+| Seed généré sur /20 | Génération sur `1..weights[type]` |
+| Code `sous_competence_code` préfixé (`C1_1A`) | Code seul (`1A`, `2B`) |
+| N3 absent de la PWA | Table `teacher_notes_n3` + endpoint + frontend dédiés |
+
+Des tests de non-régression existent : `tests/unit/bulletinQualitatif.test.js`.
 
 ---
 
 ## 6. FICHIERS CLÉS ET LEURS RESPONSABILITÉS
 
 ### 6.1 `src/shared/constants/curriculum.js`
-- **Rôle** : Source de vérité unique pour les templates et calculs
-- **Exporte** : `NOTE_MAPPING`, `getNoteToCode()`, `CURRICULUM_TEMPLATES`, `UA_TRIMESTRE_MAP`, `getWeightsForSousCompetence()`, `calcAggregateFromSubNotes()`, `SOUS_TYPES`
-- **Utilisé par** : handlers eleves, importExcel, renderer eleves, seed
+Source de vérité unique. Exporte notamment : `NOTE_MAPPING`, `getNoteToCode()`,
+`CURRICULUM_TEMPLATES`, `UA_TRIMESTRE_MAP`, `getWeightsForSousCompetence()`,
+`calcAggregateFromSubNotes()`. Utilisé par handlers eleves/importExcel, renderer, seed, tests.
 
 ### 6.2 `src/renderer/sections/eleves/eleves.js`
-- **Rôle** : Profil élève avec affichage des notes N1/N2/N3
-- **Lignes importantes** :
-  - `~473-497` : Calcul de la moyenne générale N1/N2 (inline) — **déjà corrigé**
-  - `~722-733` : Affichage des sous-notes avec conversion /20 → note réelle
-  - `~880-890` : Appel à `getNoteToCode()` pour affichage qualitatif
-- **Dépend de** : `curriculum.js` (importé via le handler IPC)
+Profil élève (notes N1/N2/N3), modale export pilotée par mode (`ouvrirModaleExportListe(mode)`
+: `'liste'` vs `'pyramide'` — titre/description dynamiques via `dataset.i18n`).
+Dépend de `curriculum.js` via IPC.
 
 ### 6.3 `src/main/handlers/eleves.js`
-- **Rôle** : Handlers IPC pour les opérations CRUD élèves et notes
-- **Fonctions** : `saveNotes`, `getNotes`, `getStats`, `getEleveDetails`, `getBulletinData`
-- **Important** : utilise `CURRICULUM_TEMPLATES` et `getWeightsForSousCompetence` pour les calculs côté backend
+Handlers IPC CRUD élèves/notes/stats. Utilise `CURRICULUM_TEMPLATES` côté backend.
 
-### 6.4 `src/shared/utils/importExcel.js`
-- **Rôle** : Import des fichiers Excel signés (nomenclature stricte)
-- **Utilise** : `calcAggregateFromSubNotes`, `CURRICULUM_TEMPLATES`
+### 6.4 Imports Excel
+- `src/shared/utils/importExcel.js` : orchestrateur (nomenclature stricte, fichier signé)
+- `src/shared/utils/import/*` : formats spécialisés — `classic.js`, `formatB.js`,
+  `listeEleves.js`, `listeProfesseurs.js`, `absencesExcel.js` (scan entête tolérant),
+  `pwaExport.js`
+- L'import génère automatiquement les comptes enseignants (utilisateur + professeur)
 
 ### 6.5 `src/renderer/sections/classes/templates.js`
-- **Rôle** : `CLASS_TEMPLATES` et fonctions `getCompetencesN1()`, `getCompetencesN2()`
-- **Contient** les listes de compétences/sous-compétences pour l'UI
+`CLASS_TEMPLATES` + listes de compétences/sous-compétences pour l'UI.
 
-### 6.6 `seed_test_data.js`
-- **Rôle** : Génération de données de test
-- **Important** : `calcAggregate()` doit utiliser `sum(val×poids)/sum(poids)` — corrigé
+### 6.6 `seed_test_data.js` / `scripts/demo_data.js`
+- `node seed_test_data.js clean` : reset + seed technique
+- `npm run demo:data` : base de démonstration réaliste (~250 élèves, notes, finances).
+  Préserve `ecole_id`, `code_ecole` et les clés de connexion PWA/portail lors de la
+  régénération.
+
+### 6.7 Modules PDF (`src/shared/utils/pdf/`)
+
+Conventions partagées dans `helpers.js` : `loadConfig()` (table `bulletin_config`, avec cache),
+`drawAdminHeader(doc, cfg, y, lang, isMinimal)` (entête officielle bilingue),
+`drawLogoFiligrane(doc, cfg, {opacity})`, `getMention/getMentionColor(note, cfg)`.
+Traductions PDF : `locales.js` → `getDocTranslator(lang)`.
+
+| Module | Rôle |
+|--------|------|
+| `bulletinTrimestre.js` | Bulletins trimestriels N1/N2/N3, 3 styles (`officiel`, `moderne`, `minimal`) |
+| `bulletinRecap.js` | Récapitulatif annuel |
+| `tableauHonneur.js` | Diplômes A4 paysage ; couleurs dédiées `th_couleur_primaire`/`th_couleur_secondaire` avec repli sur celles du bulletin |
+| `pyramideAge.js` | Pyramide des âges d'une classe par sexe |
+| `listesAffichables.js` | Listes affichables paysage N1/N2 (poids/UA) et N3 (/20 par séquence) |
+| `ficheAccesEnseignant.js` | Fiche d'accès A5 (module partagé : création de compte ET impression manuelle) |
+| `recuParents.js` | Reçus de paiement |
+| `exportImpayes.js` | Liste des impayés |
+| `styles.js` | Constantes de style communes |
+
+Couleurs bulletins : `couleur_primaire` (défaut `#1a3c6e`), `couleur_secondaire` (défaut `#c8a415`),
+stockées dans `bulletin_config` (clé/valeur, sauvegarde sans whitelist via `db:saveBulletinConfig`).
+Après sauvegarde UI, appeler `window.invalidateBulletinConfigCache()`.
 
 ---
 
-## 7. BASE DE DONNÉES — TABLE `notes`
+## 7. BASE DE DONNÉES
+
+Version courante du schéma : **123** (`CURRENT_SCHEMA_VERSION` dans `db.js`).
+Toute migration DOIT incrémenter cette version (sinon les bases installées ne migrent pas)
+et rester idempotente (`IF NOT EXISTS`). Historique récent : 121→122 (matricule élèves),
+122→123 (CM1 en notation N2/APC).
+
+### Table `notes` (hybride N1/N2/N3)
 
 ```sql
 CREATE TABLE notes (
     note_id              INTEGER PRIMARY KEY AUTOINCREMENT,
     eleve_id             INTEGER NOT NULL REFERENCES eleves(eleve_id) ON DELETE CASCADE,
     matiere_id           INTEGER,           -- N3 only
-    sous_competence_code TEXT,               -- N1/N2 only (ex: '1A', '2B', '4')
+    sous_competence_code TEXT,               -- N1/N2 only (ex: '1A', '2B')
     type_eval            TEXT,               -- N1/N2 only ('orale','ecrite','pratique','savoirEtre')
     ua                   TEXT,               -- N1/N2 only ('UA1'..'UA8')
     note                 REAL NOT NULL CHECK(note >= 0),
@@ -266,182 +331,201 @@ CREATE TABLE notes (
 );
 ```
 
-### Contraintes importantes
-- **N1/N2** : `matiere_id IS NULL`, `sous_competence_code` + `type_eval` + `ua` sont requis. Notes stockées sur échelle réelle (max variable selon sous-type).
-- **N3** : `sous_competence_code IS NULL`, `matiere_id` + `trimestre` + `sequence` sont requis
-- **Note** : `CHECK(note >= 0)` — plus d'upper bound fixe. Validation faite dans le code applicatif.
+- **N1/N2** : `matiere_id IS NULL` ; code + type_eval + ua requis ; échelle réelle.
+- **N3** : `sous_competence_code IS NULL` ; matiere + trimestre + sequence requis ;
+  moyennes pré-calculées via trigger `trg_calc_stats_eleves` sur `stats_eleves`.
+- `stats_eleves` est poussée vers le portail lors de la sync (mêmes formules que l'app).
 
 ---
 
 ## 8. SÉCURITÉ ET CONVENTIONS DE CODE
 
-(D'après `gemini/GEMINI.md`)
-
-1. **Toute requête SQL** doit utiliser des paramètres (`?`, `$variable`). Interdiction de concaténer.
+1. **Toute requête SQL** utilise des paramètres (`?`, `$variable`). Interdiction de concaténer.
 2. **Échapper tout innerHTML** avec `esc()`.
 3. **Vérifier les rôles** avant modification via IPC.
-4. **i18n** : `t('clé')` ou `data-i18n`, jamais de texte en dur.
+4. **i18n** : `t('clé')` ou `data-i18n`, jamais de texte en dur. Le mécanisme `translatePage()`
+   relit `[data-i18n]` à chaque changement de langue : pour un texte mis à jour dynamiquement,
+   mettre à jour `el.dataset.i18n` ET `el.textContent`.
 5. **Performance** : DocumentFragment + requestAnimationFrame pour listes > 20 éléments.
-6. **Migrations idempotentes** : `IF NOT EXISTS`.
-7. **Ne jamais modifier schema.sql sans script de migration séparé.**
-8. **Ne jamais supprimer/renommer des fichiers sans confirmation.**
-9. **Commiter après chaque modification :** `git add -A && git commit -m "description" && git push`. Toujours faire un commit après chaque changement significatif (correction, fonctionnalité, refactor).
+6. **Migrations idempotentes** : `IF NOT EXISTS` + bump de `CURRENT_SCHEMA_VERSION`.
+7. **Jamais modifier schema.sql sans script de migration séparé dans db.js.**
+8. **Jamais supprimer/renommer un fichier sans confirmation.**
+9. **Commiter après chaque changement significatif :**
+   `git add -A && git commit -m "description" && git push`.
+10. **Pas d'émojis dans les textes visibles par l'utilisateur** (fr.js/en.js, PDF, HTML).
+11. **CSP stricte** : aucun script inline, aucun gestionnaire inline (`onclick=` interdit) —
+    utiliser `addEventListener` + CSS hover. Le script de thème vit dans preload.
+12. **Isolation multi-école** : toute requête sur table de données filtre par `ecole_id` (§15).
 
 ---
 
-## 9. ÉTAT D'AVANCEMENT PHASE 1 (✅ Complété)
+## 9. LICENCE ET ACTIVATION
 
-| Pilier | Statut | Détail |
-|--------|--------|--------|
-| Migration schéma notes | ✅ | Table hybride N1/N2/N3, champ `niveau_v2` dans classes |
-| Moteur curriculum | ✅ | `curriculum.js` avec templates N1/N2/N3, fonctions de calcul |
-| Nettoyage UI Desktop | ✅ | Onglet Notes supprimé, presets classes, bannière rôles |
-
-### 🔴 Erreurs fondamentales corrigées (session Juillet 2026)
-
-Le calcul des notes N1/N2 contenait une **erreur fondamentale** dans toute la stack (PWA + Desktop) :
-- La formule `Σ(val × poids) / Σ(poids)` (moyenne pondérée) était utilisée, mais le curriculum MINEDUB exige une **somme directe** `Σ(val)` convertie en /20 par `(total / Σ(poids)) × 20`.
-- Les sous-notes étaient stockées sur `/20` en DB, mais le curriculum MINEDUB spécifie un max différent par sous-type (orale=20, ecrite=15, pratique=0–10, savoir-être=2–5). Certaines sous-compétences N2 ont même `ecrite=28` (ex: 2A, N2), ce qui dépasse 20. Le CHECK `<= 20` a donc été supprimé.
-- L'affichage appliquait `(note_stockee / 20) × poids` pour retrouver la note réelle, mais cela inversait la formule : la note réelle est saisie directement, pas stockée sur /20.
-
-**Correctifs appliqués :**
-- `calcAggregateFromSubNotes` → `total += val` (somme directe), retourne `(total/totalPoids)*20`
-- `schema.sql` / `db.js` → CHECK passe de `>=0 AND <=20` à `>=0`
-- Affichage `eleves.js` → `noteReelle = s.note` (valeur directe), code qualitatif sur `(note/maxPts)*20`
-- `seed_test_data.js` → génération sur `1..weights[t]` (échelle réelle), agrégat somme directe
-- PWA → ajout `teacher_notes_n3` + endpoint + frontend dédié
-
-### Transformation section Professeurs → Comptes Enseignants PWA (Juillet 2026)
-
-| Changement | Fichier |
-|-----------|---------|
-| Colonnes `utilisateur_id` + `derniere_connexion` ajoutees à `professeurs` | `schema.sql`, `db.js` |
-| Backend reecrit : 6 nouveaux handlers (createTeacherAccount, suspend, reactivate, resetPassword, getTeacherLoginHistory, printTeacherAccessCard), JOIN utilisateurs, refactor requêtes existantes | `handlers/professeurs.js` |
-| 6 nouvelles APIs exposées dans preload | `preload.js` |
-| Frontend HTML reecrit : liste cartes centree comptes, modale creation avec affichage MDP unique, modale detail avec onglets Compte/Journal, statut actif/suspendu | `professeurs.html` |
-| Frontend JS reecrit : state management V2, suspendre/reactiver/reinitialiser MDP/imprimer fiche acces, historique connexions | `professeurs.js` |
-| Locales mises à jour (fr + en) pour toutes les nouvelles cles | `locales/fr.js`, `locales/en.js` |
-| Import Excel auto-genere comptes (utilisateur + professeur) avec mot de passe securise | `utils/importExcel.js` |
-
-**Notes** : La modale edition ne permet PAS de modifier le mot de passe (seulement via Reinitialiser). Le MDP genéré à la creation est affiché UNE SEULE fois avec bloc jaune d'avertissement. Les champs RH (civilite, sexe, specialite, diplome, adresse, ville, date_embauche) sont supprimes de l'UI et des imports.
+- Clé au format `ELIMU-YYYY-MM-DD-HWID-XXXX` : signature HMAC-SHA256 tronquée à 16 hex
+  (64 bits). Le Desktop accepte les signatures 16 et 8 hex, calculées avec le secret courant
+  OU le secret historique (compatibilité).
+- **Secret jamais commité** : injecté au build par `scripts/inject-secret.js` depuis la var
+  d'environnement `ELIMU_LICENCE_SECRET` dans `src/shared/license.secret.js` (gitigné,
+  obfusqué ensuite). Un build sans secret échoue volontairement.
+- **Activation** : écran `renderer/license-screen/` — méthode 1 : glisser-déposer d'un
+  `elimu-installation.json` (bundle fournisseur contenant licence + config école initiale,
+  appliquée sans écraser l'identité existante) ; méthode 2 : saisie manuelle de la clé.
+  La clé validée est stockée dans `<userData>/license.key`.
+- La licence est liée au HWID ; bandeau d'avertissement dans l'app à J-30/J-0 de l'expiration.
+- Le CLUF affiché par l'installateur NSIS est `build-resources/license.txt` :
+  **UTF-8 avec BOM obligatoire**, sinon accents cassés chez le client.
 
 ---
 
-## 10. N3 (CM2) — VÉRIFICATION
-
-Le niveau 3 (désormais **réservé au CM2**) conserve le système classique de la V1 :
-- Matières fixes (22 matières, codifiées dans `CURRICULUM_TEMPLATES.N3.matieresFixes`)
-- Notes /20 par matière
-- 3 Trimestres × 2 Séquences
-- Coefficients par matière
-- Trigger SQL `trg_calc_stats_eleves` pour les moyennes pré-calculées
-
-**Desktop** : l'infrastructure V1 gère déjà nativement le N3 (table `notes` avec `matiere_id`, triggers SQL, moyennes pré-calculées).
-
-**PWA** : le N3 est désormais géré via la table `teacher_notes_n3` et un flux dédié (sélection séquence → grille élèves × matières). Le backend PWA expose `POST /api/teacher/notes-n3`.
-
----
-
-## 11. VÉRIFICATIONS AVANT CHAQUE MODIFICATION
-
-1. Le curriculum MINEDUB est-il respecté ? (vérifier `ELIMU_CURRICULUM_N1_N2.md` ou `ELIMU_CURRICULUM_N3.md`)
-2. La formule utilise-t-elle la **somme directe** `Σ(val)` convertie en `/20` et non la moyenne pondérée ?
-3. Les sous-notes N1/N2 sont-elles stockées sur leur échelle réelle (pas /20) ?
-4. L'affichage affiche-t-il la note réelle directement (pas de conversion /20 → poids) ?
-5. Le `sous_competence_code` est-il le code seul (ex: `1A`) sans préfixe ?
-6. La conversion qualitative `getNoteToCode()` est-elle appliquée sur l'équivalent /20 ?
-
----
-
-## 12. TESTS
+## 10. BUILD, RELEASE ET CI
 
 ```bash
-# Lancer l'application
-npx electron .
-
-# Seed des données de test (après suppression DB)
-node scripts/seed_test_data.js clean
+npm run build:win      # Windows NSIS x64 (inject-secret + obfuscate + smoke-test + builder)
+npm run build:linux    # AppImage + deb
+npm run build:all      # Les deux
 ```
 
-### 🔴 Piège better-sqlite3 (Node vs Electron ABI)
-
-`better-sqlite3` est un module natif. Le `postinstall` (`electron-builder install-app-deps`) le compile pour **Electron** (ABI 125), mais les tests tournent sous **Node 24** (ABI 137). Il est IMPOSSIBLE d'avoir les deux en même temps en local.
-
-```bash
-# Pour lancer l'app (Electron) :
-npm run rebuild:electron
-
-# Pour lancer les tests (Node) :
-npm run rebuild:node
-```
-
-- Ne JAMAIS `require('better-sqlite3')` seul pour vérifier l'ABI : le binaire natif n'est chargé qu'à l'instanciation `new Database(...)`.
-- Dans le CI, chaque job est isolé : `npm rebuild better-sqlite3` dans le job `test` (après `npm ci`), et le `postinstall` compile pour Electron automatiquement dans le job `build`.
-
-Pas de framework de tests unitaires automatisés. La vérification se fait :
-- Visuellement dans le profil élève (sections N1/N2/N3)
-- En inspectant la DB avec `SELECT * FROM notes`
-- En vérifiant les calculs d'agrégat manuellement
+- Builds officiels **exclusivement via GitHub Actions** (`release.yml`) : publication
+  electron-builder `--publish always` sur le repo GitHub `KARIS747/ELIMU-APP`
+  (les mises à jour auto passent par `electron-updater`).
+- `ci.yml` : job tests avec `npm rebuild better-sqlite3` après `npm ci` (le postinstall
+  compile sinon pour Electron).
+- Obfuscation (`javascript-obfuscator`) puis smoke-test (`scripts/smoke-test.js`) avant empaquetage.
+- Packaging : asar activé, `bcryptjs` dépacké, `database/*.db` en extraResources.
 
 ---
 
-## 13. DÉCISIONS ARCHITECTURALES CLÉS
+## 11. N3 (CM2) — VÉRIFICATION
+
+Le niveau 3 (**réservé au CM2**) conserve le système classique :
+22 matières fixes (`CURRICULUM_TEMPLATES.N3.matieresFixes`), notes /20 par matière,
+3 Trimestres × 2 Séquences, coefficients par matière, moyennes pré-calculées par triggers SQL.
+
+**Desktop** : infrastructure native (table `notes` avec `matiere_id`, triggers).
+**PWA** : table `teacher_notes_n3` + endpoint `POST /api/teacher/notes-n3` + flux dédié
+(sélection séquence → grille élèves × matières).
+
+---
+
+## 12. VÉRIFICATIONS AVANT CHAQUE MODIFICATION
+
+1. Le curriculum MINEDUB est-il respecté ?
+2. La formule utilise-t-elle la **somme directe** `Σ(val)` convertie en `/20` (jamais la moyenne pondérée) ?
+3. Les sous-notes N1/N2 restent-elles sur leur échelle réelle (pas /20) ?
+4. L'affichage montre-t-il la note réelle directement ?
+5. Le `sous_competence_code` est-il le code seul (ex: `1A`) ?
+6. `getNoteToCode()` est-il appliqué sur l'équivalent /20 ?
+7. Migration DB ? → bump `CURRENT_SCHEMA_VERSION` + idempotence.
+8. Nouveau texte UI ? → i18n fr + en, pas d'émojis.
+9. Nouvelle table/requête ? → `ecole_id` partout (§15).
+
+---
+
+## 13. TESTS ET OUTILS DE DÉVELOPPEMENT
+
+Framework : **Jest 30**. Ne JAMAIS supposer qu'il n'y a pas de tests.
+
+```bash
+npm test                # Tests unitaires (jest tests/unit)
+npm run test:integration # Tests d'intégration (--forceExit requis)
+npm run test:all        # Tout (--forceExit)
+```
+
+- Unitaires : `curriculum`, `bulletinQualitatif` (non-régression somme directe),
+  `pyramideAge`, `finance`, `license`, `dateUtils`, `exportFiles`.
+- Intégration : `db`, `auth`, `isolation` (multi-école), `finance`, `absences`,
+  `importExcel`, `parentSync`.
+
+### Piège better-sqlite3 (Node vs Electron ABI)
+
+Module natif : compilé pour **Electron ABI 125** par le postinstall, mais les tests tournent
+sous **Node 24 ABI 137**. Impossible d'avoir les deux simultanément en local.
+
+```bash
+npm run rebuild:electron   # Avant de lancer l'app
+npm run rebuild:node       # Avant de lancer les tests Node
+```
+
+- Ne jamais vérifier l'ABI par un simple `require('better-sqlite3')` : le binaire n'est
+  chargé qu'à l'instantiation `new Database(...)`.
+- Après des tests Node, penser à restaurer `npm run rebuild:electron` avant de lancer l'app.
+
+Autres outils : `tools/diagnostic-finance.js`, `tools/reset_pass.js`, `tools/diagnostic.sh`,
+`scripts/generateTestData*.js`.
+
+---
+
+## 14. DÉCISIONS ARCHITECTURALES CLÉS
 
 | Décision | Justification |
 |----------|--------------|
 | **Hardcoder les templates** | Conformité MINEDUB garantie, pas de dérive par configuration UI |
-| **Stockage /20 en DB** | Simplifie les calculs et le mapping qualitatif |
-| **Poids = max curriculum** | `orale:20` signifie « note sur 20 au max » pour l'affichage, ET sert de poids pour la moyenne |
+| **Stockage des sous-notes sur échelle réelle** | Le max varie par sous-type (orale 20, ecrite 15/28...) ; conversion /20 uniquement au calcul d'agrégat |
+| **Poids = max curriculum** | `orale:20` = « note sur 20 au max » pour l'affichage ET poids de conversion |
 | **Desktop = pilotage uniquement** | Évite toute confusion de rôle, aligné avec la vision V2 |
-| **Triggers SQL pour moyennes N3** | Performance O(1) vs recalcul à chaque affichage |
-| **N1/N2 calcul côté JS** | Car dépend du curriculum (poids variables par sous-compétence) |
+| **Triggers SQL pour moyennes N3** | Performance O(1) vs recalcul à chaque affichage ; `stats_eleves` synchronisée telle quelle vers le portail |
+| **N1/N2 calcul côté JS** | Dépend du curriculum (poids variables par sous-compétence) |
+| **Couleurs TH distinctes des bulletins** | `th_couleur_*` dans `bulletin_config` avec repli — personnalisation diplômes sans toucher aux bulletins |
 
 ---
 
-## 14. MULTI-ÉCOLE — ISOLATION PAR `ecole_id`
+## 15. MULTI-ÉCOLE — ISOLATION PAR `ecole_id`
 
-### 14.1 Principe
-Chaque installation d'ÉLIMU Desktop génère un UUID stable à son démarrage (`parametres.ecole_id`).
-Cet UUID est utilisé pour isoler toutes les données de l'école dans la Base B partagée.
+### 15.1 Principe
+Chaque installation génère un UUID stable au premier démarrage (`crypto.randomUUID()`,
+stocké dans `parametres.cle='ecole_id'`), préservé entre redémarrages et régénérations
+de démo. Il isole les données de l'école dans la base cloud partagée.
 
-### 14.2 Règles strictes
-1. **Chaque table de données** a une colonne `ecole_id TEXT NOT NULL DEFAULT ''`
-2. **Chaque requête SQL** (SELECT, INSERT, UPDATE, DELETE) DOIT inclure `WHERE ecole_id = ?`
-3. **`ecole_id` provient de `deps.getCurrentEcoleId()`** dans les handlers, jamais d'un paramètre client
-4. **Les INSERTS** incluent `ecole_id` comme colonne
-5. **Les contraintes UNIQUE** incluent `ecole_id` (ex: `UNIQUE(ecole_id, nom_utilisateur)`)
+### 15.2 Règles strictes
+1. Chaque table de données a une colonne `ecole_id TEXT NOT NULL DEFAULT ''`
+2. Chaque requête (SELECT/INSERT/UPDATE/DELETE) inclut `ecole_id = ?`
+3. `ecole_id` provient de `deps.getCurrentEcoleId()` dans les handlers, jamais du client
+4. Les contraintes UNIQUE incluent `ecole_id` (ex: `UNIQUE(ecole_id, nom_utilisateur)`)
+5. Tables isolées : `utilisateurs`, `professeurs`, `classes`, `eleves`, `notes`, `absences`,
+   `parents`, `sanctions`, `imports`, `audit_log`, `heures_absence`, `frais_types`,
+   `tranches`, `paiements`
 
-### 14.3 UUID stable
-- Généré par `crypto.randomUUID()` au premier démarrage
-- Stocké dans `parametres.cle = 'ecole_id'`
-- Préservé entre les redémarrages, même si le nom de l'école change
-- Transmis dans les syncs Desktop→PWA au lieu de l'ancien dérivé du nom
+### 15.3 Où le directeur trouve le code école
+1. Paramètres > Général — bloc « Code établissement » avec bouton Copier
+2. Création d'un compte enseignant — encadré sous le mot de passe généré
+3. Détail du compte enseignant — section « Compte PWA »
+4. Fiche d'accès PDF imprimée — ligne « Code ecole »
 
-### 14.6 Où le directeur trouve le code école (depuis le 27 Juillet 2026)
-Le `ecole_id` (UUID) est désormais affiché à 3 endroits dans le Desktop :
-1. **Paramètres > Général** — bloc "Code établissement" avec bouton Copier
-2. **Création d'un compte enseignant** — encadré bleu sous le mot de passe généré
-3. **Détail du compte enseignant** — dans la section "Compte PWA"
-4. **Fiche d'accès PDF imprimée** — ligne "Code ecole" sous l'identifiant
+L'enseignant saisit ce code une seule fois à sa première connexion PWA.
 
-Le directeur copie le code et le communique aux enseignants (oral, SMS, fiche imprimée).
-L'enseignant le saisit une seule fois lors de la première connexion PWA.
-
-### 14.4 Tables isolées
-`utilisateurs`, `professeurs`, `classes`, `eleves`, `notes`, `absences`, `parents`,
-`sanctions`, `imports`, `audit_log`, `heures_absence`, `frais_types`, `tranches`, `paiements`
-
-### 14.5 Tests d'isolation (à faire)
-- Créer 2 écoles fictives → vérifier qu'aucune donnée ne fuit
-- Confirmer que le `ecole_id` du JWT/du Desktop est toujours utilisé, jamais celui du client
-
-## 15. HISTORIQUE DES MODIFICATIONS
-
-| Date | Changement | Fichiers |
-|------|-----------|----------|
-| 27 Juillet 2026 | **Affichage code école dans l'UI Desktop** — `ecole_id` UUID désormais visible dans Paramètres > Général, modale création enseignant, détail compte, et fiche d'accès PDF | `parametres/modules/general.js`, `parametres/parametres.html`, `professeurs/professeurs.html`, `professeurs/professeurs.js`, `handlers/professeurs.js` |
-| 27 Juillet 2026 | **Correction CSP + police corrompue** — script thème inline déplacé dans preload.js, hash CSP supprimé, police rajdhani-700.woff2 remplacée (HTML→vrai woff2), tous les inline event handlers (onclick/onmouseenter/onmouseleave) remplacés par addEventListener + CSS hover | `index.html`, `preload.js`, `assets/css/style.css`, `assets/fonts/rajdhani-700.woff2`, `classes/classes.html`, `classes/classes.js`, `eleves/eleves.js`, `parametres/modules/annees.js`, `professeurs/professeurs.html` |
+### 15.4 Tests d'isolation
+Couverts par `tests/integration/isolation.test.js` — à maintenir à jour pour toute nouvelle
+table isolée.
 
 ---
 
-*Document généré le 20 Juillet 2026 — mis à jour le 27 Juillet 2026*
+## 16. COMPTES ENSEIGNANTS PWA (section Professeurs)
+
+- Backend `handlers/professeurs.js` : createTeacherAccount, suspend/reactivate, resetPassword,
+  getTeacherLoginHistory, printTeacherAccessCard (fiche PDF partagée `ficheAccesEnseignant.js`).
+- Le mot de passe généré est affiché UNE SEULE fois (bloc d'avertissement jaune) ; il ne se
+  modifie que via Réinitialiser. Minimum 6 caractères.
+- Champs RH supprimés de l'UI et des imports (civilité, sexe, spécialité, diplôme, adresse,
+  ville, date_embauche).
+- Historique des connexions : table `pwa_login_history` (incluse dans backup/restauration).
+
+---
+
+## 17. HISTORIQUE DES MODIFICATIONS
+
+| Date | Changement | Fichiers principaux |
+|------|-----------|---------------------|
+| Août 2026 | **CLUF refonte KarisDev** — 15 articles (indemnisation, non-remboursement, compétence exclusive tribunaux domicile éditeur, données mineurs/sauvegardes/cloud, loi 2000/011-OAPI-Berne) ; UTF-8 avec BOM pour corriger les accents NSIS | `build-resources/license.txt` |
+| Août 2026 | **Couleurs Tableau d'honneur indépendantes** — clés `th_couleur_primaire/th_couleur_secondaire` (repli bulletin), pickers + aperçu mini-diplôme dans Paramètres > Bulletin | `tableauHonneur.js`, `parametres.html`, `modules/bulletin.js`, locales fr/en |
+| Août 2026 | **Fiche d'accès enseignant PDF refondue** — module partagé A5 (bandeau ELIMU, carte infos, encadrés code école/mot de passe, filigrane) utilisé par création de compte et impression manuelle | `pdf/ficheAccesEnseignant.js`, `handlers/professeurs.js` |
+| Août 2026 | **Modale export élèves pilotée par mode** (liste vs pyramide), libellés dynamiques i18n | `sections/eleves/` |
+| Août 2026 | **Activation licence par glisser-déposer** d'un bundle JSON `elimu-installation.json` (licence + config école, identité préservée) | `license-screen/*`, `handlers/license.js`, `preload.js` |
+| Août 2026 | Onglets Paramètres/Import-Export flex-wrap ; auto-création année scolaire en cours + rattachement orphelins ; base démo réaliste `npm run demo:data` | divers |
+| Juil.-Août 2026 | v1.8.0 : pyramide des âges PDF ; licence signée secret injecté au build ; somme directe bulletins + moyenne simple des agrégats (+ tests régression) ; champ Matricule élèves (schéma 122) ; CM1 passé en notation N2/APC (schéma 123) ; listes affichables paysage N1/N2/N3 ; filigrane logo bulletins ; `stats_eleves` poussée vers portail ; Cloud Recovery complet (backup/restauration incluant dépendances + re-sync ecole_id/année) ; better-sqlite3 11→12.11.1 ; Jest --forceExit CI | nombreux |
+| 27 Juillet 2026 | Affichage code école dans l'UI Desktop (4 endroits) ; correction CSP + police corrompue, suppression des gestionnaires inline | `parametres/general`, `professeurs/*`, `preload.js`, `index.html`, styles |
+| Juillet 2026 | Transformation Professeurs → Comptes Enseignants PWA (6 handlers, colonnes `utilisateur_id`/`derniere_connexion`, import auto-comptes, fiche accès) | `handlers/professeurs.js`, `professeurs/*`, `locales/*` |
+| Juillet 2026 | Correction erreur fondamentale calcul N1/N2 (somme directe, échelle réelle, CHECK >= 0) sur toute la stack | `curriculum.js`, `schema.sql`, `db.js`, `eleves.js`, `seed_test_data.js`, PWA |
+
+---
+
+*Règle d'or : mettre à jour ce fichier après tout changement structurel significatif.*
