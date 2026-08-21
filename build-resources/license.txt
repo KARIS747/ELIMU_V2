@@ -1,33 +1,73 @@
-﻿CONTRAT DE LICENCE UTILISATEUR FINAL (CLUF) — ELIMU
-Application de Gestion Scolaire
-Copyright © 2025-2026 M. Karis — Tous droits réservés
+﻿CONTRAT DE LICENCE UTILISATEUR FINAL (CLUF) — LOGICIEL ÉLIMU
+Application de gestion scolaire (Desktop, Portail Parents, PWA Enseignants)
 
-IMPORTANT : VEUILLEZ LIRE ATTENTIVEMENT CE CONTRAT AVANT D'INSTALLER OU D'UTILISER LE LOGICIEL. EN INSTALLANT OU EN UTILISANT ELIMU, VOUS ACCEPTEZ D'ÊTRE LIÉ PAR LES TERMES DE CETTE LICENCE.
+Éditeur : KarisDev — Karis Zogo Emmanuel
+Contact : karisdev369@gmail.com — Tél. : +237 681 266 058
+Copyright © 2025-2026 KarisDev — Karis Zogo Emmanuel. Tous droits réservés.
 
-1. CONCESSION DE LICENCE
-M. Karis (l'Éditeur) vous concède une licence limitée, non exclusive et non transférable pour utiliser Elimu sur UN (1) seul poste de travail informatique au sein d'UN (1) seul établissement scolaire identifié lors de l'achat. La licence est liée à l'empreinte matérielle (HWID) de l'ordinateur.
+IMPORTANT : VEUILLEZ LIRE ATTENTIVEMENT CE CONTRAT AVANT D'INSTALLER OU D'UTILISER LE LOGICIEL. EN COCHANT LA CASE D'ACCEPTATION, EN CLIQUANT SUR « J'ACCEPTE », OU EN INSTALLANT OU EN UTILISANT LE LOGICIEL, VOUS ACCEPTEZ D'ÊTRE LIÉ PAR LES TERMES DE CETTE LICENCE. SI VOUS N'ACCEPTEZ PAS CES TERMES, N'INSTALLEZ PAS ET N'UTILISEZ PAS LE LOGICIEL.
 
-2. RESTRICTIONS STRICTES
+ARTICLE 1 — DÉFINITIONS
+- « Logiciel » : le logiciel ÉLIMU dans toutes ses composantes (application de bureau ÉLIMU Desktop, portail web Parents, application mobile Enseignants PWA), y compris sa documentation, ses mises à jour et ses fichiers d'installation.
+- « Éditeur » : KarisDev, entreprise individuelle exploitée par Karis Zogo Emmanuel.
+- « Utilisateur » / « Vous » : la personne physique ou morale qui installe ou utilise le Logiciel.
+- « Établissement » : l'établissement scolaire identifié lors de l'acquisition de la Licence.
+- « Fichier d'installation » : le fichier JSON sécurisé fourni par l'Éditeur contenant la clé de licence et les paramètres de configuration initiale.
+
+ARTICLE 2 — OBJET ET CONCESSION DE LICENCE
+L'Éditeur vous concède une licence limitée, non exclusive, non transférable et révocable pour utiliser le Logiciel sur UN (1) seul poste de travail au sein d'UN (1) seul Établissement identifié lors de l'achat, à des fins strictement internes de gestion scolaire. Cette licence ne confère aucun droit de propriété sur le Logiciel, lequel reste intégralement la propriété de l'Éditeur.
+
+ARTICLE 3 — ACTIVATION ET LIAISON MATÉRIELLE
+La licence est liée à l'empreinte matérielle (HWID) de l'ordinateur sur lequel elle est activée. Toute modification matérielle importante du poste peut nécessiter une réactivation auprès de l'Éditeur, à sa seule discrétion. Tout procédé visant à contourner, falsifier ou simuler la validation de licence constitue une violation caractérisée du présent contrat.
+
+ARTICLE 4 — RESTRICTIONS STRICTES
 Il vous est formellement interdit de :
-- Copier, modifier, adapter, traduire ou créer des œuvres dérivées du Logiciel.
-- Décompiler, désassembler ou tenter de découvrir le code source par ingénierie inverse.
-- Louer, prêter, revendre, distribuer ou sous-licencier le Logiciel à des tiers.
-- Contourner les mesures de protection technique ou les systèmes de validation de licence.
+a) Copier, modifier, adapter, traduire ou créer des œuvres dérivées du Logiciel ;
+b) Décompiler, désassembler ou tenter de découvrir le code source, les algorithmes, la structure ou les mécanismes internes par ingénierie inverse, sauf dans la limite autorisée par la loi et qui ne pourrait être exclue contractuellement ;
+c) Louer, prêter, revendre, distribuer, sous-licencier, mettre à disposition du public ou partager le Logiciel avec des tiers ;
+d) Installer ou utiliser le Logiciel sur plusieurs postes avec une même licence ;
+e) Contourner ou tenter de contourner les mesures techniques de protection, de contrôle d'accès ou de validation de licence ;
+f) Utiliser le Logiciel pour fournir un service comparable à des tiers, ou concurrencer directement ou indirectement l'Éditeur.
 
-3. PROPRIÉTÉ ET DONNÉES
-Le Logiciel est protégé par les lois sur le droit d'auteur. L'Éditeur reste propriétaire de tous les droits de propriété intellectuelle.
-Données Utilisateur : L'Éditeur ne collecte aucune donnée personnelle saisie dans l'application. La responsabilité de la sauvegarde, de la confidentialité et de la conformité légale (ex: RGPD ou lois locales sur la protection des données) des informations relatives aux élèves et au personnel incombe exclusivement à l'Établissement Utilisateur.
+ARTICLE 5 — PROPRIÉTÉ INTELLECTUELLE
+Le Logiciel est une œuvre de l'esprit protégée notamment par la loi n° 2000/011 du 19 décembre 2000 relative au droit d'auteur et droits voisins au Cameroun, la Convention de Berne et les actes de l'OAPI. Toute reproduction, représentation ou utilisation non autorisée constitue une contrefaçon sanctionnée pénalement et civilement, sans préjudice de toutes poursuites et demandes d'indemnisation. Les noms, logos et éléments graphiques associés au Logiciel sont la propriété exclusive de l'Éditeur.
 
-4. EXCLUSION DE GARANTIE
-LE LOGICIEL EST FOURNI "TEL QUEL", SANS AUCUNE GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE, Y COMPRIS MAIS SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE OU D'ADÉQUATION À UN USAGE PARTICULIER. L'ÉDITEUR NE GARANTIT PAS QUE LES FONCTIONS CONTENUES DANS LE LOGICIEL RÉPONDRONT À VOS EXIGENCES OU QUE LE FONCTIONNEMENT DU LOGICIEL SERA ININTERROMPU OU SANS ERREUR.
+ARTICLE 6 — DONNÉES ET RESPONSABILITÉ DE L'ÉTABLISSEMENT
+6.1 Responsabilité de traitement : l'Établissement est seul responsable du traitement des données qu'il saisit dans le Logiciel (données relatives aux élèves, aux parents, au personnel). Il garantit détenir toutes autorisations nécessaires à ce traitement.
+6.2 Données de mineurs : l'Établissement est seul responsable de l'obtention du consentement des parents ou représentants légaux pour toute donnée relative aux élèves, y compris sa diffusion via le portail Parents.
+6.3 Sauvegardes : la réalisation régulière de sauvegardes relève de la responsabilité exclusive de l'Établissement. L'Éditeur ne peut être tenu responsable de toute perte de données, quelle qu'en soit la cause.
+6.4 Synchronisation cloud : certaines fonctions reposent sur des infrastructures d'hébergement tierces sécurisées. L'Éditeur n'utilise ni ne vend les données à des fins commerciales ; seuls les traitements techniques strictement nécessaires au fonctionnement sont réalisés. La sécurité absolue des transmissions ne pouvant être garantie, l'Établissement reconnaît les risques inhérents à tout système connecté.
+6.5 Exactitude des documents : les notes, moyennes, rangs et documents produits (bulletins, diplômes, listes) doivent impérativement être vérifiés et validés par l'Établissement avant tout usage officiel. L'Éditeur n'exerce aucun contrôle sur la saisie et ne saurait être tenu responsable des erreurs non détectées avant publication.
 
-5. LIMITATION DE RESPONSABILITÉ (CLAUSE DE PROTECTION)
-EN AUCUN CAS L'ÉDITEUR NE POURRA ÊTRE TENU RESPONSABLE DE TOUT DOMMAGE DIRECT, INDIRECT, ACCESSOIRE, SPÉCIAL OU CONSÉCUTIF (Y COMPRIS, SANS S'Y LIMITER, LA PERTE DE DONNÉES, LES ERREURS DE CALCUL, LA PERTE DE PROFITS OU L'INTERRUPTION D'ACTIVITÉ) RÉSULTANT DE L'UTILISATION OU DE L'IMPOSSIBILITÉ D'UTILISER LE LOGICIEL, MÊME SI L'ÉDITEUR A ÉTÉ INFORMÉ DE LA POSSIBILITÉ DE TELS DOMMAGES. LA RESPONSABILITÉ TOTALE DE L'ÉDITEUR NE SAURAIT EXCÉDER LE MONTANT PAYÉ POUR L'ACQUISITION DE LA LICENCE.
+ARTICLE 7 — MISES À JOUR ET SUPPORT
+Les mises à jour, corrections et évolutions sont fournies à la discrétion de l'Éditeur, sans obligation de fréquence ni de contenu. Le support technique est fourni à la discrétion de l'Éditeur selon ses disponibilités, via karisdev369@gmail.com. Les mises à jour sont soumises aux termes du présent contrat.
 
-6. RÉSILIATION
-Tout manquement aux termes de ce contrat entraînera la résiliation immédiate et automatique de la licence, sans préavis ni remboursement, et pourra donner lieu à des poursuites judiciaires.
+ARTICLE 8 — EXCLUSION DE GARANTIE
+LE LOGICIEL EST FOURNI « EN L'ÉTAT », SANS AUCUNE GARANTIE D'AUCUNE SORTE, EXPRESSE OU IMPLICITE, Y COMPRIS, SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. L'ÉDITEUR NE GARANTIT PAS QUE LE LOGICIEL SERA ININTERROMPU, EXEMPT D'ERREURS OU COMPATIBLE AVEC TOUS LES ENVIRONNEMENTS MATÉRIELS ET LOGICIELS. AUCUN RÉSULTAT SCOLAIRE, ADMINISTRATIF OU FINANCIER N'EST GARANTI PAR L'USAGE DU LOGICIEL.
 
-7. SUPPORT ET CONTACT
-Le support technique est fourni à la discrétion de l'Éditeur via : karisdev369@gmail.com
+ARTICLE 9 — LIMITATION DE RESPONSABILITÉ
+DANS LA LIMITE AUTORISÉE PAR LA LOI, EN AUCUN CAS L'ÉDITEUR NE POURRA ÊTRE TENU RESPONSABLE DE TOUT DOMMAGE DIRECT, INDIRECT, ACCESSOIRE, SPÉCIAL, CONSÉCUTIF OU IMMATÉRIEL, Y COMPRIS, SANS S'Y LIMITER : LA PERTE DE DONNÉES, LES ERREURS DE CALCUL, LA PERTE DE PROFITS, L'INTERRUPTION D'ACTIVITÉ, LES ATTEINTES À LA RÉPUTATION OU LES CONSÉQUENCES LIÉES À L'USAGE DES DOCUMENTS PRODUITS, MÊME SI L'ÉDITEUR A ÉTÉ INFORMÉ DE LA POSSIBILITÉ DE TELS DOMMAGES. EN TOUT ÉTAT DE CAUSE, LA RESPONSABILITÉ TOTALE DE L'ÉDITEUR EST LIMITÉE AU MONTANT EFFECTIVEMENT PAYÉ POUR LA LICENCE EN COURS. CETTE LIMITATION S'APPLIQUE MALGRÉ L'ÉCHEC DE LA FINALITÉ ESSENTIELLE DE TOUT RECOURS.
 
-Fait à la date de l'installation, l'acceptation électronique faisant foi de signature.
+ARTICLE 10 — INDEMNISATION
+Vous vous engagez à garantir, indemniser et dégager l'Éditeur de toute responsabilité à l'égard de toute réclamation, demande, action, amende, perte ou dommage, y compris les frais raisonnables de défense, introduits par un tiers et résultant : de votre utilisation du Logiciel en violation du présent contrat ; de données saisies, diffusées ou publiées par vos soins ; ou du non-respect des obligations légales applicables à votre établissement.
+
+ARTICLE 11 — RÉSILIATION
+Tout manquement aux termes du présent contrat entraîne la résiliation immédiate et automatique de la licence, sans préavis ni remboursement, et pourra donner lieu à des poursuites judiciaires. En cas de résiliation, vous devez cesser toute utilisation du Logiciel et le désinstaller. Les articles 4, 5, 8, 9, 10 et 14 survivent à la résiliation.
+
+ARTICLE 12 — REMBOURSEMENT
+Conformément à l'usage des logiciels sous licence perpétuelle ou périodique, aucune somme versée au titre de la licence ne peut donner lieu à remboursement après activation, l'utilisateur ayant pu tester la conformité du Logiciel à ses besoins avant achat.
+
+ARTICLE 13 — CESSION
+La présente licence est personnelle à l'Établissement. Toute cession, transmission ou mise à disposition, quelle qu'elle soit, est interdite sans l'accord écrit préalable de l'Éditeur.
+
+ARTICLE 14 — DISPOSITIONS GÉNÉRALES
+14.1 Intégralité : le présent contrat constitue l'intégralité de l'accord entre les parties relatif au Logiciel et remplace tout accord antérieur.
+14.2 Divisibilité : si une clause était jugée invalide ou inapplicable, les autres clauses demeureraient pleinement en vigueur.
+14.3 Non-renonciation : le fait pour l'Éditeur de ne pas exiger l'exécution stricte d'une clause ne vaut pas renonciation à celle-ci.
+14.4 Force majeure : l'Éditeur n'est pas responsable des manquements dus à un cas de force majeure au sens de la loi.
+14.5 Langue : le présent contrat est rédigé en langue française qui fait foi entre les parties.
+
+ARTICLE 15 — DROIT APPLICABLE ET JURIDICTION COMPÉTENTE
+Le présent contrat est soumis au droit camerounais. Tout litige relatif à son interprétation, son exécution ou sa rupture sera soumis à une tentative de règlement amiable préalable ; à défaut d'accord amiable dans un délai de trente (30) jours, le litige relèvera de la compétence exclusive des tribunaux du ressort du domicile de l'Éditeur, nonobstant pluralité de défendeurs ou appel en garantie.
+
+Fait à la date de l'installation. L'acceptation électronique du présent contrat, matérialisée par la case d'acceptation ou le premier usage du Logiciel, fait foi de signature et emporte la même valeur qu'une signature manuscrite.
