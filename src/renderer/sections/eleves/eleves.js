@@ -770,7 +770,7 @@ function attacherEvenements() {
   });
 
   // ★ Export liste élèves PDF
-  document.getElementById('btn-export-liste-eleves')?.addEventListener('click', ouvrirModaleExportListe);
+  document.getElementById('btn-export-liste-eleves')?.addEventListener('click', () => ouvrirModaleExportListe('liste'));
   document.getElementById('modal-export-liste-close')?.addEventListener('click', fermerModaleExportListe);
   document.getElementById('modal-export-liste-cancel')?.addEventListener('click', fermerModaleExportListe);
   document.getElementById('modal-export-liste')?.addEventListener('click', e => {
@@ -778,7 +778,7 @@ function attacherEvenements() {
   });
   document.getElementById('export-liste-ok')?.addEventListener('click', executerExportListe);
   // ★ Export pyramide des âges PDF
-  document.getElementById('btn-export-pyramide')?.addEventListener('click', ouvrirModaleExportListe);
+  document.getElementById('btn-export-pyramide')?.addEventListener('click', () => ouvrirModaleExportListe('pyramide'));
   document.getElementById('export-pyramide-ok')?.addEventListener('click', executerExportPyramide);
 }
 
@@ -844,13 +844,35 @@ function remplirFiltreClasses(classes) {
 // EXPORT LISTE ÉLÈVES (PDF)
 // ============================================================
 
-function ouvrirModaleExportListe() {
+let _exportMode = 'liste';
+
+function ouvrirModaleExportListe(mode = 'liste') {
   const modal = document.getElementById('modal-export-liste');
   const select = document.getElementById('export-liste-classe');
   if (!modal || !select) return;
+  _exportMode = mode === 'pyramide' ? 'pyramide' : 'liste';
+
   const classes = window.appState?.classes || [];
   const options = classes.map(c => `<option value="${c.id}">${esc(c.nom_classe)}</option>`).join('');
   select.innerHTML = `<option value="">${t('eleves.select_classe_placeholder')}</option>` + options;
+
+  const pyramide = _exportMode === 'pyramide';
+  const title = document.getElementById('modal-export-title');
+  const desc = document.getElementById('modal-export-desc');
+  const sexeGroup = document.getElementById('export-sexe-group');
+  const btnListe = document.getElementById('export-liste-ok');
+  const btnPyramide = document.getElementById('export-pyramide-ok');
+
+  const titleKey = pyramide ? 'eleves.export_pdf_title_pyramide' : 'eleves.export_pdf_title_liste';
+  if (title) { title.dataset.i18n = titleKey; title.textContent = t(titleKey); }
+
+  const descKey = pyramide ? 'eleves.export_desc_pyramide' : 'eleves.export_liste_desc';
+  if (desc) { desc.dataset.i18n = descKey; desc.textContent = t(descKey); }
+
+  if (sexeGroup) sexeGroup.style.display = pyramide ? 'block' : 'none';
+  if (btnListe) btnListe.style.display = pyramide ? 'none' : '';
+  if (btnPyramide) btnPyramide.style.display = pyramide ? '' : 'none';
+
   modal.style.display = 'flex';
 }
 

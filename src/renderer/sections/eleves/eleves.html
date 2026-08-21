@@ -252,10 +252,10 @@
                 border-radius:20px; padding:28px; width:90%; max-width:440px;
                 box-shadow:0 24px 64px rgba(0,0,0,0.6);">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
-        <div style="font-family:'Rajdhani',sans-serif; font-size:20px;
+        <div id="modal-export-title" style="font-family:'Rajdhani',sans-serif; font-size:20px;
              font-weight:700; color:var(--text-primary); text-transform:uppercase;"
-             data-i18n="eleves.export_pdf_title">
-          Exporter (PDF)
+             data-i18n="eleves.export_pdf_title_liste">
+          Exporter la liste (PDF)
         </div>
         <button id="modal-export-liste-close" type="button"
                 style="background:var(--bg-hover); border:1px solid var(--border-color);
@@ -263,9 +263,9 @@
                        cursor:pointer; font-size:14px;"
                 data-i18n="common.close">✕</button>
       </div>
-      <p style="font-size:13px; color:var(--text-secondary); margin:0 0 16px; line-height:1.6;"
+      <p id="modal-export-desc" style="font-size:13px; color:var(--text-secondary); margin:0 0 16px; line-height:1.6;"
          data-i18n="eleves.export_liste_desc">
-        Sélectionnez la classe à exporter. La liste PDF inclut matricule, date de naissance et sexe. La pyramide des âges trace la courbe des naissances (par sexe si choisi).
+        Sélectionnez la classe dont vous souhaitez exporter la liste des élèves (PDF avec matricule, date de naissance, sexe).
       </p>
       <div class="input-group" style="margin-bottom:20px;">
         <label data-i18n="eleves.label_class">Classe</label>
@@ -273,7 +273,7 @@
           <option value="" data-i18n="eleves.select_classe_placeholder">— Sélectionner une classe —</option>
         </select>
       </div>
-      <div class="input-group" style="margin-bottom:20px;">
+      <div class="input-group" id="export-sexe-group" style="display:none; margin-bottom:20px;">
         <label data-i18n="eleves.label_sexe">Sexe</label>
         <select id="export-pyramide-sexe" class="input">
           <option value="T" data-i18n="eleves.sexe_tous">Tous</option>
