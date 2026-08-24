@@ -19,6 +19,30 @@ const { getDocTranslator } = require('./locales');
 const SOUS_TYPES = ['orale', 'ecrite', 'pratique', 'savoirEtre'];
 
 /**
+ * Labels courts français pour les colonnes N1/N2 (listes affichables).
+ * Les enfants ne connaissent pas les codes 1A/2B — on affiche un seul mot
+ * lisible (ex: Français, Maths, Anglais...).
+ */
+const SC_SHORT_LABELS = {
+  '1A': 'Français',
+  '1B': 'Anglais',
+  '1C': 'Langue',
+  '2A': 'Maths',
+  '2B': 'Sciences',
+  '3A': 'Social',
+  '3B': 'Civique',
+  '4': 'Autonomie',
+  '5': 'TIC',
+  '6A1': 'EPS',
+  '6A2': 'EPS*',
+  '6B': 'Arts',
+};
+
+function getScShortLabel(scCode, fallbackNom) {
+  return SC_SHORT_LABELS[scCode] || (fallbackNom ? fallbackNom.split(' ')[0] : scCode);
+}
+
+/**
  * Construit la liste ordonnée des colonnes (sous-compétences) + groupes
  * (compétences) depuis le curriculum, pour N1/N2.
  */
@@ -36,6 +60,7 @@ function buildColumnsN12(lvl, CURRICULUM_TEMPLATES) {
         code: scCode,
         compCode,
         nom: sc.nom || scCode,
+        shortLabel: getScShortLabel(scCode, sc.nom),
         total: sc.total || 0
       });
     }
@@ -77,13 +102,14 @@ function drawHeaderN12(doc, t, LEFT, pageW, columns, compGroups, colNoW, colNomW
     x += wdt;
   }
 
-  // Ligne 2 : codes des sous-compétences
+  // Ligne 2 : libellés courts français (lisibles par les élèves : Français, Maths...)
   const y2 = y + headH1;
   doc.rect(scStart, y2, scW, headH2).fill('#dce3f0');
   doc.fillColor('#111').font('Helvetica-Bold');
   x = scStart;
   for (const c of columns) {
-    doc.fontSize(8).text(c.code, x, y2 + 3, { width: colW, align: 'center' });
+    const label = (c.shortLabel || c.code).toUpperCase();
+    doc.fontSize(7).text(label, x, y2 + 3, { width: colW, align: 'center' });
     x += colW;
     doc.moveTo(x, y2).lineTo(x, y2 + headH2).strokeColor('#9fb3d0').lineWidth(0.6).stroke();
   }
