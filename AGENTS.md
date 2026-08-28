@@ -528,4 +528,15 @@ table isolée.
 
 ---
 
+## 18. OUTILLAGE — MCP & MÉMOIRE (depuis 23 Août 2026)
+
+- **MCP actifs (global `~/.config/opencode/opencode.jsonc`)** : `filesystem` (/home/karis/ELIMU), `memory` (`MEMORY_FILE_PATH=~/.local/share/mcp-memory/memory.json`), `sequential-thinking`, `fetch`, `sqlite` (elimu.db), `postgres` (Neon PWA), `github` (ghp_rcJZ...) — 7/20. 13 désactivés (`enabled:false`) : `gitlab`, `brave-search`, `google-drive`, `google-maps`, `youtube-transcript`, `slack`, `notion`, `sentry`, `stripe`, `playwright` (chromium 656 Mo installé, `--executable-path`), `puppeteer`, `docker`, `kubernetes` — à activer via `enabled:true` + token quand besoin.
+- **Mémoire persistante** : graphe `~/.local/share/mcp-memory/memory.json` (4 entités : ELIMU_Ecosystem, Karis, ELIMU_Docs (11 docs résumés), ELIMU_Credentials (référence hors-git vers `github_credentials`)) — chargée via MCP `memory` (redémarrage requis après modif `opencode.jsonc`).
+- **Skills globaux (20)** : `~/.config/opencode/skills/*/SKILL.md` — design-system, ui-review, security-audit, perf-audit, test-generator, pr-review, refactor-clean, spec-writer, changelog-generator, git-release, docs-generator, api-design, db-migration, i18n-translator, accessibility-audit, seo-optimizer, prompt-optimizer, code-explainer, dependency-scan, customize-opencode — invoqués via `skill({name})`.
+- **Modèle par défaut** : `opencode/muse-spark-1.2-contributor-free` en `reasoningEffort=high` (medium écrasé) + variantes `rapide` (low) / `max` (xhigh) — config dans `provider.opencode.models`.
+
+> Après toute modification de `opencode.jsonc` (MCP, modèle, skills), **redémarrer opencode**.
+
+---
+
 *Règle d'or : mettre à jour ce fichier après tout changement structurel significatif.*
