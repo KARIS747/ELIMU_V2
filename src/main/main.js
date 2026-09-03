@@ -7,7 +7,11 @@ const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-app.commandLine.appendSwitch('disable-gpu');
+// Desactive le GPU sauf si ELIMU_ENABLE_GPU=1 (ex: Hyprland/Wayland ou GPU recent).
+// Garde le comportement par defaut inchange pour les postes clients existants.
+if (!process.env.ELIMU_ENABLE_GPU) {
+  app.commandLine.appendSwitch('disable-gpu');
+}
 
 // === ÉTAT GLOBAL ===
 let mainWindow = null;
