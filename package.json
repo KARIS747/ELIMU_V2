@@ -72,15 +72,6 @@
       "!**/tests/**",
       "!**/.git/**"
     ],
-    "extraResources": [
-      {
-        "from": "database",
-        "to": "database",
-        "filter": [
-          "*.db"
-        ]
-      }
-    ],
     "asar": true,
     "asarUnpack": [
       "node_modules/bcryptjs/**"
