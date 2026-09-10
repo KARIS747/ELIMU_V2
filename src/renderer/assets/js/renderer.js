@@ -321,7 +321,8 @@ function renderFirstLaunchForm(container) {
     'Quelle est votre équipe de sport préférée ?',
     'Quel est le modèle de votre premier téléphone portable ?',
   ];
-  const optionsHTML = QUESTIONS.map(q => `<option value="${q}">${q}</option>`).join('');
+  const optionsHTML = QUESTIONS.map(q => `<option value="${q}">${q}</option>`).join('')
+    + `<option value="__custom__">${t('firstlaunch.question_custom')}</option>`;
 
   container.innerHTML = `
     <h2>${t('firstlaunch.title')}</h2>
@@ -352,6 +353,12 @@ function renderFirstLaunchForm(container) {
           ${optionsHTML}
         </select>
       </div>
+      <div class="input-group" id="grp-question-perso" style="margin-bottom:10px; display:none;">
+        <label style="font-size:12px;">${t('firstlaunch.question_custom_label')}</label>
+        <input type="text" id="inp-question-perso" class="input"
+               placeholder="${t('firstlaunch.question_custom_placeholder')}"
+               style="font-size:13px;" autocomplete="off" maxlength="200">
+      </div>
       <div class="input-group" style="margin-bottom:0;">
         <label style="font-size:12px;">${t('firstlaunch.answer')}</label>
         <input type="text" id="inp-reponse" class="input" placeholder="${t('common.search').replace('...','...')}"
@@ -369,6 +376,10 @@ function renderFirstLaunchForm(container) {
   attachPasswordToggle('inp-password');
   attachPasswordToggle('inp-confirm');
   document.getElementById('btn-login').addEventListener('click', handleCreateAdmin);
+  document.getElementById('inp-question')?.addEventListener('change', e => {
+    const grp = document.getElementById('grp-question-perso');
+    if (grp) grp.style.display = e.target.value === '__custom__' ? 'block' : 'none';
+  });
   document.getElementById('inp-username').focus();
 }
 
@@ -402,12 +413,15 @@ async function handleCreateAdmin() {
   const username = document.getElementById('inp-username').value.trim();
   const password = document.getElementById('inp-password').value;
   const confirm  = document.getElementById('inp-confirm').value;
-  const question = document.getElementById('inp-question')?.value || null;
+  const selQuestion = document.getElementById('inp-question')?.value || '';
+  const questionPerso = document.getElementById('inp-question-perso')?.value.trim() || '';
+  const question = selQuestion === '__custom__' ? (questionPerso || null) : (selQuestion || null);
   const reponse  = document.getElementById('inp-reponse')?.value.trim() || null;
 
   if (!username || !password || !confirm) { showLoginError('Veuillez remplir tous les champs obligatoires'); return; }
   if (password !== confirm)               { showLoginError('Les mots de passe ne correspondent pas'); return; }
   if (password.length < 6)               { showLoginError('Le mot de passe doit avoir au moins 6 caractères'); return; }
+  if (selQuestion === '__custom__' && !questionPerso) { showLoginError(t('firstlaunch.question_custom_required')); return; }
   if (question && !reponse)              { showLoginError('Veuillez saisir votre réponse secrète'); return; }
 
   btn.disabled    = true;
