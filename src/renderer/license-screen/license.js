@@ -20,6 +20,8 @@ const toggleManual = document.getElementById('toggle-manual');
 const manualSection = document.getElementById('manual-section');
 const hwidDisplay = document.getElementById('hwid-display');
 const copyBtn     = document.getElementById('copy-hwid');
+const hwidDisplayMain = document.getElementById('hwid-display-main');
+const copyBtnMain     = document.getElementById('copy-hwid-main');
 const licenseInput = document.getElementById('license-key');
 const activateBtn = document.getElementById('activate-btn');
 const successMsg  = document.getElementById('success-msg');
@@ -48,9 +50,10 @@ async function init() {
       updateLangButtons(lang);
     }
 
-    // Charger le HWID (utilisé par le repli manuel)
+    // Charger le HWID (vue principale + repli manuel)
     currentHwid = await window.elimuAPI.getHardwareId();
     if (hwidDisplay) hwidDisplay.textContent = currentHwid;
+    if (hwidDisplayMain) hwidDisplayMain.textContent = currentHwid;
 
     // Appliquer les traductions
     translatePage();
@@ -159,6 +162,8 @@ function bundleErrorText(code) {
 
 function showBundleSuccess(result) {
   dropzone.style.display = 'none';
+  document.getElementById('hwid-step').style.display = 'none';
+  document.getElementById('dz-step').style.display = 'none';
   toggleManual.parentElement.style.display = 'none';
 
   const school = result.schoolName || t('licence.success_school_default', 'Votre établissement');
@@ -201,13 +206,17 @@ toggleManual?.addEventListener('click', () => {
     : t('licence.manual_hide', 'Masquer la saisie manuelle');
 });
 
-// Copier le HWID
-copyBtn?.addEventListener('click', () => {
-  navigator.clipboard.writeText(currentHwid);
-  const originalText = copyBtn.textContent;
-  copyBtn.textContent = t('toast.copy_success', 'Copié !');
-  setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
-});
+// Copier le HWID (vue principale + repli manuel)
+function wireCopy(btn) {
+  btn?.addEventListener('click', () => {
+    navigator.clipboard.writeText(currentHwid);
+    const originalText = btn.textContent;
+    btn.textContent = t('toast.copy_success', 'Copié !');
+    setTimeout(() => { btn.textContent = originalText; }, 2000);
+  });
+}
+wireCopy(copyBtn);
+wireCopy(copyBtnMain);
 
 // Activer la licence (manuel)
 activateBtn?.addEventListener('click', async () => {

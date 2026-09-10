@@ -207,10 +207,26 @@
     <h1 data-i18n="licence.title">Activation de la licence</h1>
     <p data-i18n="licence.subtitle">Pour continuer à utiliser Elimu, veuillez activer votre licence.</p>
 
-    <!-- ── VUE PRINCIPALE : glisser-déposer le fichier d'installation ── -->
+    <!-- ── ÉTAPE 1 : identifiant machine à transmettre au fournisseur ── -->
+    <div id="hwid-step" style="text-align:left; margin-bottom:18px;">
+      <div style="font-size:0.85rem; font-weight:bold; color:#cbd5e0; margin-bottom:8px;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+                     border-radius:50%; background:#00a854; color:#fff; font-size:0.75rem; margin-right:8px;">1</span><span data-i18n="licence.hwid_label">Identifiant machine</span>
+      </div>
+      <div class="hwid-box" style="margin-bottom:8px;">
+        <span id="hwid-display-main" class="hwid-value">Chargement...</span>
+        <button id="copy-hwid-main" class="copy-btn" data-i18n="licence.copy_hwid">Copier</button>
+      </div>
+      <div style="font-size:0.78rem; color:#718096;" data-i18n="licence.send_hwid">Envoyez cet identifiant à votre fournisseur pour obtenir votre clé.</div>
+    </div>
+
+    <!-- ── ÉTAPE 2 : glisser-déposer le fichier d'installation ── -->
+    <div id="dz-step" style="text-align:left; font-size:0.85rem; font-weight:bold; color:#cbd5e0; margin-bottom:8px;">
+      <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px;
+                   border-radius:50%; background:#00a854; color:#fff; font-size:0.75rem; margin-right:8px;">2</span><span data-i18n="licence.dz_title">Installation rapide</span>
+    </div>
     <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Fichier d'installation">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-      <div class="dz-title" data-i18n="licence.dz_title">Installation rapide</div>
       <div class="dz-sub" data-i18n="licence.dz_sub">Glissez-déposez le fichier d'installation reçu de votre fournisseur, ou cliquez pour le sélectionner.</div>
       <div class="dz-hint">elimu-installation.json</div>
     </div>
