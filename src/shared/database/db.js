@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 124; // v1.2.4 (frais_types.classe_id : portee par classe)
+const CURRENT_SCHEMA_VERSION = 125; // v1.2.5 (frais_types_classes : portee multi-classes)
 
 /**
  * Initialise la base de données et applique le schéma
@@ -107,7 +107,15 @@ async function initializeDatabase(customPath = null) {
     "ALTER TABLE tranches ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE paiements ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE frais_types ADD COLUMN annee_scolaire_id INTEGER",
-    "ALTER TABLE frais_types ADD COLUMN classe_id INTEGER",
+    `CREATE TABLE IF NOT EXISTS frais_types_classes (
+       frais_type_id INTEGER NOT NULL,
+       classe_id     INTEGER NOT NULL,
+       ecole_id      TEXT NOT NULL DEFAULT '',
+       PRIMARY KEY (frais_type_id, classe_id),
+       FOREIGN KEY(frais_type_id) REFERENCES frais_types(id) ON DELETE CASCADE
+     )`,
+    "INSERT OR IGNORE INTO frais_types_classes (frais_type_id, classe_id, ecole_id) SELECT id, classe_id, ecole_id FROM frais_types WHERE classe_id IS NOT NULL",
+    "ALTER TABLE frais_types DROP COLUMN classe_id",
     "ALTER TABLE paiement_tranches ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE heures_absence ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE absences ADD COLUMN annee_scolaire_id INTEGER",

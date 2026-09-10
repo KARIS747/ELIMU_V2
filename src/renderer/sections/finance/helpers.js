@@ -81,7 +81,7 @@ function _masquerErreurPaiement() {
 function _remplirSelectsClasse() {
   const ids = [
     'fin-filter-classe', 'fin-impayes-filter-classe',
-    'fin-hist-classe', 'pay-classe', 'ff-cible-classe'
+    'fin-hist-classe', 'pay-classe'
   ];
 
   ids.forEach(id => {

@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import { _remplirSelectsClasse, showFinLoader, hideFinLoader, _afficherErreurFrais, _masquerErreurFrais } from './helpers.js';
 import { _chargerKpis, _chargerDashboard } from './dashboard.js';
-import { _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _majVerrouPortee, _chargerFraisTypes } from './fraisTypes.js';
+import { _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _chargerFraisTypes } from './fraisTypes.js';
 import { _chargerTranches, _chargerImpayes, _chargerPlusImpayes, _chargerHistorique } from './tranches.js';
 import { _ouvrirModalePaiement, _fermerModalePaiement, _chargerTranchesEleve, _majTotalPaiement, _enregistrerPaiement } from './paiement.js';
 
@@ -108,12 +108,7 @@ function _setupEvents() {
     document.getElementById(id)?.addEventListener('input', _majApercuTranches);
   });
 
-  document.getElementById('ff-cible')?.addEventListener('change', e => {
-    const selClasse = document.getElementById('ff-cible-classe');
-    if (selClasse) selClasse.style.display = e.target.value === 'classe' ? 'block' : 'none';
-  });
 
-  document.getElementById('ff-classe-scope')?.addEventListener('change', _majVerrouPortee);
 
   document.getElementById('btn-save-frais')?.addEventListener('click', async () => {
     _masquerErreurFrais();
@@ -124,8 +119,8 @@ function _setupEvents() {
     const periode  = parseInt(document.getElementById('ff-periodicite')?.value);
     const dateDebut = document.getElementById('ff-date-debut')?.value;
     const destin   = document.getElementById('ff-destinataire')?.value;
-    const scopeVal = document.getElementById('ff-classe-scope')?.value || '';
-    const classeId = scopeVal ? parseInt(scopeVal) : null;
+    const classeIds = [...document.querySelectorAll('.ff-scope-chk:checked')]
+      .map(el => parseInt(el.value)).filter(n => !isNaN(n));
     const actif    = document.getElementById('ff-actif')?.checked ? 1 : 0;
 
     if (!nom)    { _afficherErreurFrais(window.t('finance.fee_name_label')); return; }
@@ -139,7 +134,7 @@ function _setupEvents() {
     const data = {
       nom, montant_par_tranche: montant, nombre_tranches: nbTranches,
       periodicite_mois: periode, date_premiere_echeance: dateDebut,
-      destinataire: destin, classe_id: classeId, actif
+      destinataire: destin, classe_ids: classeIds, actif
     };
 
     try {
@@ -167,14 +162,13 @@ function _setupEvents() {
 
   document.getElementById('btn-generer-tranches')?.addEventListener('click', async () => {
     if (!state._fraisEditId) { showToast(window.t('finance.fee_save_first'), 'warning'); return; }
-    const cible    = document.getElementById('ff-cible')?.value || 'all';
-    const classeId = document.getElementById('ff-cible-classe')?.value || null;
 
-    showFinLoader(`Génération des tranches pour ${cible === 'all' ? 'tous les élèves' : 'la classe sélectionnés'}...`);
+    showFinLoader(window.t('finance.tranche_generating'));
     try {
+      // La portée (classes cochées) est appliquée côté backend.
       const result = await window.elimuAPI.financeGenererTranches({
         frais_type_id: state._fraisEditId,
-        cible, id_cible: classeId ? parseInt(classeId) : null
+        cible: 'all', id_cible: null
       });
       hideFinLoader();
 

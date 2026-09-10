@@ -43,12 +43,12 @@ async function _chargerFraisTypes() {
                         : f.periodicite_mois === 6 ? window.t('finance.period_biannual')
                         : window.t('finance.period_annual');
 
-      const scopeClasse = f.classe_id != null
-        ? state._classes.find(c => String(c.id) === String(f.classe_id))?.nom_classe
-        : null;
+      const scopeNoms = (f.classe_ids || [])
+        .map(cid => state._classes.find(c => String(c.id) === String(cid))?.nom_classe)
+        .filter(Boolean);
       tr.innerHTML = `
         <td style="font-weight:600; color:var(--text-primary);">${window.esc(f.nom)}
-          ${scopeClasse ? `<div style="font-size:11px; font-weight:500; color:var(--blue-fifa); margin-top:2px;">🎯 ${window.esc(scopeClasse)}</div>` : ''}
+          ${scopeNoms.length ? `<div style="font-size:11px; font-weight:500; color:var(--blue-fifa); margin-top:2px;">🎯 ${scopeNoms.map(window.esc).join(', ')}</div>` : ''}
         </td>
         <td style="font-family:'Rajdhani',sans-serif; font-size:15px; color:var(--green-fifa);">
           ${formatMontant(f.montant_par_tranche)}
@@ -97,11 +97,22 @@ function _ouvrirFormFrais(id = null) {
   card.style.display = 'block';
   card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Select de portée (persistée sur le type de frais)
-  const selScope = document.getElementById('ff-classe-scope');
-  if (selScope) {
-    selScope.innerHTML = `<option value="">${window.t('finance.scope_all_classes')}</option>` +
-      state._classes.map(c => `<option value="${c.id}">${window.esc(c.nom_classe)}</option>`).join('');
+  // Cases à cocher de portée (persistée sur le type de frais).
+  // Vide = toutes les classes.
+  const scopeIds = id
+    ? (state._fraisTypes.find(x => x.id === id)?.classe_ids || []).map(String)
+    : [];
+  const scopeBox = document.getElementById('ff-classes-scope');
+  if (scopeBox) {
+    scopeBox.innerHTML = state._classes.map(c => `
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;
+             font-size:12.5px; padding:5px 10px; border:1px solid var(--border-color);
+             border-radius:6px; white-space:nowrap;">
+        <input type="checkbox" class="ff-scope-chk" value="${c.id}"
+               style="accent-color:var(--green-fifa); width:14px; height:14px;"
+               ${scopeIds.includes(String(c.id)) ? 'checked' : ''}>
+        <span>${window.esc(c.nom_classe)}</span>
+      </label>`).join('') || `<span style="font-size:12px; color:var(--text-muted);">${window.t('finance.no_class_available')}</span>`;
   }
 
   if (id) {
@@ -114,7 +125,6 @@ function _ouvrirFormFrais(id = null) {
     _setVal('ff-periodicite',   f.periodicite_mois);
     _setVal('ff-date-debut',    f.date_premiere_echeance);
     _setVal('ff-destinataire',  f.destinataire);
-    if (selScope) selScope.value = f.classe_id != null ? String(f.classe_id) : '';
     const chk = document.getElementById('ff-actif');
     if (chk) chk.checked = !!f.actif;
   } else {
@@ -123,7 +133,6 @@ function _ouvrirFormFrais(id = null) {
     _setVal('ff-nb-tranches', '3');
     _setVal('ff-periodicite', '3');
     _setVal('ff-destinataire', 'etablissement');
-    if (selScope) selScope.value = '';
     const chk = document.getElementById('ff-actif');
     if (chk) chk.checked = true;
     _setVal('ff-date-debut', new Date().toISOString().split('T')[0]);
@@ -131,35 +140,6 @@ function _ouvrirFormFrais(id = null) {
 
   _majApercuTranches();
   _masquerErreurFrais();
-  _majVerrouPortee();
-
-  const selClasse = document.getElementById('ff-cible-classe');
-  if (selClasse) {
-    selClasse.innerHTML = `<option value="">— ${window.t('finance.all_classes_short_dash')} —</option>` +
-      state._classes.map(c => `<option value="${c.id}">${window.esc(c.nom_classe)}</option>`).join('');
-  }
-}
-
-// Verrouille la cible de génération ponctuelle quand le frais est restreint
-// à une classe : la génération (modale comme globale) reste dans cette portée.
-function _majVerrouPortee() {
-  const selScope  = document.getElementById('ff-classe-scope');
-  const selCible  = document.getElementById('ff-cible');
-  const selClasse = document.getElementById('ff-cible-classe');
-  if (!selScope || !selCible || !selClasse) return;
-  const scopeVal = selScope.value || '';
-  if (scopeVal) {
-    const nomClasse = state._classes.find(c => String(c.id) === String(scopeVal))?.nom_classe || '';
-    selCible.value = 'classe';
-    selCible.disabled = true;
-    selClasse.innerHTML = `<option value="${window.esc(scopeVal)}">${window.esc(nomClasse)}</option>`;
-    selClasse.value = scopeVal;
-    selClasse.style.display = '';
-    selClasse.disabled = true;
-  } else {
-    selCible.disabled = false;
-    selClasse.disabled = false;
-  }
 }
 
 function _fermerFormFrais() {
@@ -220,4 +200,4 @@ async function _supprimerFrais(id) {
   }
 }
 
-export { _chargerFraisTypes, _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _majVerrouPortee, _supprimerFrais };
+export { _chargerFraisTypes, _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _supprimerFrais };

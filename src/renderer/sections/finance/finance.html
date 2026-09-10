@@ -309,11 +309,12 @@
             <option value="externe" data-i18n="finance.recipient_external">Externe</option>
           </select>
         </div>
-        <div class="input-group" style="margin:0;">
-          <label data-i18n="finance.fee_scope_label">Classe concernée</label>
-          <select id="ff-classe-scope" class="input">
-            <option value="" data-i18n="finance.scope_all_classes">Toutes les classes</option>
-          </select>
+        <div class="input-group" style="margin:0; grid-column:1/-1;">
+          <label data-i18n="finance.fee_scope_label">Classes concernées</label>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:6px;"
+               data-i18n="finance.fee_scope_hint">Laisser tout décoché = toutes les classes</div>
+          <div id="ff-classes-scope" style="display:flex; gap:8px; flex-wrap:wrap; max-height:110px; overflow-y:auto;
+               padding:10px 12px; border:1px solid var(--border-color); border-radius:8px;"></div>
         </div>
         <div class="input-group" style="margin:0; grid-column:1/-1;">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -339,13 +340,6 @@
       <div style="display:flex; gap:10px; justify-content:space-between; margin-top:16px;
                   padding-top:14px; border-top:1px solid var(--border-color);">
         <div id="ff-generer-zone" style="display:flex; gap:10px; align-items:center;">
-          <select id="ff-cible" class="input" style="width:180px; font-size:12.5px; padding:7px 12px;">
-            <option value="all" data-i18n="finance.target_all">Tous les élèves</option>
-            <option value="classe" data-i18n="finance.target_class">Par classe</option>
-          </select>
-          <select id="ff-cible-classe" class="input" style="width:180px; display:none; font-size:12.5px; padding:7px 12px;">
-            <option value="" data-i18n="finance.select_class_placeholder">— Choisir une classe —</option>
-          </select>
           <button class="btn btn-secondary" id="btn-generer-tranches" style="white-space:nowrap;"
                   data-i18n="finance.btn_generate_tranches">
             🔄 Générer les tranches

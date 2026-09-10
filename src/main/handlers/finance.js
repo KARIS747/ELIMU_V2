@@ -28,6 +28,18 @@ function register(ipcMain, deps) {
     return await hasRole(userId, roles);
   };
 
+  // Remplace la portée multi-classes d'un type de frais.
+  // Liste vide/absente = toutes les classes.
+  const _saveFraisScope = (fraisId, classeIds, ecoleId) => {
+    run(`DELETE FROM frais_types_classes WHERE frais_type_id = ? AND ecole_id = ?`, [fraisId, ecoleId]);
+    const ids = Array.isArray(classeIds) ? classeIds : [];
+    for (const cid of ids) {
+      const n = parseInt(cid);
+      if (isNaN(n)) continue;
+      run(`INSERT OR IGNORE INTO frais_types_classes (frais_type_id, classe_id, ecole_id) VALUES (?, ?, ?)`, [fraisId, n, ecoleId]);
+    }
+  };
+
   // ── Statistiques globales ───────────────────────────────────────────────────
 
   ipcMain.handle('finance:getStats', async () => {
@@ -57,7 +69,13 @@ function register(ipcMain, deps) {
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      return all(`SELECT * FROM frais_types WHERE annee_scolaire_id = ? AND ecole_id = ? ORDER BY actif DESC, nom`, [anneeId, ecoleId]);
+      const rows = all(`SELECT * FROM frais_types WHERE annee_scolaire_id = ? AND ecole_id = ? ORDER BY actif DESC, nom`, [anneeId, ecoleId]);
+      const scope = all(`SELECT frais_type_id, classe_id FROM frais_types_classes WHERE ecole_id = ?`, [ecoleId]);
+      const byFrais = {};
+      for (const s of scope) {
+        (byFrais[s.frais_type_id] = byFrais[s.frais_type_id] || []).push(s.classe_id);
+      }
+      return rows.map(r => ({ ...r, classe_ids: byFrais[r.id] || [] }));
     } catch (e) {
       logger.error('Erreur finance:getFraisTypes:', e);
       return [];
@@ -69,17 +87,17 @@ function register(ipcMain, deps) {
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      const classeId = data.classe_id != null && data.classe_id !== '' ? parseInt(data.classe_id) : null;
       const r = run(
         `INSERT INTO frais_types
-           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, classe_id, actif, annee_scolaire_id, ecole_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, actif, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire || 'etablissement', isNaN(classeId) ? null : classeId, data.actif ?? 1, anneeId, ecoleId
+          data.destinataire || 'etablissement', data.actif ?? 1, anneeId, ecoleId
         ]
       );
+      _saveFraisScope(r.lastID, data.classe_ids, ecoleId);
       return { success: true, id: r.lastID };
     } catch (e) {
       logger.error('Erreur finance:addFraisType:', e);
@@ -93,17 +111,17 @@ function register(ipcMain, deps) {
       const fid = parseInt(id);
       if (isNaN(fid)) return { success: false, error: 'ID invalide' };
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
-      const classeIdUp = data.classe_id != null && data.classe_id !== '' ? parseInt(data.classe_id) : null;
       run(
         `UPDATE frais_types SET nom=?, montant_par_tranche=?, nombre_tranches=?,
-           periodicite_mois=?, date_premiere_echeance=?, destinataire=?, classe_id=?, actif=?
+           periodicite_mois=?, date_premiere_echeance=?, destinataire=?, actif=?
          WHERE id=? AND ecole_id=?`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire, isNaN(classeIdUp) ? null : classeIdUp, data.actif ?? 1, fid, ecoleId
+          data.destinataire, data.actif ?? 1, fid, ecoleId
         ]
       );
+      _saveFraisScope(fid, data.classe_ids, ecoleId);
       return { success: true };
     } catch (e) {
       logger.error('Erreur finance:updateFraisType:', e);
@@ -125,6 +143,7 @@ function register(ipcMain, deps) {
       if (paiements?.nb > 0) {
         return { success: false, error: 'Des paiements sont liés à ce type de frais' };
       }
+      run(`DELETE FROM frais_types_classes WHERE frais_type_id = ? AND ecole_id = ?`, [fid, ecoleId]);
       run(`DELETE FROM frais_types WHERE id = ? AND ecole_id = ?`, [fid, ecoleId]);
       return { success: true };
     } catch (e) {
@@ -145,12 +164,16 @@ function register(ipcMain, deps) {
       if (!ft) return { success: false, error: 'Type de frais introuvable' };
 
       // Portée configurée sur le type de frais : prime sur le paramètre cible.
-      // Un frais restreint à une classe ne génère JAMAIS pour les autres classes.
-      const porteeClasseId = ft.classe_id != null ? parseInt(ft.classe_id) : NaN;
+      // Un frais restreint à des classes ne génère JAMAIS pour les autres classes.
+      const porteeRows = all(`SELECT classe_id FROM frais_types_classes WHERE frais_type_id = ? AND ecole_id = ?`, [fid, ecoleId]);
+      const porteeIds = porteeRows.map(r => parseInt(r.classe_id)).filter(n => !isNaN(n));
 
       let eleves;
       const targetId = parseInt(id_cible);
-      if (!isNaN(porteeClasseId))                       eleves = all(`SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`, [porteeClasseId, anneeId, ecoleId]);
+      if (porteeIds.length) {
+        const ph = porteeIds.map(() => '?').join(',');
+        eleves = all(`SELECT id FROM eleves WHERE classe_id IN (${ph}) AND annee_scolaire_id = ? AND ecole_id = ?`, [...porteeIds, anneeId, ecoleId]);
+      }
       else if (cible === 'eleve' && !isNaN(targetId))   eleves = all(`SELECT id FROM eleves WHERE id = ? AND ecole_id = ?`, [targetId, ecoleId]);
       else if (cible === 'classe' && !isNaN(targetId))  eleves = all(`SELECT id FROM eleves WHERE classe_id = ? AND ecole_id = ?`, [targetId, ecoleId]);
       else                                              eleves = all(`SELECT id FROM eleves WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]);

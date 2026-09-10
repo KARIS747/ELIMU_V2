@@ -286,11 +286,19 @@ CREATE TABLE IF NOT EXISTS frais_types (
     periodicite_mois       INTEGER NOT NULL DEFAULT 1,
     date_premiere_echeance TEXT NOT NULL,
     destinataire           TEXT DEFAULT 'etablissement',
-    classe_id              INTEGER,
     actif                  INTEGER DEFAULT 1,
     annee_scolaire_id      INTEGER,
     ecole_id               TEXT NOT NULL DEFAULT '',
     date_creation          TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Portée multi-classes d'un type de frais (vide = toutes les classes)
+CREATE TABLE IF NOT EXISTS frais_types_classes (
+    frais_type_id INTEGER NOT NULL,
+    classe_id     INTEGER NOT NULL,
+    ecole_id      TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (frais_type_id, classe_id),
+    FOREIGN KEY(frais_type_id) REFERENCES frais_types(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS tranches (
