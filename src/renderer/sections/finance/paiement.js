@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { formatMontant, formatDate, statutBadge, _masquerErreurPaiement, _afficherErreurPaiement } from './helpers.js';
+import { formatMontant, formatDate, statutBadge, _masquerErreurPaiement, _afficherErreurPaiement, finConfirm } from './helpers.js';
 import { _chargerKpis, _chargerDashboard } from './dashboard.js';
 import { _chargerImpayes, _chargerTranches, _chargerHistorique } from './tranches.js';
 
@@ -162,7 +162,7 @@ async function _enregistrerPaiement() {
       .replace('{amount}', formatMontant(montant))
       .replace('{total}', formatMontant(totalTranches));
 
-    if (!confirm(confirmMsg)) return;
+    if (!(await finConfirm(confirmMsg))) return;
     montant = totalTranches;
     document.getElementById('pay-montant').value = montant;
   }
@@ -191,8 +191,8 @@ async function _enregistrerPaiement() {
       showToast(window.t('finance.payment_success').replace('{num}', result.recu_numero), 'success');
 
       if (result.paiement_id) {
-        setTimeout(() => {
-          if (confirm(window.t('finance.payment_confirm_print').replace('{num}', result.recu_numero))) {
+        setTimeout(async () => {
+          if (await finConfirm(window.t('finance.payment_confirm_print').replace('{num}', result.recu_numero))) {
             _imprimerRecu(result.paiement_id);
           }
         }, 300);

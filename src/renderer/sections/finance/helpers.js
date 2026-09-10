@@ -25,6 +25,45 @@ function modeLabel(mode) {
   return m[mode] || mode || '—';
 }
 
+/**
+ * Boîte de confirmation in-app (Promise<boolean>).
+ * Remplace confirm() natif : aucune transition de focus vers l'OS,
+ * messages traduits, fermeture via Échap ou clic hors carte.
+ */
+function finConfirm(message) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('fin-confirm-overlay');
+    const msg     = document.getElementById('fin-confirm-msg');
+    const btnOk   = document.getElementById('fin-confirm-ok');
+    const btnNo   = document.getElementById('fin-confirm-cancel');
+    if (!overlay || !btnOk || !btnNo) { resolve(window.confirm(message)); return; }
+
+    if (msg) msg.textContent = message;
+    overlay.style.display = 'flex';
+    btnOk.focus();
+
+    const done = (value) => {
+      overlay.style.display = 'none';
+      btnOk.removeEventListener('click', onOk);
+      btnNo.removeEventListener('click', onNo);
+      overlay.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey, true);
+      try { window.focus(); } catch (_) { /* ignore */ }
+      resolve(value);
+    };
+    const onOk = () => done(true);
+    const onNo = () => done(false);
+    const onBackdrop = (e) => { if (e.target === overlay) done(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); done(false); }
+    };
+    btnOk.addEventListener('click', onOk);
+    btnNo.addEventListener('click', onNo);
+    overlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey, true);
+  });
+}
+
 function showFinLoader(text = 'Traitement en cours...', progress = null, countText = '') {
   const loader = document.getElementById('fin-global-loader');
   const txt = document.getElementById('fin-loader-text');
@@ -110,4 +149,4 @@ function _remplirSelectsClasse() {
   }
 }
 
-export { formatMontant, formatDate, statutBadge, modeLabel, showFinLoader, hideFinLoader, _setVal, _setKpi, _afficherErreurFrais, _masquerErreurFrais, _afficherErreurPaiement, _masquerErreurPaiement, _remplirSelectsClasse };
+export { formatMontant, formatDate, statutBadge, modeLabel, showFinLoader, hideFinLoader, finConfirm, _setVal, _setKpi, _afficherErreurFrais, _masquerErreurFrais, _afficherErreurPaiement, _masquerErreurPaiement, _remplirSelectsClasse };

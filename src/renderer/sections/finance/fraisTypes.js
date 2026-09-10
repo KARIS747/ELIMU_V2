@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { formatMontant, formatDate, _setVal, _afficherErreurFrais, _masquerErreurFrais, _remplirSelectsClasse } from './helpers.js';
+import { formatMontant, formatDate, _setVal, _afficherErreurFrais, _masquerErreurFrais, _remplirSelectsClasse, finConfirm } from './helpers.js';
 import { _chargerKpis } from './dashboard.js';
 
 async function _chargerFraisTypes() {
@@ -143,6 +143,11 @@ function _ouvrirFormFrais(id = null) {
 }
 
 function _fermerFormFrais() {
+  // Libère le focus AVANT de masquer : évite qu'un popup natif orphelin
+  // (calendrier, liste déroulante) coince le focus clavier de la page.
+  try {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  } catch (_) { /* ignore */ }
   const card = document.getElementById('fin-frais-form-card');
   if (card) card.style.display = 'none';
   state._fraisEditId = null;
@@ -184,7 +189,7 @@ function _majApercuTranches() {
 
 async function _supprimerFrais(id) {
   const f = state._fraisTypes.find(x => x.id === id);
-  if (!confirm(window.t('finance.fee_delete_confirm').replace('{name}', f?.nom))) return;
+  if (!(await finConfirm(window.t('finance.fee_delete_confirm').replace('{name}', f?.nom)))) return;
 
   try {
     const res = await window.elimuAPI.financeDeleteFraisType(id);

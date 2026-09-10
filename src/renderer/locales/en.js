@@ -137,6 +137,7 @@ const en = {
   // ── Common ────────────────────────────────────────────────
   'common.save':        ' Save',
   'common.cancel':      'Cancel',
+  'common.confirm':     'Confirm',
   'common.add':         'Add',
   'common.edit':        'Edit',
   'common.delete':      'Delete',
@@ -651,6 +652,8 @@ const en = {
   'finance.payment_success':      ' Payment recorded — Receipt No. {num}',
   'finance.payment_confirm_print':'Payment recorded!\nDo you want to print receipt No. {num}?',
   'finance.fee_delete_confirm':   'Delete fee type "{name}" ?\nAssociated instalments will also be deleted.',
+  'finance.confirm_title':        'Confirmation',
+  'finance.global_generate_confirm': 'Generate ALL missing instalments for ALL active fee types and ALL students?\nThis may take a few seconds.',
   'finance.fee_delete_success':   'Fee type deleted',
   'finance.fee_save_success':     ' Fee type saved',
   'finance.tranche_generate_success': ' {count} instalment(s) generated',

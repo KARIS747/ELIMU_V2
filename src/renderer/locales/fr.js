@@ -137,6 +137,7 @@ const fr = {
   // ── Commun ────────────────────────────────────────────────
   'common.save':        ' Enregistrer',
   'common.cancel':      'Annuler',
+  'common.confirm':     'Confirmer',
   'common.add':         'Ajouter',
   'common.edit':        'Modifier',
   'common.delete':      'Supprimer',
@@ -652,6 +653,8 @@ const fr = {
   'finance.payment_success':      ' Paiement enregistré — Reçu N° {num}',
   'finance.payment_confirm_print':'Paiement enregistré !\nVoulez-vous imprimer le reçu N° {num} ?',
   'finance.fee_delete_confirm':   'Supprimer le type de frais "{name}" ?\nLes tranches associées seront aussi supprimées.',
+  'finance.confirm_title':        'Confirmation',
+  'finance.global_generate_confirm': 'Générer TOUTES les tranches manquantes pour TOUS les types de frais actifs et TOUS les élèves ?\nCette opération peut prendre quelques secondes.',
   'finance.fee_delete_success':   'Type de frais supprimé',
   'finance.fee_save_success':     ' Type de frais enregistré',
   'finance.tranche_generate_success': ' {count} tranche(s) générée(s)',

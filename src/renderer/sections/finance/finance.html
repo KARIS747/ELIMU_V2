@@ -105,6 +105,19 @@
     </div>
   </div>
 
+  <!-- Modale de confirmation in-app (remplace confirm() natif : pas de transition focus OS) -->
+  <div id="fin-confirm-overlay" class="modal-overlay" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="fin-confirm-title" aria-describedby="fin-confirm-msg"
+         style="width:420px; max-width:92vw; padding:26px; background:var(--bg-glass); border:1px solid var(--border-accent); box-shadow:0 32px 80px rgba(0,0,0,0.6);">
+      <h3 id="fin-confirm-title" style="font-family:'Rajdhani',sans-serif; font-size:19px; color:var(--text-primary); margin-bottom:10px; text-transform:uppercase; letter-spacing:1.5px;" data-i18n="finance.confirm_title">Confirmation</h3>
+      <p id="fin-confirm-msg" style="font-size:13.5px; color:var(--text-secondary); margin-bottom:22px; line-height:1.55; white-space:pre-line;"></p>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="btn btn-secondary" id="fin-confirm-cancel" data-i18n="common.cancel">Annuler</button>
+        <button class="btn btn-primary" id="fin-confirm-ok" data-i18n="common.confirm">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="animate-in" style="padding: 0;">
     <!-- En-tête -->
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">

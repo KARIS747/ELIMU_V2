@@ -1,7 +1,7 @@
 'use strict';
 
 import { state } from './state.js';
-import { _remplirSelectsClasse, showFinLoader, hideFinLoader, _afficherErreurFrais, _masquerErreurFrais } from './helpers.js';
+import { _remplirSelectsClasse, showFinLoader, hideFinLoader, finConfirm, _afficherErreurFrais, _masquerErreurFrais } from './helpers.js';
 import { _chargerKpis, _chargerDashboard } from './dashboard.js';
 import { _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _chargerFraisTypes } from './fraisTypes.js';
 import { _chargerTranches, _chargerImpayes, _chargerPlusImpayes, _chargerHistorique } from './tranches.js';
@@ -186,7 +186,8 @@ function _setupEvents() {
   });
 
   document.getElementById('btn-generer-tout-auto')?.addEventListener('click', async () => {
-    if (!confirm("Voulez-vous générer TOUTES les tranches manquantes pour TOUS les types de frais actifs et TOUS les élèves ? Cette opération peut prendre quelques secondes.")) return;
+    const ok = await finConfirm(window.t('finance.global_generate_confirm'));
+    if (!ok) return;
 
     showFinLoader("Génération globale en cours...");
 
