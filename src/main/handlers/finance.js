@@ -69,14 +69,15 @@ function register(ipcMain, deps) {
     try {
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classeId = data.classe_id != null && data.classe_id !== '' ? parseInt(data.classe_id) : null;
       const r = run(
         `INSERT INTO frais_types
-           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, actif, annee_scolaire_id, ecole_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, destinataire, classe_id, actif, annee_scolaire_id, ecole_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire || 'etablissement', data.actif ?? 1, anneeId, ecoleId
+          data.destinataire || 'etablissement', isNaN(classeId) ? null : classeId, data.actif ?? 1, anneeId, ecoleId
         ]
       );
       return { success: true, id: r.lastID };
@@ -92,14 +93,15 @@ function register(ipcMain, deps) {
       const fid = parseInt(id);
       if (isNaN(fid)) return { success: false, error: 'ID invalide' };
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const classeIdUp = data.classe_id != null && data.classe_id !== '' ? parseInt(data.classe_id) : null;
       run(
         `UPDATE frais_types SET nom=?, montant_par_tranche=?, nombre_tranches=?,
-           periodicite_mois=?, date_premiere_echeance=?, destinataire=?, actif=?
+           periodicite_mois=?, date_premiere_echeance=?, destinataire=?, classe_id=?, actif=?
          WHERE id=? AND ecole_id=?`,
         [
           data.nom, data.montant_par_tranche, data.nombre_tranches,
           data.periodicite_mois, data.date_premiere_echeance,
-          data.destinataire, data.actif ?? 1, fid, ecoleId
+          data.destinataire, isNaN(classeIdUp) ? null : classeIdUp, data.actif ?? 1, fid, ecoleId
         ]
       );
       return { success: true };
@@ -142,9 +144,14 @@ function register(ipcMain, deps) {
       const ft = get(`SELECT * FROM frais_types WHERE id = ? AND ecole_id = ?`, [fid, ecoleId]);
       if (!ft) return { success: false, error: 'Type de frais introuvable' };
 
+      // Portée configurée sur le type de frais : prime sur le paramètre cible.
+      // Un frais restreint à une classe ne génère JAMAIS pour les autres classes.
+      const porteeClasseId = ft.classe_id != null ? parseInt(ft.classe_id) : NaN;
+
       let eleves;
       const targetId = parseInt(id_cible);
-      if (cible === 'eleve' && !isNaN(targetId))       eleves = all(`SELECT id FROM eleves WHERE id = ? AND ecole_id = ?`, [targetId, ecoleId]);
+      if (!isNaN(porteeClasseId))                       eleves = all(`SELECT id FROM eleves WHERE classe_id = ? AND annee_scolaire_id = ? AND ecole_id = ?`, [porteeClasseId, anneeId, ecoleId]);
+      else if (cible === 'eleve' && !isNaN(targetId))   eleves = all(`SELECT id FROM eleves WHERE id = ? AND ecole_id = ?`, [targetId, ecoleId]);
       else if (cible === 'classe' && !isNaN(targetId))  eleves = all(`SELECT id FROM eleves WHERE classe_id = ? AND ecole_id = ?`, [targetId, ecoleId]);
       else                                              eleves = all(`SELECT id FROM eleves WHERE annee_scolaire_id = ? AND ecole_id = ?`, [anneeId, ecoleId]);
 

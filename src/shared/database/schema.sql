@@ -286,6 +286,7 @@ CREATE TABLE IF NOT EXISTS frais_types (
     periodicite_mois       INTEGER NOT NULL DEFAULT 1,
     date_premiere_echeance TEXT NOT NULL,
     destinataire           TEXT DEFAULT 'etablissement',
+    classe_id              INTEGER,
     actif                  INTEGER DEFAULT 1,
     annee_scolaire_id      INTEGER,
     ecole_id               TEXT NOT NULL DEFAULT '',

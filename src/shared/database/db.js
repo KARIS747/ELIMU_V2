@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 123; // v1.2.3 (CM1 passe en notation N2/APC)
+const CURRENT_SCHEMA_VERSION = 124; // v1.2.4 (frais_types.classe_id : portee par classe)
 
 /**
  * Initialise la base de données et applique le schéma
@@ -107,6 +107,7 @@ async function initializeDatabase(customPath = null) {
     "ALTER TABLE tranches ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE paiements ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE frais_types ADD COLUMN annee_scolaire_id INTEGER",
+    "ALTER TABLE frais_types ADD COLUMN classe_id INTEGER",
     "ALTER TABLE paiement_tranches ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE heures_absence ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE absences ADD COLUMN annee_scolaire_id INTEGER",

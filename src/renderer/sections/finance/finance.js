@@ -3,7 +3,7 @@
 import { state } from './state.js';
 import { _remplirSelectsClasse, showFinLoader, hideFinLoader, _afficherErreurFrais, _masquerErreurFrais } from './helpers.js';
 import { _chargerKpis, _chargerDashboard } from './dashboard.js';
-import { _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _chargerFraisTypes } from './fraisTypes.js';
+import { _ouvrirFormFrais, _fermerFormFrais, _majApercuTranches, _majVerrouPortee, _chargerFraisTypes } from './fraisTypes.js';
 import { _chargerTranches, _chargerImpayes, _chargerPlusImpayes, _chargerHistorique } from './tranches.js';
 import { _ouvrirModalePaiement, _fermerModalePaiement, _chargerTranchesEleve, _majTotalPaiement, _enregistrerPaiement } from './paiement.js';
 
@@ -113,6 +113,8 @@ function _setupEvents() {
     if (selClasse) selClasse.style.display = e.target.value === 'classe' ? 'block' : 'none';
   });
 
+  document.getElementById('ff-classe-scope')?.addEventListener('change', _majVerrouPortee);
+
   document.getElementById('btn-save-frais')?.addEventListener('click', async () => {
     _masquerErreurFrais();
     const btn = document.getElementById('btn-save-frais');
@@ -122,6 +124,8 @@ function _setupEvents() {
     const periode  = parseInt(document.getElementById('ff-periodicite')?.value);
     const dateDebut = document.getElementById('ff-date-debut')?.value;
     const destin   = document.getElementById('ff-destinataire')?.value;
+    const scopeVal = document.getElementById('ff-classe-scope')?.value || '';
+    const classeId = scopeVal ? parseInt(scopeVal) : null;
     const actif    = document.getElementById('ff-actif')?.checked ? 1 : 0;
 
     if (!nom)    { _afficherErreurFrais(window.t('finance.fee_name_label')); return; }
@@ -135,7 +139,7 @@ function _setupEvents() {
     const data = {
       nom, montant_par_tranche: montant, nombre_tranches: nbTranches,
       periodicite_mois: periode, date_premiere_echeance: dateDebut,
-      destinataire: destin, actif
+      destinataire: destin, classe_id: classeId, actif
     };
 
     try {
@@ -162,7 +166,7 @@ function _setupEvents() {
   });
 
   document.getElementById('btn-generer-tranches')?.addEventListener('click', async () => {
-    if (!state._fraisEditId) { showToast(window.t('finance.fee_save_success'), 'warning'); return; }
+    if (!state._fraisEditId) { showToast(window.t('finance.fee_save_first'), 'warning'); return; }
     const cible    = document.getElementById('ff-cible')?.value || 'all';
     const classeId = document.getElementById('ff-cible-classe')?.value || null;
 
