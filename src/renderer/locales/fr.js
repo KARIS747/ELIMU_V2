@@ -448,6 +448,7 @@ const fr = {
   'eleves.delete_success':        'Élève supprimé.',
   'eleves.save_success_add':      ' Élève ajouté !',
   'eleves.save_success_update':   ' Élève modifié !',
+  'eleves.error_classe_required': 'Veuillez sélectionner une classe pour l\u2019élève.',
   'eleves.profil_title':          'Profil Élève',
   'eleves.profil_tab_notes':      'Notes',
   'eleves.profil_tab_absences':   'Absences',

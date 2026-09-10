@@ -141,6 +141,11 @@ CREATE TABLE IF NOT EXISTS eleves (
 );
 CREATE INDEX IF NOT EXISTS idx_eleves_classe ON eleves(classe_id);
 CREATE INDEX IF NOT EXISTS idx_eleves_ecole ON eleves(ecole_id);
+-- Matricule unique par école et année (les lignes NULL/vides sont ignorées ;
+-- la copie vers une nouvelle année conserve le même matricule sans conflit)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_eleves_matricule_unique
+  ON eleves(ecole_id, annee_scolaire_id, matricule COLLATE NOCASE)
+  WHERE matricule IS NOT NULL AND matricule != '';
 
 CREATE TABLE IF NOT EXISTS notes (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,

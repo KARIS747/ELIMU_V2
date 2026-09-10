@@ -446,6 +446,7 @@ const en = {
   'eleves.delete_success':        'Student deleted.',
   'eleves.save_success_add':      ' Student added!',
   'eleves.save_success_update':   ' Student updated!',
+  'eleves.error_classe_required': 'Please select a class for the student.',
   'eleves.profil_title':          'Student Profile',
   'eleves.profil_tab_notes':      'Grades',
   'eleves.profil_tab_absences':   'Absences',

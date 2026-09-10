@@ -20,7 +20,7 @@ let db = null;
 let dbPath = null;
 let lastWriteTimestamp = Date.now();
 
-const CURRENT_SCHEMA_VERSION = 125; // v1.2.5 (frais_types_classes : portee multi-classes)
+const CURRENT_SCHEMA_VERSION = 126; // v1.2.6 (matricule unique par ecole+annee)
 
 /**
  * Initialise la base de données et applique le schéma
@@ -116,6 +116,7 @@ async function initializeDatabase(customPath = null) {
      )`,
     "INSERT OR IGNORE INTO frais_types_classes (frais_type_id, classe_id, ecole_id) SELECT id, classe_id, ecole_id FROM frais_types WHERE classe_id IS NOT NULL",
     "ALTER TABLE frais_types DROP COLUMN classe_id",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_eleves_matricule_unique ON eleves(ecole_id, annee_scolaire_id, matricule COLLATE NOCASE) WHERE matricule IS NOT NULL AND matricule != ''",
     "ALTER TABLE paiement_tranches ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE heures_absence ADD COLUMN annee_scolaire_id INTEGER",
     "ALTER TABLE absences ADD COLUMN annee_scolaire_id INTEGER",

@@ -157,17 +157,46 @@ function register(ipcMain, deps) {
 
   // ── CRUD élèves ─────────────────────────────────────────────────────────────
 
+  // Valide la classe (obligatoire) et l'unicité du matricule (par école+année).
+  // Retourne { ok:true, classeId, matricule } ou { ok:false, error }.
+  const validerEleve = (data, ecoleId, anneeId, eleveIdExclu = null) => {
+    const cid = parseInt(data.classe_id);
+    if (isNaN(cid)) return { ok: false, error: 'Veuillez sélectionner une classe pour l\u2019élève.' };
+    const classe = get(`SELECT id FROM classes WHERE id = ? AND ecole_id = ?`, [cid, ecoleId]);
+    if (!classe) return { ok: false, error: 'La classe sélectionnée est introuvable.' };
+    const mat = data.matricule ? String(data.matricule).trim() : null;
+    const matricule = mat || null;
+    if (matricule) {
+      const doublon = get(
+        `SELECT id FROM eleves WHERE matricule = ? COLLATE NOCASE AND ecole_id = ?
+           AND ((annee_scolaire_id = ?) OR (annee_scolaire_id IS NULL AND ? IS NULL))
+           ${eleveIdExclu ? 'AND id != ?' : ''} LIMIT 1`,
+        eleveIdExclu ? [matricule, ecoleId, anneeId, anneeId, eleveIdExclu] : [matricule, ecoleId, anneeId, anneeId]
+      );
+      if (doublon) return { ok: false, error: `Le matricule « ${matricule} » est déjà attribué à un autre élève.` };
+    }
+    return { ok: true, classeId: cid, matricule };
+  };
+
+  const messageErreurContrainte = (message) => {
+    if (message && message.includes('UNIQUE constraint failed') && message.includes('matricule'))
+      return 'Ce matricule est déjà attribué à un autre élève.';
+    return message;
+  };
+
   ipcMain.handle('db:addEleve', async (event, data) => {
     if (!(await checkAccess())) return { success: false, error: 'Accès non autorisé' };
     try {
       if (!data.nom || !data.prenom) return { success: false, error: 'Nom et prénom requis' };
       const anneeId = getCurrentAnneeId();
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const validation = validerEleve(data, ecoleId, anneeId);
+      if (!validation.ok) return { success: false, error: validation.error };
       const result = run(
         `INSERT INTO eleves (nom, prenom, matricule, date_naissance, sexe, classe_id, nom_parent, telephone_parent, email_parent, annee_scolaire_id, ecole_id)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [data.nom.trim(), data.prenom.trim(), data.matricule ? String(data.matricule).trim() : null, data.date_naissance, data.sexe || 'M', parseInt(data.classe_id) || null,
-         data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
+        [data.nom.trim(), data.prenom.trim(), validation.matricule, data.date_naissance, data.sexe || 'M', validation.classeId,
+         data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null,
          data.email_parent ? data.email_parent.trim() : null, anneeId, ecoleId]
       );
       const eleveId = result.lastID;
@@ -190,7 +219,7 @@ function register(ipcMain, deps) {
       return { success: true, id: eleveId };
     } catch (error) {
       logger.error('Erreur addEleve:', error);
-      return { error: error.message };
+      return { error: messageErreurContrainte(error.message) };
     }
   });
 
@@ -200,11 +229,14 @@ function register(ipcMain, deps) {
       const eid = parseInt(id);
       if (isNaN(eid) || eid < 1) return { error: 'ID élève invalide' };
       const ecoleId = getCurrentEcoleId ? getCurrentEcoleId() : '';
+      const anneeId = getCurrentAnneeId();
+      const validation = validerEleve(data, ecoleId, anneeId, eid);
+      if (!validation.ok) return { success: false, error: validation.error };
 
       run(
         `UPDATE eleves SET nom=?, prenom=?, matricule=?, date_naissance=?, sexe=?, classe_id=?, nom_parent=?, telephone_parent=?, email_parent=? WHERE id=? AND ecole_id=?`,
-        [data.nom.trim(), data.prenom.trim(), data.matricule ? String(data.matricule).trim() : null, data.date_naissance, data.sexe || null, parseInt(data.classe_id) || null,
-         data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null, 
+        [data.nom.trim(), data.prenom.trim(), validation.matricule, data.date_naissance, data.sexe || null, validation.classeId,
+         data.nom_parent ? data.nom_parent.trim() : null, data.telephone_parent ? data.telephone_parent.trim() : null,
          data.email_parent ? data.email_parent.trim() : null, eid, ecoleId]
       );
 
@@ -215,7 +247,7 @@ function register(ipcMain, deps) {
       return { success: true };
     } catch (error) {
       logger.error('Erreur updateEleve:', error);
-      return { error: error.message };
+      return { error: messageErreurContrainte(error.message) };
     }
   });
 

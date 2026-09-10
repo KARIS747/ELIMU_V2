@@ -326,6 +326,11 @@ async function sauvegarderEleve() {
     return;
   }
 
+  if (!document.getElementById('ef-classe')?.value) {
+    afficherErreurForm(t('eleves.error_classe_required'));
+    return;
+  }
+
   const data = {
     nom,
     prenom,
