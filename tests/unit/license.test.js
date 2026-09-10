@@ -74,6 +74,93 @@ describe('verifyLicense avec secret injecté/env', () => {
   });
 });
 
+describe('HWID stable — insensible au Wi-Fi / VPN', () => {
+  const fs = require('fs');
+  const path = require('path');
+
+  function tmpDir() {
+    return fs.mkdtempSync(path.join(os.tmpdir(), 'elimu-hwid-'));
+  }
+
+  // Deux états réseau simulés : Ethernet seul, puis Wi-Fi activé (nouvelle interface en tête)
+  const NET_ETH_ONLY = {
+    eth0: [{ mac: 'AA:BB:CC:DD:EE:01', internal: false }],
+    lo: [{ mac: '00:00:00:00:00:00', internal: true }]
+  };
+  const NET_WIFI_ON = {
+    'Wi-Fi': [{ mac: 'AA:BB:CC:DD:EE:02', internal: false }],
+    eth0: [{ mac: 'AA:BB:CC:DD:EE:01', internal: false }],
+    lo: [{ mac: '00:00:00:00:00:00', internal: true }]
+  };
+
+  test('le HWID stable ne change pas quand le Wi-Fi s’active', () => {
+    const dir = tmpDir();
+    const lic = require(LICENSE_PATH);
+    const spyNet = jest.spyOn(os, 'networkInterfaces');
+
+    spyNet.mockReturnValue(NET_ETH_ONLY);
+    const before = lic.getStableHardwareId(dir);
+
+    spyNet.mockReturnValue(NET_WIFI_ON);
+    const after = lic.getStableHardwareId(dir);
+
+    spyNet.mockRestore();
+    expect(before).toMatch(/^HWID-[0-9A-F]{4}(-[0-9A-F]{4}){3}$/);
+    expect(after).toBe(before);
+  });
+
+  test('l’ancien calcul change avec le Wi-Fi (démontre le bug corrigé)', () => {
+    const lic = require(LICENSE_PATH);
+    const spyNet = jest.spyOn(os, 'networkInterfaces');
+    const spyHost = jest.spyOn(os, 'hostname').mockReturnValue('PC-ECOLE');
+
+    spyNet.mockReturnValue(NET_ETH_ONLY);
+    const before = lic.getLegacyHardwareId();
+
+    spyNet.mockReturnValue(NET_WIFI_ON);
+    const after = lic.getLegacyHardwareId();
+
+    spyNet.mockRestore();
+    spyHost.mockRestore();
+    expect(after).not.toBe(before);
+  });
+
+  test('verifyLicense accepte une clé émise pour le HWID stable', () => {
+    process.env.ELIMU_LICENCE_SECRET = 'ELIMU_TEST_SECRET_0123456789';
+    delete require.cache[require.resolve(LICENSE_PATH)];
+    const lic = require(LICENSE_PATH);
+    const dir = tmpDir();
+    const stable = lic.getStableHardwareId(dir);
+    const key = makeKey('20301231', stable, 'ELIMU_TEST_SECRET_0123456789');
+    expect(lic.verifyLicense(key, stable, '20260101')).toBe(true);
+    delete process.env.ELIMU_LICENCE_SECRET;
+  });
+
+  test('verifyLicense accepte une ancienne clé MAC (rétro-compat à vie)', () => {
+    process.env.ELIMU_LICENCE_SECRET = 'ELIMU_TEST_SECRET_0123456789';
+    delete require.cache[require.resolve(LICENSE_PATH)];
+    const lic = require(LICENSE_PATH);
+    const dir = tmpDir();
+
+    // Clé émise à l’époque avec l’ancien calcul (Ethernet seul)
+    const spyNet = jest.spyOn(os, 'networkInterfaces');
+    const spyHost = jest.spyOn(os, 'hostname').mockReturnValue('PC-ECOLE');
+    spyNet.mockReturnValue(NET_ETH_ONLY);
+    const legacyHwid = lic.getLegacyHardwareId();
+    const key = makeKey('20301231', legacyHwid, 'ELIMU_TEST_SECRET_0123456789');
+
+    // Vérification aujourd’hui : Wi-Fi actif + nouveau HWID stable affiché
+    spyNet.mockReturnValue(NET_WIFI_ON);
+    const stable = lic.getStableHardwareId(dir);
+    expect(stable).not.toBe(legacyHwid);
+    expect(lic.verifyLicense(key, stable, '20260101')).toBe(true);
+
+    spyNet.mockRestore();
+    spyHost.mockRestore();
+    delete process.env.ELIMU_LICENCE_SECRET;
+  });
+});
+
 describe('extractExpiryFromKey', () => {
   const { extractExpiryFromKey } = require(LICENSE_PATH);
 

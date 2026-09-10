@@ -73,10 +73,44 @@ function _hmacForSecret(secret, dataToSign, len = 16) {
 }
 
 /**
- * Génère un identifiant machine unique (Hardware ID)
- * Basé sur la première adresse MAC non interne (triée par nom d'interface) et le nom d'hôte.
+ * Calcule le HWID stable à partir d'un identifiant persistant.
+ * Volontairement SANS hostname ni MAC : l'ID ne change plus avec le Wi-Fi,
+ * un hotspot, un VPN ou un renommage du PC. Format inchangé (HWID-XXXX-...).
+ */
+function hwidFromStableId(stableId) {
+  const hash = crypto.createHash('sha256').update(String(stableId)).digest('hex').toUpperCase();
+  const parts = hash.match(/.{1,4}/g);
+  return `HWID-${parts[0]}-${parts[1]}-${parts[2]}-${parts[3]}`;
+}
+
+/**
+ * Retourne le Hardware ID stable de la machine (insensible réseau).
+ * @param {string|null} userDataDir - Dossier userData forcé (tests uniquement).
+ */
+function getStableHardwareId(userDataDir = null) {
+  const { getStableMachineId } = require('./machineId');
+  return hwidFromStableId(getStableMachineId(userDataDir));
+}
+
+/**
+ * Génère un identifiant machine unique (Hardware ID).
+ * → HWID STABLE (fichier persistant + ID natif OS). Ne dépend plus du réseau :
+ * activer le Wi-Fi, un hotspot ou un VPN ne change plus l'identifiant affiché.
  */
 function generateHardwareId() {
+  try {
+    return getStableHardwareId();
+  } catch (_) {
+    return getLegacyHardwareId();
+  }
+}
+
+/**
+ * Ancien calcul (MAC + hostname) — conservé UNIQUEMENT pour valider les
+ * licences déjà émises avant la migration. Ne plus l'utiliser pour afficher
+ * ou émettre un HWID.
+ */
+function getLegacyHardwareId() {
   const networkInterfaces = os.networkInterfaces();
   let mac = '';
 
@@ -105,8 +139,10 @@ function generateHardwareId() {
 }
 
 /**
- * Retourne tous les HWIDs possibles pour cette machine (un par interface réseau valide)
- * Utile pour la vérification quand l'ordre des interfaces change (ex: connexion VPN, Hotspot).
+ * Retourne tous les HWIDs HISTORIQUES possibles pour cette machine
+ * (un par interface réseau valide, ancien calcul MAC + hostname).
+ * Utilisé UNIQUEMENT en fallback de vérification pour les licences émises
+ * avant la migration vers le HWID stable. Ne pas utiliser pour afficher.
  */
 function getAllPossibleHardwareIds() {
   const networkInterfaces = os.networkInterfaces();
@@ -168,12 +204,13 @@ function verifyLicense(key, hwid, todayOverride = null) {
 
   // 2. Vérifier le HWID (sauf si la clé est universelle)
   const keyHwid = parts.slice(2, parts.length - 1).join('-');
-  
+
   if (keyHwid !== 'UNIVERSAL') {
-    // On vérifie d'abord le HWID principal passé en paramètre
+    // On vérifie d'abord le HWID (stable) passé en paramètre
     if (keyHwid !== hwid) {
-      // Si ça ne match pas, on vérifie tous les autres HWIDs possibles de la machine
-      // (au cas où l'ordre des interfaces réseau a changé, ex: hotspot mobile)
+      // Rétro-compatibilité à vie : les clés émises avant la migration
+      // (basées sur MAC + hostname) restent acceptées sur la même machine.
+      // On vérifie donc aussi tous les HWIDs historiques possibles.
       const allPossible = getAllPossibleHardwareIds();
       if (!allPossible.includes(keyHwid)) return false;
     }
@@ -215,4 +252,12 @@ function extractExpiryFromKey(key) {
   return new Date(year, month - 1, day);
 }
 
-module.exports = { generateHardwareId, getAllPossibleHardwareIds, verifyLicense, extractExpiryFromKey };
+module.exports = {
+  generateHardwareId,
+  getStableHardwareId,
+  hwidFromStableId,
+  getLegacyHardwareId,
+  getAllPossibleHardwareIds,
+  verifyLicense,
+  extractExpiryFromKey
+};
