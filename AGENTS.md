@@ -515,6 +515,7 @@ table isolée.
 
 | Date | Changement | Fichiers principaux |
 |------|-----------|---------------------|
+| Sept 2026 | **GPU auto-activé sur Wayland** — `disable-gpu` figeait le splash sur Hyprland/Wayland (page chargée mais `ready-to-show` jamais émis, rendu logiciel sans image composée) ; détection auto via `WAYLAND_DISPLAY`/`XDG_SESSION_TYPE`, `ELIMU_ENABLE_GPU=1` restant prioritaire | `src/main/main.js` |
 | Août 2026 | **CLUF refonte KarisDev** — 15 articles (indemnisation, non-remboursement, compétence exclusive tribunaux domicile éditeur, données mineurs/sauvegardes/cloud, loi 2000/011-OAPI-Berne) ; UTF-8 avec BOM pour corriger les accents NSIS | `build-resources/license.txt` |
 | Août 2026 | **Couleurs Tableau d'honneur indépendantes** — clés `th_couleur_primaire/th_couleur_secondaire` (repli bulletin), pickers + aperçu mini-diplôme dans Paramètres > Bulletin | `tableauHonneur.js`, `parametres.html`, `modules/bulletin.js`, locales fr/en |
 | Août 2026 | **Fiche d'accès enseignant PDF refondue** — module partagé A5 (bandeau ELIMU, carte infos, encadrés code école/mot de passe, filigrane) utilisé par création de compte et impression manuelle | `pdf/ficheAccesEnseignant.js`, `handlers/professeurs.js` |

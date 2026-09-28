@@ -9,7 +9,10 @@ const fs = require('fs');
 
 // Desactive le GPU sauf si ELIMU_ENABLE_GPU=1 (ex: Hyprland/Wayland ou GPU recent).
 // Garde le comportement par defaut inchange pour les postes clients existants.
-if (!process.env.ELIMU_ENABLE_GPU) {
+// Sur Wayland natif, le rendu logiciel ne compose aucune image (splash fige,
+// ready-to-show jamais emis) : le GPU reste donc active automatiquement.
+const isWaylandSession = !!process.env.WAYLAND_DISPLAY || process.env.XDG_SESSION_TYPE === 'wayland';
+if (!process.env.ELIMU_ENABLE_GPU && !isWaylandSession) {
   app.commandLine.appendSwitch('disable-gpu');
 }
 
