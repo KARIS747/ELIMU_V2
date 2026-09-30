@@ -119,6 +119,18 @@ const slug = (str) => str
   .toLowerCase();
 
 // ============================================================================
+// IDENTITÉ DE L'ÉCOLE DE DÉMO (surchargable par environnement, ex: démo pilote
+// dans le privé). Les valeurs par défaut reproduisent la sortie historique.
+// ============================================================================
+const DEMO_ECOLE_NOM = process.env.ELIMU_DEMO_ECOLE || 'École Publique de Nkolbisson';
+const DEMO_DIRECTEUR = process.env.ELIMU_DEMO_DIRECTEUR || 'M. Jean-Paul MBALLA';
+const DEMO_EMAIL = process.env.ELIMU_DEMO_EMAIL || 'ep.nkolbisson@elimu.cm';
+const DEMO_TEL = process.env.ELIMU_DEMO_TEL || '+237 691 234 567';
+const DEMO_ADRESSE = process.env.ELIMU_DEMO_ADRESSE || 'Nkolbisson, Yaoundé — Cameroun';
+const DEMO_ADRESSE_COURTE = process.env.ELIMU_DEMO_ADRESSE_COURTE || 'Nkolbisson, Yaoundé';
+const DEMO_DEVISE = process.env.ELIMU_DEMO_DEVISE || 'Travail — Discipline — Progrès';
+
+// ============================================================================
 // MAIN
 // ============================================================================
 async function main() {
@@ -187,22 +199,22 @@ async function main() {
   console.log(`→ Année active : ${ANNEE} (id=${ANNEE_ID})`);
 
   db.prepare('INSERT OR REPLACE INTO ecoles (ecole_id, nom, date_creation) VALUES (?,?,datetime(\'now\'))')
-    .run(ECOLE_ID, 'École Publique de Nkolbisson');
+    .run(ECOLE_ID, DEMO_ECOLE_NOM);
 
   const insParam = db.prepare('INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?,?)');
   for (const [k, v] of Object.entries({
     ecole_id: ECOLE_ID,
     code_ecole: codeEcoleParam || '7KMQXT',
-    nom_etablissement: 'École Publique de Nkolbisson',
-    telephone: '+237 691 234 567',
-    email: 'ep.nkolbisson@elimu.cm',
-    adresse: 'Nkolbisson, Yaoundé — Cameroun',
+    nom_etablissement: DEMO_ECOLE_NOM,
+    telephone: DEMO_TEL,
+    email: DEMO_EMAIL,
+    adresse: DEMO_ADRESSE,
     periode_active: 'Trimestre 3',
     seuil_alerte: '10',
     note_max: '20',
     theme: 'dark',
     langue_interface: 'fr',
-    nom_directeur: 'M. Jean-Paul MBALLA',
+    nom_directeur: DEMO_DIRECTEUR,
     schema_version: '123',
   })) insParam.run(k, v);
   if (licenceKey) insParam.run('licence_key', licenceKey);
@@ -222,12 +234,12 @@ async function main() {
 
   const bc = db.prepare('INSERT OR REPLACE INTO bulletin_config (cle, valeur) VALUES (?,?)');
   for (const [k, v] of Object.entries({
-    etab_nom: 'École Publique de Nkolbisson',
-    etab_devise: 'Travail — Discipline — Progrès',
-    etab_adresse: 'Nkolbisson, Yaoundé',
-    etab_telephone: '+237 691 234 567',
-    etab_email: 'ep.nkolbisson@elimu.cm',
-    directeur_nom: 'M. Jean-Paul MBALLA',
+    etab_nom: DEMO_ECOLE_NOM,
+    etab_devise: DEMO_DEVISE,
+    etab_adresse: DEMO_ADRESSE_COURTE,
+    etab_telephone: DEMO_TEL,
+    etab_email: DEMO_EMAIL,
+    directeur_nom: DEMO_DIRECTEUR,
     annee_scolaire: ANNEE,
     delegation_regionale: 'DÉLÉGATION RÉGIONALE DU CENTRE',
     delegation_departementale: 'DÉLÉGATION DÉPARTEMENTALE DE MFOUNDI',
@@ -324,10 +336,10 @@ async function main() {
   // FINANCE — TYPES DE FRAIS
   // ==========================================================================
   const FRAIS = [
-    { nom: 'Inscription', montant: 10000, nb: 1, period: 1, echeance: '2025-09-15' },
-    { nom: 'Frais de scolarité', montant: 8000, nb: 3, period: 3, echeance: '2025-10-05' },
-    { nom: 'APEE', montant: 3000, nb: 1, period: 1, echeance: '2025-10-10' },
-    { nom: 'Assurance scolaire', montant: 2000, nb: 1, period: 1, echeance: '2025-10-10' },
+    { nom: 'Inscription', montant: 15000, nb: 1, period: 1, echeance: '2025-09-15' },
+    { nom: 'Frais de scolarité', montant: 30000, nb: 3, period: 3, echeance: '2025-10-05' },
+    { nom: 'APEE', montant: 5000, nb: 1, period: 1, echeance: '2025-10-10' },
+    { nom: 'Assurance scolaire', montant: 2500, nb: 1, period: 1, echeance: '2025-10-10' },
   ];
   const insFrais = db.prepare(`INSERT INTO frais_types
     (nom, montant_par_tranche, nombre_tranches, periodicite_mois, date_premiere_echeance, actif, annee_scolaire_id, ecole_id)
