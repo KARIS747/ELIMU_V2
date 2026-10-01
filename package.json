@@ -1,6 +1,6 @@
 {
   "name": "elimu",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "Application de gestion scolaire pour établissements en Afrique",
   "main": "src/main/main.js",
   "author": {
